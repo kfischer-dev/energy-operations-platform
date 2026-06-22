@@ -4,3 +4,4 @@ app.log
 .venv/
 venv/
 .env
+private_learning_notes.md
