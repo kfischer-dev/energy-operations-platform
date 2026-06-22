@@ -133,12 +133,65 @@ This separation makes the system more flexible and prepares the project for futu
 * REST API endpoints
 * PostgreSQL integration
 
-## Next Steps
+## Relationship Between Stations and Measurements
 
-Planned next steps:
+A station can have many measurements.
 
-* define the first SQL table structure
-* create a `schema.sql` file
-* practice basic SQL commands
-* prepare PostgreSQL integration
-* later connect the Python project to a database
+Each measurement belongs to exactly one station.
+
+This is modeled as a one-to-many relationship:
+
+stations.id → measurements.station_id
+
+## Why This Relationship Is Useful
+
+This structure allows the system to store a flexible number of measurements for each station. It also makes it possible to query all measurements for one station, calculate historical values and later add alerts or different measurement types.
+
+## PostgreSQL Test
+
+The initial schema was tested successfully in a local PostgreSQL database named `energy_operations`.
+
+Tested concepts:
+
+- table creation
+- primary keys
+- foreign key relationship
+- insert statements
+- select queries
+- filtering with `WHERE`
+- joining `stations` and `measurements`
+
+## Progress and Next Steps
+
+### Completed
+
+- Defined the first relational table structure.
+- Created an initial `schema.sql` draft.
+- Practiced basic SQL commands:
+  - `CREATE TABLE`
+  - `INSERT INTO`
+  - `SELECT`
+  - `WHERE`
+  - `JOIN`
+- Installed PostgreSQL locally.
+- Created a local PostgreSQL database named `energy_operations`.
+- Tested the first schema successfully in PostgreSQL.
+- Inserted example station and measurement data.
+- Verified the relationship between `stations` and `measurements` using a `JOIN`.
+
+### Current Focus
+
+- Separate the SQL work into clean project files:
+  - `schema.sql` for table definitions
+  - `seed_data.sql` for example data
+  - `example_queries.sql` for test queries
+- Test the foreign key constraint with an invalid `station_id`.
+- Keep the database model small and understandable before connecting it to Python.
+
+### Next Steps
+
+- Clean up and finalize the first `schema.sql` file.
+- Add example data in a separate SQL file if needed.
+- Document the PostgreSQL test result.
+- Prepare the future Python database connection.
+- Later connect the Python project to PostgreSQL.
