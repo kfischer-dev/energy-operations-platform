@@ -12,12 +12,16 @@
 -- Each measurement belongs to exactly one station.
 -- measurements.station_id references stations.id
 -- =============================================================
+/*
+DROP TABLE IF EXISTS measurements;
+DROP TABLE IF EXISTS stations;
+*/
 
 CREATE TABLE stations (
     station_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
+    station_name VARCHAR(255) NOT NULL,
     station_type VARCHAR(100) NOT NULL,
-    location VARCHAR(50) NOT NULL,
+    station_location VARCHAR(50) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

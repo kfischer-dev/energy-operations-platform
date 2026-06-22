@@ -188,6 +188,14 @@ Tested concepts:
 - Test the foreign key constraint with an invalid `station_id`.
 - Keep the database model small and understandable before connecting it to Python.
 
+## Foreign Key Test
+
+The foreign key constraint was tested by trying to insert a measurement with a non-existing `station_id`.
+
+PostgreSQL rejected the insert because no station with this ID exists.
+
+This confirms that the relationship between `stations` and `measurements` is enforced by the database.
+
 ### Next Steps
 
 - Clean up and finalize the first `schema.sql` file.

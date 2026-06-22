@@ -5,11 +5,11 @@ SELECT * FROM measurements;
 SELECT * FROM measurements WHERE station_id = 1;
 
 SELECT
-    stations.name,
+    stations.station_name,
     measurements.measurement_time,
     measurements.load_value,
     measurements.unit
 FROM measurements
 JOIN stations
     ON measurements.station_id = stations.station_id
-ORDER BY stations.name, measurements.measurement_time;
+ORDER BY stations.station_name, measurements.measurement_time;
