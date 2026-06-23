@@ -19,16 +19,29 @@ print("Database connection successful")
 cursor = conn.cursor()
 
 cursor.execute("""
-    SELECT station_id, station_name, station_type, station_location
-    FROM stations
-    ORDER BY station_id;
+    SELECT
+        stations.station_name,
+        measurements.measurement_time,
+        measurements.load_value,
+        measurements.unit
+    FROM measurements
+    JOIN stations
+        ON measurements.station_id = stations.station_id
+    ORDER BY stations.station_name, measurements.measurement_time;
 """)
 
 rows = cursor.fetchall()
 
+print("\nMesurements by station:")
+print("-" * 70)
+
 for row in rows:
-    print(row)
+    station_name, time, load_value, unit = row
+    print(f"{station_name:10} | {time:%Y-%m-%d %H:%M} | {load_value:>8} {unit}")
+
+print("-" * 70)
+print(f"Total rows: {len(rows)}")
 
 conn.close()
 
-print("Connection closed.")
+print("\nConnection closed.")
