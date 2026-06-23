@@ -16,6 +16,19 @@ conn = psycopg.connect(dbname = db_name, user = db_user, password = db_password,
 
 print("Database connection successful")
 
+cursor = conn.cursor()
+
+cursor.execute("""
+    SELECT station_id, station_name, station_type, station_location
+    FROM stations
+    ORDER BY station_id;
+""")
+
+rows = cursor.fetchall()
+
+for row in rows:
+    print(row)
+
 conn.close()
 
 print("Connection closed.")

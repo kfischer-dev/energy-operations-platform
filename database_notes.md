@@ -64,17 +64,17 @@ A measurement represents a changing value recorded for a station. In the current
 
 The stations table stores relatively stable asset information.
 
-Possible fields:
+Current fields:
 
-* id
-* name
+* station_id
+* station_name
 * station_type
-* location
+* station_location
 * created_at
 
 Example:
 
-| id | name | station_type | location |
+| station_id | station_name | station_type | station_location |
 |---:|---|---|---|
 | 1 | Station A | solar_park | Stuttgart |
 | 2 | Station B | wind_park | Ulm |
@@ -83,12 +83,12 @@ Example:
 
 The measurements table stores changing measurement values.
 
-Possible fields:
+Current fields:
 
-* id
+* measurement_id
 * station_id
-* timestamp
-* load_kw
+* measurement_time
+* load_value
 * unit
 * source
 * quality_status
@@ -96,23 +96,23 @@ Possible fields:
 
 Example:
 
-| id | station_id | timestamp | load_kw | unit |
+| measurement_id | station_id | measurement_time | load_value | unit |
 |---:|---:|---|---:|---|
-| 1 | 1 | 2026-06-22 08:00 | 80 | kW |
-| 2 | 1 | 2026-06-22 08:15 | 95 | kW |
-| 3 | 1 | 2026-06-22 08:30 | 120 | kW |
+| 1 | 1 | 2026-06-22 08:00 | 80.50 | kW |
+| 2 | 1 | 2026-06-22 08:15 | 95.25 | kW |
+| 3 | 1 | 2026-06-22 08:30 | 120.75 | kW |
 
 ## Primary Key and Foreign Key
 
-Each station has a unique `id`.
+Each station has a unique `station_id`.
 
-Each measurement also has a unique `id`.
+Each measurement also has a unique `measurement_id`.
 
-The field `station_id` in the `measurements` table refers to the `id` of the related station.
+The field `station_id` in the `measurements` table refers to the `station_id` of the related station.
 
 This creates a relationship:
 
-* stations.id → measurements.station_id
+* stations.station_id → measurements.station_id
 
 This makes it possible to store many measurements for one station.
 
@@ -141,7 +141,7 @@ Each measurement belongs to exactly one station.
 
 This is modeled as a one-to-many relationship:
 
-stations.id → measurements.station_id
+stations.station_id → measurements.station_id
 
 ## Why This Relationship Is Useful
 
@@ -178,15 +178,37 @@ Tested concepts:
 - Tested the first schema successfully in PostgreSQL.
 - Inserted example station and measurement data.
 - Verified the relationship between `stations` and `measurements` using a `JOIN`.
+- Renamed station columns from generic names to clearer names:
+  - `name` → `station_name`
+  - `location` → `station_location`
+- Added additional example stations and measurement values.
+- Added SQL aggregation examples using `COUNT`, `AVG`, `MIN`, `MAX`, `GROUP BY` and `HAVING`.
+- Set up the first Python database connection preparation:
+  - created `.venv`
+  - installed `psycopg`
+  - installed `python-dotenv`
+  - created `requirements.txt`
+  - created `.env` and `.env.example` for local database configuration.
+- Created a local `.venv` for project-specific Python dependencies.
+- Installed `psycopg` for PostgreSQL access from Python.
+- Installed `python-dotenv` for loading local environment variables from `.env`.
+- Created a `.env` file for local database connection settings.
+- Created a `.env.example` file as a safe template without real secrets.
+- Added Python dependencies to `requirements.txt`.
+- Successfully connected to the local PostgreSQL database from Python.
+- Executed a first `SELECT` query from Python.
+- Printed station records from PostgreSQL in the terminal.
 
 ### Current Focus
 
-- Separate the SQL work into clean project files:
+- Keep the SQL work separated into clean project files:
   - `schema.sql` for table definitions
   - `seed_data.sql` for example data
   - `example_queries.sql` for test queries
-- Test the foreign key constraint with an invalid `station_id`.
-- Keep the database model small and understandable before connecting it to Python.
+- Read database configuration from `.env` instead of hardcoding credentials in Python.
+- Test the PostgreSQL connection from Python using `psycopg`.
+- Execute the first read-only `SELECT` query from Python.
+- Keep the database model small and understandable before adding more Python business logic.
 
 ## Foreign Key Test
 
@@ -226,11 +248,67 @@ These queries make it possible to calculate basic energy KPIs directly in the da
 
 `HAVING` is used to filter grouped results after aggregation.
 
+## Python Database Connection
+
+The next step is to connect the Python project to the local PostgreSQL database.
+
+The application should not store database credentials directly in the Python code. Instead, local connection data is stored in a `.env` file.
+
+Example `.env` structure:
+
+```env
+DB_NAME=energy_operations
+DB_USER=postgres
+DB_PASSWORD=your_local_password
+DB_HOST=localhost
+DB_PORT=5432
+```
+
+The real `.env` file must not be committed to GitHub.
+
+A public `.env.example` file can be committed to document which environment variables are required.
+
+Required Python packages:
+
+```txt
+psycopg[binary]
+python-dotenv
+```
+
+`psycopg` is used to connect Python with PostgreSQL.
+
+`python-dotenv` is used to load the local `.env` file into Python.
+
+The first Python test should only read data from the database.
+
+The first query should be simple:
+
+```sql
+SELECT station_id, station_name, station_type, station_location
+FROM stations
+ORDER BY station_id;
+```
+
+The result returned by PostgreSQL is not one large string. Python receives structured rows, usually as tuples. This means the data does not need to be split manually like CSV or TXT data.
+
+Example result structure:
+
+```python
+[
+    (1, "Station A", "solar_park", "Stuttgart"),
+    (2, "Station B", "wind_park", "Ulm")
+]
+```
+
+Later, these rows can be converted into Python objects or returned as JSON through FastAPI.
+
 ### Next Steps
 
-- Finalize the first PostgreSQL schema.
-- Keep schema, seed data and example queries in separate SQL files.
-- Extend example queries for common energy KPIs.
-- Test and document the foreign key constraint.
-- Prepare the Python database connection.
-- Later connect the existing Python project to PostgreSQL.
+- Refactor `database_test.py` so that the database connection is separated into a small helper function.
+- Replace raw tuple output with clearer formatted terminal output.
+- Add a first query for measurements joined with station data.
+- Keep the first Python database access read-only for now (`SELECT` only).
+- Do not insert, update or delete data from Python yet.
+- Document that Python receives structured database rows, not raw strings that need manual splitting.
+- Later move database access logic into a dedicated module, e.g. `database.py`.
+- Later connect the PostgreSQL access layer to FastAPI endpoints.
