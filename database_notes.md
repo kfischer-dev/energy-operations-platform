@@ -196,10 +196,41 @@ PostgreSQL rejected the insert because no station with this ID exists.
 
 This confirms that the relationship between `stations` and `measurements` is enforced by the database.
 
+## SQL Queries and Aggregations
+
+The project now includes example SQL queries for filtering, joining and aggregating station measurement data.
+
+Covered query concepts:
+
+- `SELECT`
+- `WHERE`
+- `JOIN`
+- `ORDER BY`
+- `COUNT`
+- `AVG`
+- `MIN`
+- `MAX`
+- `GROUP BY`
+- `HAVING`
+
+These queries make it possible to calculate basic energy KPIs directly in the database, such as:
+
+- number of measurements per station
+- average load per station
+- minimum and maximum load per station
+- average load per station type
+- filtering high load values
+- filtering grouped results with `HAVING`
+
+`WHERE` is used to filter individual rows before grouping.
+
+`HAVING` is used to filter grouped results after aggregation.
+
 ### Next Steps
 
-- Clean up and finalize the first `schema.sql` file.
-- Add example data in a separate SQL file if needed.
-- Document the PostgreSQL test result.
-- Prepare the future Python database connection.
-- Later connect the Python project to PostgreSQL.
+- Finalize the first PostgreSQL schema.
+- Keep schema, seed data and example queries in separate SQL files.
+- Extend example queries for common energy KPIs.
+- Test and document the foreign key constraint.
+- Prepare the Python database connection.
+- Later connect the existing Python project to PostgreSQL.
