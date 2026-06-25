@@ -3,6 +3,10 @@ from dotenv import load_dotenv
 import psycopg
 import logging
 
+# ============================================================
+# PostgreSQL Connection Management
+# ============================================================
+
 def get_connection():
 
     load_dotenv() # loads the values from the local .env file into the environment of the running Python program. This makes variables like DB_NAME, DB_USER and DB_PASSWORD available.
@@ -23,46 +27,58 @@ def get_connection():
 
     return conn
 
+# ============================================================
+# PostgreSQL Read Queries
+# ============================================================
+
 def fetch_joined_measurements(conn):
-    cursor = conn.cursor() # conn.cursor() creates a cursor object. The cursor is used to execute SQL commands through the database connection.
 
-    # cursor.execute() sends an SQL command to PostgreSQL. For example, it can execute a SELECT query.
-    cursor.execute("""
-        SELECT
-            stations.station_name,
-            measurements.measurement_time,
-            measurements.load_value,
-            measurements.unit
-        FROM measurements
-        JOIN stations
-            ON measurements.station_id = stations.station_id
-        ORDER BY stations.station_name, measurements.measurement_time;
-    """)
-
-    # fetchall() retrieves all result rows from the last executed SELECT query.
-    rows = cursor.fetchall()
-
-    cursor.close()
+    with conn.cursor() as cursor: # cursor to execute SQL commands through the database connection
+        cursor.execute("""
+            SELECT
+                stations.station_name,
+                measurements.measurement_time,
+                measurements.load_value,
+                measurements.unit
+            FROM measurements
+            JOIN stations
+                ON measurements.station_id = stations.station_id
+            ORDER BY stations.station_name, measurements.measurement_time;
+        """)
+        rows = cursor.fetchall()
 
     return rows
 
 def fetch_stations(conn):
 
-    cursor = conn.cursor() # cursor to execute SQL commands through the database connection
-
-    cursor.execute("""
-        SELECT
-            station_id,
-            station_name,
-            station_type,
-            station_location
-        FROM stations
-        ORDER BY station_id;
-    """)
-
-    rows = cursor.fetchall()
+    with conn.cursor() as cursor: # cursor to execute SQL commands through the database connection
+        cursor.execute("""
+            SELECT
+                station_id,
+                station_name,
+                station_type,
+                station_location
+            FROM stations
+            ORDER BY station_id;
+        """)
+        rows = cursor.fetchall()
     
-    cursor.close()
-
     return rows
+
+# ============================================================
+# Database Report Data Loader
+# ============================================================
+
+def fetch_database_report_data():
+    conn = get_connection() # Object for active database connection
+
+    try:
+        station_rows = fetch_stations(conn) # Values of database
+        measurement_rows = fetch_joined_measurements(conn) # Values of database
+
+    finally:
+        conn.close() # Close Database connection
+        logging.info("Database connection closed")
+
+    return station_rows, measurement_rows
 

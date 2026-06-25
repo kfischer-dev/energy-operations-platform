@@ -20,3 +20,8 @@ def print_stations(rows):
 
     print()
     print(f"Total stations: {len(rows)}")
+
+def print_database_report(station_rows, measurement_rows):
+
+        print_stations(station_rows) # Print station data
+        print_measurements(measurement_rows) # Print joined measurement data
