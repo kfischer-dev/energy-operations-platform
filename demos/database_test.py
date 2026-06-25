@@ -39,7 +39,7 @@ cursor.execute("""
 # fetchall() retrieves all result rows from the last executed SELECT query.
 rows = cursor.fetchall()
 
-print("\nMesurements by station:")
+print("\nMeasurements by station:")
 print("-" * 70)
 
 for row in rows:

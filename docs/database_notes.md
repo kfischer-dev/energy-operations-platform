@@ -2,213 +2,128 @@
 
 ## Purpose
 
-This document describes the first database design ideas for the Energy Operations Platform.
+This document describes the database design and PostgreSQL integration of the Energy Operations Platform.
 
-The goal is to move from a CSV-based data structure toward a relational database model that can later support PostgreSQL, REST APIs and backend services.
-
----
-
-## Current Data Structure
-
-The current project reads station data from a CSV file.
-
-Each row contains:
-
-- a station name
-- multiple load values
-
-During import, each CSV row is converted into a `Station` object. Valid load values are stored and processed. Invalid or missing values are handled through logging.
+The goal is to move from a CSV-based data structure toward a relational database model that can later support backend services, REST APIs, cloud deployment and energy-related data analysis.
 
 ---
 
-## Why CSV Is Not Enough Long-Term
+## Why Move from CSV to a Database?
 
-The current CSV structure is useful for learning and early prototyping, but it is limited for a real backend system.
+The earlier project versions used a CSV file as the main data source.
 
-Current structure:
+Example:
 
 ```csv
 Station,Load1,Load2,Load3
 Station A,80,95,120
 ```
 
-This structure has several limitations:
+This was useful for learning Python basics, file handling, error handling and object-oriented programming.
 
-* the number of load values is fixed by the number of columns
-* measurement values do not have timestamps
-* measurements cannot easily store additional metadata
-* different measurement types are difficult to represent
-* querying historical data is inefficient
-* relationships between technical assets and measurements are not explicit
+However, a CSV-based structure has important limitations:
+
+* the number of load values is fixed by columns,
+* measurement values do not have proper timestamps,
+* metadata such as source or quality status is difficult to store,
+* historical queries are inefficient,
+* relationships between technical assets and measurements are not explicit,
+* and the structure does not scale well toward APIs or backend services.
 
 For a backend-oriented energy data platform, stations and measurements should be modeled separately.
+
+---
 
 ## Relational Data Model
 
 The first relational model separates technical assets from measurement values.
 
-This leads to two main tables:
+The two main tables are:
 
-* stations
-* measurements
+* `stations`
+* `measurements`
 
-# Station Data
+This reflects a typical real-world structure:
 
-A station represents a technical asset. It changes rarely compared to measurement values. Examples could be a transformer station, wind park, solar park or industrial energy asset.
+```text
+One station can have many measurements.
+Each measurement belongs to exactly one station.
+```
 
-# Measurement Data
+---
 
-A measurement represents a changing value recorded for a station. In the current version, measurements are load values. Later versions may also include voltage, temperature, power output, status values or other technical measurements.
+## Table: `stations`
 
-## Table: stations
-
-The stations table stores relatively stable asset information.
+The `stations` table stores relatively stable asset information.
 
 Current fields:
 
-* station_id
-* station_name
-* station_type
-* station_location
-* created_at
+* `station_id`
+* `station_name`
+* `station_type`
+* `station_location`
+* `created_at`
 
 Example:
 
 | station_id | station_name | station_type | station_location |
-|---:|---|---|---|
-| 1 | Station A | solar_park | Stuttgart |
-| 2 | Station B | wind_park | Ulm |
+| ---------: | ------------ | ------------ | ---------------- |
+|          1 | Station A    | solar_park   | Stuttgart        |
+|          2 | Station B    | wind_park    | Ulm              |
+|          3 | Station C    | hydro_power  | Heidelberg       |
 
-## Table: measurements
+---
 
-The measurements table stores changing measurement values.
+## Table: `measurements`
+
+The `measurements` table stores changing measurement values.
 
 Current fields:
 
-* measurement_id
-* station_id
-* measurement_time
-* load_value
-* unit
-* source
-* quality_status
-* created_at
+* `measurement_id`
+* `station_id`
+* `measurement_time`
+* `load_value`
+* `unit`
+* `source`
+* `quality_status`
+* `created_at`
 
 Example:
 
 | measurement_id | station_id | measurement_time | load_value | unit |
-|---:|---:|---|---:|---|
-| 1 | 1 | 2026-06-22 08:00 | 80.50 | kW |
-| 2 | 1 | 2026-06-22 08:15 | 95.25 | kW |
-| 3 | 1 | 2026-06-22 08:30 | 120.75 | kW |
+| -------------: | ---------: | ---------------- | ---------: | ---- |
+|              1 |          1 | 2026-06-22 08:15 |      80.50 | kW   |
+|              2 |          1 | 2026-06-22 08:30 |      95.25 | kW   |
+|              3 |          2 | 2026-06-22 08:15 |     120.75 | kW   |
+
+---
 
 ## Primary Key and Foreign Key
 
-Each station has a unique `station_id`.
+Each station has a unique primary key:
 
-Each measurement also has a unique `measurement_id`.
+```text
+stations.station_id
+```
 
-The field `station_id` in the `measurements` table refers to the `station_id` of the related station.
+Each measurement has its own unique primary key:
 
-This creates a relationship:
+```text
+measurements.measurement_id
+```
 
-* stations.station_id → measurements.station_id
+The field `measurements.station_id` is a foreign key that refers to `stations.station_id`.
 
-This makes it possible to store many measurements for one station.
+Relationship:
 
-## Design Decisions
-
-The first database model separates stations and measurements because they represent different concepts.
-
-A station is a technical asset and changes rarely.
-
-A measurement is a recorded value and changes frequently.
-
-This separation makes the system more flexible and prepares the project for future extensions such as:
-
-* alerts
-* asset types
-* measurement history
-* different measurement types
-* REST API endpoints
-* PostgreSQL integration
-
-## Relationship Between Stations and Measurements
-
-A station can have many measurements.
-
-Each measurement belongs to exactly one station.
-
-This is modeled as a one-to-many relationship:
-
+```text
 stations.station_id → measurements.station_id
+```
 
-## Why This Relationship Is Useful
+This enforces that each measurement belongs to an existing station.
 
-This structure allows the system to store a flexible number of measurements for each station. It also makes it possible to query all measurements for one station, calculate historical values and later add alerts or different measurement types.
-
-## PostgreSQL Test
-
-The initial schema was tested successfully in a local PostgreSQL database named `energy_operations`.
-
-Tested concepts:
-
-- table creation
-- primary keys
-- foreign key relationship
-- insert statements
-- select queries
-- filtering with `WHERE`
-- joining `stations` and `measurements`
-
-## Progress and Next Steps
-
-### Completed
-
-- Defined the first relational table structure.
-- Created an initial `schema.sql` draft.
-- Practiced basic SQL commands:
-  - `CREATE TABLE`
-  - `INSERT INTO`
-  - `SELECT`
-  - `WHERE`
-  - `JOIN`
-- Installed PostgreSQL locally.
-- Created a local PostgreSQL database named `energy_operations`.
-- Tested the first schema successfully in PostgreSQL.
-- Inserted example station and measurement data.
-- Verified the relationship between `stations` and `measurements` using a `JOIN`.
-- Renamed station columns from generic names to clearer names:
-  - `name` → `station_name`
-  - `location` → `station_location`
-- Added additional example stations and measurement values.
-- Added SQL aggregation examples using `COUNT`, `AVG`, `MIN`, `MAX`, `GROUP BY` and `HAVING`.
-- Set up the first Python database connection preparation:
-  - created `.venv`
-  - installed `psycopg`
-  - installed `python-dotenv`
-  - created `requirements.txt`
-  - created `.env` and `.env.example` for local database configuration.
-- Created a local `.venv` for project-specific Python dependencies.
-- Installed `psycopg` for PostgreSQL access from Python.
-- Installed `python-dotenv` for loading local environment variables from `.env`.
-- Created a `.env` file for local database connection settings.
-- Created a `.env.example` file as a safe template without real secrets.
-- Added Python dependencies to `requirements.txt`.
-- Successfully connected to the local PostgreSQL database from Python.
-- Executed a first `SELECT` query from Python.
-- Printed station records from PostgreSQL in the terminal.
-
-### Current Focus
-
-- Keep the SQL work separated into clean project files:
-  - `schema.sql` for table definitions
-  - `seed_data.sql` for example data
-  - `example_queries.sql` for test queries
-- Read database configuration from `.env` instead of hardcoding credentials in Python.
-- Test the PostgreSQL connection from Python using `psycopg`.
-- Execute the first read-only `SELECT` query from Python.
-- Keep the database model small and understandable before adding more Python business logic.
+---
 
 ## Foreign Key Test
 
@@ -218,41 +133,65 @@ PostgreSQL rejected the insert because no station with this ID exists.
 
 This confirms that the relationship between `stations` and `measurements` is enforced by the database.
 
-## SQL Queries and Aggregations
+---
 
-The project now includes example SQL queries for filtering, joining and aggregating station measurement data.
+## SQL Files
 
-Covered query concepts:
+The SQL files are stored in the `sql/` directory.
 
-- `SELECT`
-- `WHERE`
-- `JOIN`
-- `ORDER BY`
-- `COUNT`
-- `AVG`
-- `MIN`
-- `MAX`
-- `GROUP BY`
-- `HAVING`
+| File                      | Purpose                                                               |
+| ------------------------- | --------------------------------------------------------------------- |
+| `sql/schema.sql`          | Defines the database tables.                                          |
+| `sql/seed_data.sql`       | Inserts example station and measurement data.                         |
+| `sql/example_queries.sql` | Contains example queries for filtering, joining and aggregating data. |
 
-These queries make it possible to calculate basic energy KPIs directly in the database, such as:
+---
 
-- number of measurements per station
-- average load per station
-- minimum and maximum load per station
-- average load per station type
-- filtering high load values
-- filtering grouped results with `HAVING`
+## SQL Concepts Practiced
 
-`WHERE` is used to filter individual rows before grouping.
+The project currently includes example queries for:
 
-`HAVING` is used to filter grouped results after aggregation.
+* `SELECT`
+* `WHERE`
+* `JOIN`
+* `ORDER BY`
+* `COUNT`
+* `AVG`
+* `MIN`
+* `MAX`
+* `GROUP BY`
+* `HAVING`
 
-## Python Database Connection
+These queries make it possible to calculate basic energy KPIs directly in the database.
 
-The next step is to connect the Python project to the local PostgreSQL database.
+Examples:
 
-The application should not store database credentials directly in the Python code. Instead, local connection data is stored in a `.env` file.
+* number of measurements per station,
+* average load per station,
+* minimum and maximum load per station,
+* average load per station type,
+* high-load filtering,
+* grouped filtering with `HAVING`.
+
+Important distinction:
+
+```text
+WHERE  = filters individual rows before grouping
+HAVING = filters grouped results after aggregation
+```
+
+---
+
+## Python Database Integration
+
+The Python project connects to PostgreSQL using:
+
+* `psycopg`
+* `python-dotenv`
+
+Database credentials are not stored directly in the Python code.
+
+Instead, local connection data is read from a `.env` file.
 
 Example `.env` structure:
 
@@ -266,49 +205,196 @@ DB_PORT=5432
 
 The real `.env` file must not be committed to GitHub.
 
-A public `.env.example` file can be committed to document which environment variables are required.
+A safe `.env.example` file should be committed to document the required variables.
 
-Required Python packages:
+---
 
-```txt
-psycopg[binary]
-python-dotenv
+## Current Python Database Flow
+
+The current PostgreSQL-based application flow is started with:
+
+```bash
+python -m src.main
 ```
 
-`psycopg` is used to connect Python with PostgreSQL.
+Current flow:
 
-`python-dotenv` is used to load the local `.env` file into Python.
+1. `src/main.py` starts the application.
+2. `src/database.py` loads database credentials from environment variables.
+3. `src/database.py` opens a PostgreSQL connection.
+4. `fetch_stations()` reads station records from PostgreSQL.
+5. `fetch_joined_measurements()` reads joined station and measurement records.
+6. `fetch_database_report_data()` returns both result sets.
+7. `src/output.py` prints the database report to the terminal.
+8. The database connection is closed safely.
 
-The first Python test should only read data from the database.
+---
 
-The first query should be simple:
+## Current Database Functions
 
-```sql
-SELECT station_id, station_name, station_type, station_location
-FROM stations
-ORDER BY station_id;
+### `get_connection()`
+
+Opens a PostgreSQL connection using environment variables.
+
+### `fetch_stations(conn)`
+
+Reads station data from the `stations` table.
+
+Query result:
+
+```text
+station_id, station_name, station_type, station_location
 ```
 
-The result returned by PostgreSQL is not one large string. Python receives structured rows, usually as tuples. This means the data does not need to be split manually like CSV or TXT data.
+### `fetch_joined_measurements(conn)`
 
-Example result structure:
+Reads measurement data joined with station names.
 
-```python
-[
-    (1, "Station A", "solar_park", "Stuttgart"),
-    (2, "Station B", "wind_park", "Ulm")
-]
+Query result:
+
+```text
+station_name, measurement_time, load_value, unit
 ```
 
-Later, these rows can be converted into Python objects or returned as JSON through FastAPI.
+### `fetch_database_report_data()`
 
-### Next Steps
+Coordinates the database report loading process:
 
-- Refactor `database_test.py` so that the database connection is separated into a small helper function.
-- Replace raw tuple output with clearer formatted terminal output.
-- Add a first query for measurements joined with station data.
-- Keep the first Python database access read-only for now (`SELECT` only).
-- Do not insert, update or delete data from Python yet.
-- Document that Python receives structured database rows, not raw strings that need manual splitting.
-- Later move database access logic into a dedicated module, e.g. `database.py`.
-- Later connect the PostgreSQL access layer to FastAPI endpoints.
+* opens a connection,
+* loads station rows,
+* loads joined measurement rows,
+* closes the connection,
+* returns both result sets.
+
+---
+
+## Output Separation
+
+Database access and output formatting are separated.
+
+Current structure:
+
+```text
+src/database.py → database connection and queries
+src/output.py   → terminal output formatting
+src/main.py     → application flow
+```
+
+This separation is important because later versions may return the same data through FastAPI instead of printing it to the terminal.
+
+---
+
+## Legacy CSV/OOP Workflow
+
+The earlier CSV/OOP workflow is preserved in:
+
+```text
+demos/legacy_csv_demo.py
+```
+
+It uses:
+
+* `data/stations.csv`
+* `src/read_documents.py`
+* `src/station.py`
+* `src/server.py`
+
+This workflow demonstrates the earlier project stage:
+
+```text
+CSV data → Station objects → Python report
+```
+
+The current v0.4 focus is:
+
+```text
+PostgreSQL data → SQL queries → database report
+```
+
+---
+
+## Project Structure After Reorganization
+
+```text
+energy-operations-platform/
+│
+├── data/
+│   └── stations.csv
+│
+├── demos/
+│   ├── database_test.py
+│   └── legacy_csv_demo.py
+│
+├── docs/
+│   └── database_notes.md
+│
+├── sql/
+│   ├── schema.sql
+│   ├── seed_data.sql
+│   └── example_queries.sql
+│
+├── src/
+│   ├── database.py
+│   ├── main.py
+│   ├── output.py
+│   ├── read_documents.py
+│   ├── server.py
+│   └── station.py
+│
+├── README.md
+├── requirements.txt
+├── .env.example
+└── .gitignore
+```
+
+---
+
+## Completed in v0.4
+
+* Created first relational PostgreSQL schema.
+* Created `stations` and `measurements` tables.
+* Added primary keys and foreign key relationship.
+* Inserted example station and measurement data.
+* Added SQL example queries.
+* Practiced filtering, joining and aggregating data.
+* Connected Python to PostgreSQL using `psycopg`.
+* Loaded database configuration from environment variables.
+* Read station data from PostgreSQL.
+* Read joined station and measurement data from PostgreSQL.
+* Separated database access from terminal output formatting.
+* Preserved the old CSV/OOP workflow as a legacy demo.
+* Reorganized project files into `src/`, `sql/`, `docs/`, `data/` and `demos/`.
+
+---
+
+## Current Limitations
+
+The current implementation is intentionally simple.
+
+Current limitations:
+
+* Python only reads from PostgreSQL.
+* No insert/update/delete operations from Python yet.
+* Database rows are still returned as tuples.
+* No FastAPI endpoints yet.
+* No automated tests yet.
+* No Docker setup yet.
+* No cloud deployment yet.
+
+These limitations are intentional for the current learning stage.
+
+---
+
+## Next Steps
+
+Recommended next steps:
+
+1. Keep the v0.4 PostgreSQL integration stable.
+2. Add clearer data conversion from database rows to dictionaries or data objects.
+3. Add basic error handling around database connection failures.
+4. Add a first FastAPI endpoint for station data.
+5. Add a first FastAPI endpoint for measurement data.
+6. Return database data as JSON.
+7. Add basic tests for database-related functions.
+8. Add Docker setup for the application and PostgreSQL.
+9. Prepare a simple cloud deployment scenario.

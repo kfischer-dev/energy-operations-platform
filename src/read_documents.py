@@ -1,5 +1,5 @@
 import csv, logging
-from station import Station
+from src.station import Station
 
 def read_stations_file(filename):
 

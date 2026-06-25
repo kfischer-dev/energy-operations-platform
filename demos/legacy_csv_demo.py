@@ -2,15 +2,15 @@ import logging
 logging.basicConfig(filename="app.log", level=logging.DEBUG,
                     format="%(asctime)s - %(levelname)s - %(module)s.%(funcName)s - %(message)s")
 
-from read_documents import read_stations_file
-from server import new_stations
-from station import Station
+from src.read_documents import read_stations_file
+from src.server import new_stations
+from src.station import Station
 
 # =============================================================
 # Import Station Data from CSV
 # =============================================================
 
-doc_name = "stations.csv" # csv document with stations
+doc_name = "data/stations.csv" # csv document with stations
 logging.info(f'Station import from csv file "{doc_name}" started.')
 
 stations = read_stations_file(doc_name) # Read csv file with stations

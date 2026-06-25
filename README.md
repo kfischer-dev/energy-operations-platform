@@ -2,9 +2,9 @@
 
 ## Overview
 
-The **Energy Operations Platform** is a growing Python-based backend and data project for processing, validating and analyzing technical energy and station data.
+The **Energy Operations Platform** is a Python-based backend and data project for processing, validating and analyzing technical energy and station data.
 
-The current version focuses on a small but clean data-processing core: station data is imported from CSV, transformed into Python objects, validated, analyzed and reported. Invalid or missing values are handled robustly and documented through logging.
+The project started with CSV-based station data and object-oriented Python logic. The current development focus is the transition toward a PostgreSQL-backed data backend with relational station and measurement data.
 
 This project is part of a structured learning path toward backend, data and cloud development with a focus on industrial and energy-related software systems.
 
@@ -18,10 +18,9 @@ The long-term vision is a system that can:
 
 * process technical asset and measurement data,
 * validate incoming data,
-* calculate key figures,
+* calculate technical key figures,
 * classify operating states,
-* create alerts,
-* store data in a database,
+* store data in a relational database,
 * expose data through REST APIs,
 * and later be containerized and deployed.
 
@@ -31,170 +30,284 @@ The project is intentionally not a generic tutorial app. It is designed around t
 
 ## Current Version
 
-**Current version:** `v0.32`
+**Current development focus:** `v0.4`
 
 The current version focuses on:
 
-* object-oriented station modeling,
-* CSV-based data import,
-* robust handling of invalid and missing values,
-* report generation,
-* basic logging,
-* and a clean separation of responsibilities between modules.
+* PostgreSQL integration,
+* a relational data model with `stations` and `measurements`,
+* SQL queries with `JOIN`, `WHERE`, `GROUP BY` and `HAVING`,
+* Python database access using `psycopg`,
+* environment-based database configuration with `.env`,
+* separation of database access, output formatting and application flow,
+* and a reorganized project structure.
+
+The earlier CSV/OOP workflow from v0.3 is still preserved as a separate legacy demo.
 
 ---
 
 ## Current Features
 
-The project currently supports the following functionality:
+The project currently supports two workflows:
 
-* CSV file with station and load data is read.
+### Current PostgreSQL workflow
+
+* Station data is stored in a PostgreSQL `stations` table.
+* Measurement data is stored in a PostgreSQL `measurements` table.
+* Measurements are linked to stations through a foreign key.
+* Python connects to PostgreSQL using `psycopg`.
+* Database credentials are loaded from environment variables.
+* Python reads station data from PostgreSQL.
+* Python reads joined station and measurement data from PostgreSQL.
+* The terminal output shows a basic database report.
+
+### Legacy CSV/OOP workflow
+
+* Station data is read from a CSV file.
 * Each CSV row is converted into a `Station` object.
-* Valid load values are stored and processed.
-* Invalid load values, such as text instead of numbers, do not stop the program.
-* Invalid values are detected as data-quality problems and logged.
-* Missing values are detected, skipped and logged.
-* Stations without enough valid load values are handled safely in the report.
-* Additional station data is imported from `server.py`.
-* `server.py` currently acts as a placeholder for a future external data source or server interface.
-* Reports are generated for valid stations.
-* The report includes average load, minimum load, maximum load and classification.
-* Program execution and data-quality problems are written to `app.log`.
+* Valid load values are processed.
+* Invalid or missing load values are handled through logging.
+* Additional station data is imported from a simulated server source.
+* Station reports are generated using object-oriented Python logic.
 
 ---
 
 ## Project Structure
 
-| File                | Responsibility                                                                                                        |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `main.py`           | Entry point of the program. Controls the overall workflow and configures logging.                                     |
-| `station.py`        | Contains the `Station` class, station-related calculations, classification, report generation and CSV-row conversion. |
-| `read_documents.py` | Reads station data from a CSV file.                                                                                   |
-| `server.py`         | Simulates additional external station data. Placeholder for future server/API-based data sources.                     |
-| `stations.csv`      | Example input data for stations and load values.                                                                      |
-| `app.log`           | Log file containing program flow and data-quality warnings.                                                           |
+```text
+energy-operations-platform/
+│
+├── data/
+│   └── stations.csv
+│
+├── demos/
+│   ├── __init__.py
+│   ├── database_test.py
+│   └── legacy_csv_demo.py
+│
+├── docs/
+│   └── database_notes.md
+│
+├── sql/
+│   ├── schema.sql
+│   ├── seed_data.sql
+│   └── example_queries.sql
+│
+├── src/
+│   ├── __init__.py
+│   ├── database.py
+│   ├── main.py
+│   ├── output.py
+│   ├── read_documents.py
+│   ├── server.py
+│   └── station.py
+│
+├── README.md
+├── requirements.txt
+├── .env.example
+└── .gitignore
+```
+
+---
+
+## Module Responsibilities
+
+| Path                       | Responsibility                                                           |
+| -------------------------- | ------------------------------------------------------------------------ |
+| `src/main.py`              | Current application entry point for the PostgreSQL-based v0.4 workflow.  |
+| `src/database.py`          | PostgreSQL connection management and read queries.                       |
+| `src/output.py`            | Terminal output formatting for database report results.                  |
+| `src/station.py`           | `Station` class and object-oriented station logic from earlier versions. |
+| `src/read_documents.py`    | CSV reading logic for the legacy CSV/OOP workflow.                       |
+| `src/server.py`            | Simulated additional station data from a server source.                  |
+| `demos/legacy_csv_demo.py` | Preserved v0.3 CSV/OOP workflow.                                         |
+| `demos/database_test.py`   | Legacy direct PostgreSQL test script for learning/reference purposes.    |
+| `sql/schema.sql`           | PostgreSQL table definitions.                                            |
+| `sql/seed_data.sql`        | Example station and measurement data.                                    |
+| `sql/example_queries.sql`  | Example SQL queries for filtering, joining and aggregating data.         |
+| `data/stations.csv`        | Example CSV input data for the legacy workflow.                          |
+| `docs/database_notes.md`   | Notes about the database model, SQL queries and Python integration.      |
 
 ---
 
 ## Technologies Used
 
-### Currently used
-
 * Python
 * Object-oriented programming
-* CSV file processing
+* CSV processing
 * Error handling
 * Logging
-* Modular project structure
-
-### Planned for later versions
-
-* Git and GitHub
-* SQL
 * PostgreSQL
-* FastAPI
-* REST APIs
-* Docker
-* Azure basics
-* Testing
-* Monitoring
-* Security basics
+* SQL
+* Relational data modeling
+* Primary keys and foreign keys
+* SQL joins and aggregations
+* `psycopg`
+* `python-dotenv`
+* Git/GitHub project structure
+
+---
+
+## Database Model
+
+The current PostgreSQL model contains two main tables:
+
+### `stations`
+
+Stores technical asset information.
+
+Example fields:
+
+* `station_id`
+* `station_name`
+* `station_type`
+* `station_location`
+* `created_at`
+
+### `measurements`
+
+Stores measurement values that belong to a station.
+
+Example fields:
+
+* `measurement_id`
+* `station_id`
+* `measurement_time`
+* `load_value`
+* `unit`
+* `source`
+* `quality_status`
+* `created_at`
+
+The relationship is:
+
+```text
+stations.station_id → measurements.station_id
+```
+
+One station can have many measurements.
+
+---
+
+## Environment Configuration
+
+The real `.env` file is used locally and must not be committed.
+
+Required environment variables:
+
+```env
+DB_NAME=energy_operations
+DB_USER=postgres
+DB_PASSWORD=your_password_here
+DB_HOST=localhost
+DB_PORT=5432
+```
+
+A safe template is provided in `.env.example`.
 
 ---
 
 ## How to Run
 
-### Requirements
-
-* Python installed
-* Project files available locally
-
-### Run the program
-
-Open a terminal in the project folder and run:
+### Install dependencies
 
 ```bash
-python main.py
+pip install -r requirements.txt
 ```
 
-The program reads station data, creates station objects, processes load values and prints reports for valid stations.
+### Run the current PostgreSQL workflow
 
-A log file named `app.log` is created or updated during execution.
+Run from the project root:
+
+```bash
+python -m src.main
+```
+
+This starts the current v0.4 workflow:
+
+1. Load station and measurement data from PostgreSQL.
+2. Print station data.
+3. Print joined measurement data.
+4. Write technical runtime information to `app.log`.
+
+### Run the legacy CSV/OOP workflow
+
+Run from the project root:
+
+```bash
+python -m demos.legacy_csv_demo
+```
+
+This runs the previous CSV-based workflow:
+
+1. Read station data from `data/stations.csv`.
+2. Convert rows into `Station` objects.
+3. Import additional simulated server data.
+4. Generate station reports.
 
 ---
 
-## Example Input
+## SQL Files
 
-Example structure of `stations.csv`:
+The SQL files are stored in the `sql/` directory.
 
-```csv
-Station,Load1,Load2,Load3
-Station A,80,95,xyz
-Station B,110,130,150
-Station C,200,220,240
-Station D,120,,
-Station E,,,
-```
+| File                      | Purpose                                            |
+| ------------------------- | -------------------------------------------------- |
+| `sql/schema.sql`          | Creates the `stations` and `measurements` tables.  |
+| `sql/seed_data.sql`       | Inserts example stations and measurements.         |
+| `sql/example_queries.sql` | Contains example queries for learning and testing. |
 
-The program processes valid values and logs invalid or missing values.
+Covered SQL concepts include:
 
----
-
-## Example Behavior
-
-If a station contains valid load values, the program generates a report.
-
-Example:
-
-```text
-Station B
-Average Load: 130.0
-Minimum Load: 110
-Maximum Load: 150
-Classification: NORMAL
-```
-
-If a value is invalid, for example `xyz`, the program does not stop. The invalid value is skipped and logged.
-
-If a station has no valid load values, no calculation is performed for that station.
+* `SELECT`
+* `WHERE`
+* `JOIN`
+* `ORDER BY`
+* `COUNT`
+* `AVG`
+* `MIN`
+* `MAX`
+* `GROUP BY`
+* `HAVING`
 
 ---
 
-## Error Handling and Logging
+## Logging
 
 The project uses Python logging to make program behavior and data-quality issues traceable.
 
 Examples of logged events:
 
-| Situation                         | Log Level | Meaning                                        |
-| --------------------------------- | --------- | ---------------------------------------------- |
-| Program started                   | `INFO`    | Normal program flow                            |
-| CSV file is being read            | `INFO`    | Normal program flow                            |
-| Station imported successfully     | `DEBUG`   | Detailed development information               |
-| Missing load value                | `WARNING` | Data-quality issue                             |
-| Invalid load value                | `WARNING` | Data-quality issue                             |
-| Not enough load values for report | `WARNING` | Data-quality issue                             |
-| File not found                    | `ERROR`   | Program cannot process the expected input file |
+| Situation                   | Log Level |
+| --------------------------- | --------- |
+| Program started             | `INFO`    |
+| Database connection started | `INFO`    |
+| Database query executed     | `DEBUG`   |
+| CSV file opened             | `INFO`    |
+| Missing load value          | `WARNING` |
+| Invalid load value          | `WARNING` |
+| File not found              | `ERROR`   |
 
-This distinction is important because not every data problem should stop the program. Invalid or missing measurement values are handled as data-quality warnings, while missing files are treated as actual processing errors.
+The log file `app.log` is generated locally and should not be committed.
 
 ---
 
 ## Version History
 
-| Version | Description                                                                                                           |
-| ------- | --------------------------------------------------------------------------------------------------------------------- |
-| `v0.1`  | First Python script with station data stored directly in code. Basic calculations and classification.                 |
-| `v0.2`  | External data sources introduced. Station data loaded from text/CSV files. Basic error handling added.                |
-| `v0.3`  | First object-oriented structure with a `Station` class. CSV rows are converted into station objects.                  |
-| `v0.31` | Refactoring of CSV conversion into `Station.from_csv_row()`. More robust handling of invalid and missing load values. |
-| `v0.32` | Basic logging introduced. Program flow and data-quality issues are written to `app.log`. Code structure cleaned up.   |
+| Version | Description                                                                                                                 |
+| ------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `v0.1`  | First Python script with station data stored directly in code. Basic calculations and classification.                       |
+| `v0.2`  | External data sources introduced. Station data loaded from text/CSV files. Basic error handling added.                      |
+| `v0.3`  | First object-oriented structure with a `Station` class. CSV rows are converted into station objects.                        |
+| `v0.31` | Refactoring of CSV conversion into `Station.from_csv_row()`. More robust handling of invalid and missing load values.       |
+| `v0.32` | Basic logging introduced. Program flow and data-quality issues are written to `app.log`.                                    |
+| `v0.4`  | PostgreSQL integration added. SQL schema, seed data, example queries, Python database connection and project restructuring. |
 
 ---
 
 ## Learning Goals Covered So Far
 
-The current project version demonstrates practical knowledge in:
+The current project demonstrates practical knowledge in:
 
 * Python basics,
 * functions and return values,
@@ -205,73 +318,26 @@ The current project version demonstrates practical knowledge in:
 * CSV processing,
 * validation of external input data,
 * defensive programming,
-* basic logging,
+* logging,
+* relational database design,
+* SQL queries and aggregations,
+* PostgreSQL setup,
+* Python-to-PostgreSQL access,
+* environment-based configuration,
 * and separation of responsibilities between files.
 
 ---
 
 ## Roadmap
 
-The project will be extended step by step.
+Next planned steps:
 
-### Next steps
-
-* Initialize Git repository.
-* Create first structured Git commits.
-* Improve and maintain `README.md`.
-* Start SQL basics.
-* Design first PostgreSQL data model for:
-
-  * assets,
-  * measurements,
-  * alerts.
-
-### Later planned steps
-
-* Add PostgreSQL persistence.
-* Build REST API with FastAPI.
-* Add API endpoints for assets, measurements and alerts.
+* Improve the PostgreSQL access layer step by step.
+* Add more realistic database queries and KPIs.
+* Convert database rows into cleaner Python data structures.
+* Add first FastAPI endpoints.
+* Return station and measurement data as JSON.
 * Add basic tests.
 * Add Docker setup.
-* Add basic deployment scenario.
+* Add basic cloud deployment preparation.
 * Add monitoring and security basics.
-* Extend the project toward a more complete Energy Operations Platform.
-
----
-
-## Long-Term Vision
-
-The long-term goal is to evolve this project from a local Python data analyzer into a backend-oriented energy and asset data platform.
-
-Possible future extensions include:
-
-* solar park assets,
-* wind park assets,
-* battery storage assets,
-* substations,
-* measurement history,
-* alert generation,
-* KPI dashboards,
-* weather data integration,
-* forecasting,
-* anomaly detection,
-* and optional cloud deployment.
-
-These features are planned as later extensions. The current focus is on building a clean and reliable backend foundation step by step.
-
----
-
-## Learning and Career Context
-
-This project is part of a structured six-month transition from mechanical engineering, technical development and technical project leadership toward backend, data and cloud development.
-
-The focus is on roles where technical domain knowledge and software skills can be combined, especially in:
-
-* industrial software,
-* energy systems,
-* asset monitoring,
-* data platforms,
-* backend services,
-* and technical digitalization.
-
-The project is intended to become a practical GitHub portfolio that demonstrates continuous learning, technical implementation and software architecture thinking.

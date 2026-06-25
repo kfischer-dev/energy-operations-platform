@@ -23,7 +23,6 @@
 # Existing project modules:
 # - station.py contains the Station class and object-oriented station logic.
 # - read_documents.py contains file and CSV reading logic from previous versions.
-# - save_documents.py contains file output logic from previous versions.
 # - server.py contains simulated additional station data from a server source.
 # - legacy_csv_demo.py preserves the previous CSV/OOP workflow from v0.3.
 #
@@ -37,8 +36,8 @@ import logging
 logging.basicConfig(filename="app.log", level=logging.DEBUG,
                     format="%(asctime)s - %(levelname)s - %(module)s.%(funcName)s - %(message)s")
 
-from database import fetch_database_report_data
-from output import print_database_report
+from src.database import fetch_database_report_data
+from src.output import print_database_report
 
 # =============================================================
 # Application Startup
