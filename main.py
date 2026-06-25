@@ -1,25 +1,31 @@
 # =============================================================
-# Energy Monitoring Platform - v0.32
-# -------------------------------------------------------------
+# Energy Operations Platform
 #
-# Changelog
+# Current development focus: v0.4
 #
-# New Features:
-# - Introduced Python logging framework
-# - Centralized logging configuration
-# - Structured application logging
-# - CSV import monitoring
-# - Server import monitoring
-# - Data validation logging
-# - Report generation logging
-# - Replaced custom error reporting with logging
+# This script currently starts the PostgreSQL-based application flow:
+# 1. Open a PostgreSQL database connection.
+# 2. Load joined station and measurement data from the database.
+# 3. Print the retrieved measurement data to the terminal.
+# 4. Close the database connection safely.
 #
-# Architecture:
-# - main.py            -> Application control & logging configuration
-# - read_documents.py  -> CSV data source
-# - server.py          -> Simulated server data source
-# - station.py         -> Domain model, business logic & validation
+# Project status:
+# - v0.1: Basic energy load analysis with hardcoded station data
+# - v0.2: File-based input handling and basic error handling
+# - v0.3: CSV import, object-oriented Station model and logging
+# - v0.4: PostgreSQL integration with relational station and measurement data
 #
+# Existing project modules:
+# - station.py contains the Station class and object-oriented station logic.
+# - read_documents.py contains file and CSV reading logic from previous versions.
+# - save_documents.py contains file output logic from previous versions.
+# - database.py contains PostgreSQL connection and query logic.
+# - output.py contains terminal output formatting for database results.
+# - main.py currently controls the PostgreSQL demo/application flow.
+#
+# Note:
+# The CSV/OOP workflow from earlier versions is still part of the project.
+# The current v0.4 focus is to add PostgreSQL as the next data backend.
 # =============================================================
 
 import logging
@@ -29,6 +35,8 @@ logging.basicConfig(filename="app.log", level=logging.DEBUG,
 from read_documents import read_stations_file
 from server import new_stations
 from station import Station
+from database import get_connection, fetch_joined_measurements 
+from output import print_measurements
 
 # =============================================================
 # Application Startup
@@ -78,6 +86,20 @@ for station in stations: # Create Report for all stations
 
 logging.info(f"Successfully created report for {report} stations.")
 logging.info(f"Report creation for {no_report} stations failed.\n")
+
+# =============================================================
+# Load Measurements from PostgreSQL Database
+# =============================================================
+
+conn = get_connection() # Object for active database connection
+
+try:
+    rows = fetch_joined_measurements(conn) # Values of database
+    print_measurements(rows) # Print database values
+
+finally:
+    conn.close() # Close Database connection
+    logging.info("Database connection closed")
 
 # =============================================================
 # Application Shutdown
