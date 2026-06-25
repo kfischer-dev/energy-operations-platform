@@ -9,3 +9,14 @@ def print_measurements(rows):
 
     print("-" * 70)
     print(f"Total rows: {len(rows)}")
+
+def print_stations(rows):
+
+    print("\nStations:\n")
+
+    for row in rows:
+        station_id, station_name, station_type, station_location = row
+        print(f"{station_id} | {station_name:10} | {station_type:16} | {station_location}")
+
+    print()
+    print(f"Total stations: {len(rows)}")

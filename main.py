@@ -35,8 +35,8 @@ logging.basicConfig(filename="app.log", level=logging.DEBUG,
 from read_documents import read_stations_file
 from server import new_stations
 from station import Station
-from database import get_connection, fetch_joined_measurements 
-from output import print_measurements
+from database import get_connection, fetch_joined_measurements, fetch_stations
+from output import print_measurements, print_stations
 
 # =============================================================
 # Application Startup
@@ -88,14 +88,17 @@ logging.info(f"Successfully created report for {report} stations.")
 logging.info(f"Report creation for {no_report} stations failed.\n")
 
 # =============================================================
-# Load Measurements from PostgreSQL Database
+# Load Stations & Measurements from PostgreSQL Database
 # =============================================================
 
 conn = get_connection() # Object for active database connection
 
 try:
-    rows = fetch_joined_measurements(conn) # Values of database
-    print_measurements(rows) # Print database values
+    station_rows = fetch_stations(conn) # Values of database
+    print_stations(station_rows) # Print station data
+    
+    measurement_rows = fetch_joined_measurements(conn) # Values of database
+    print_measurements(measurement_rows) # Print joined measurement data
 
 finally:
     conn.close() # Close Database connection

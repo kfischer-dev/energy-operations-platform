@@ -46,5 +46,23 @@ def fetch_joined_measurements(conn):
 
     return rows
 
+def fetch_stations(conn):
 
+    cursor = conn.cursor() # cursor to execute SQL commands through the database connection
+
+    cursor.execute("""
+        SELECT
+            station_id,
+            station_name,
+            station_type,
+            station_location
+        FROM stations
+        ORDER BY station_id;
+    """)
+
+    rows = cursor.fetchall()
+    
+    cursor.close()
+
+    return rows
 
