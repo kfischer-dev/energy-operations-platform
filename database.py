@@ -34,6 +34,7 @@ def get_connection():
 def fetch_joined_measurements(conn):
 
     with conn.cursor() as cursor: # cursor to execute SQL commands through the database connection
+        logging.debug("Executing joined measurements query.")
         cursor.execute("""
             SELECT
                 stations.station_name,
@@ -52,6 +53,7 @@ def fetch_joined_measurements(conn):
 def fetch_stations(conn):
 
     with conn.cursor() as cursor: # cursor to execute SQL commands through the database connection
+        logging.debug("Executing station query.")
         cursor.execute("""
             SELECT
                 station_id,
@@ -72,13 +74,17 @@ def fetch_stations(conn):
 def fetch_database_report_data():
     conn = get_connection() # Object for active database connection
 
+    logging.info("Loading database report data started.")
+
     try:
         station_rows = fetch_stations(conn) # Values of database
+        logging.info(f"Loaded {len(station_rows)} stations from database.")
         measurement_rows = fetch_joined_measurements(conn) # Values of database
+        logging.info(f"Loaded {len(measurement_rows)} joined measurements from database.")
 
     finally:
         conn.close() # Close Database connection
-        logging.info("Database connection closed")
+        logging.info("Database connection closed.")
 
     return station_rows, measurement_rows
 

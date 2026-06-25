@@ -90,9 +90,10 @@ logging.info(f"Report creation for {no_report} stations failed.\n")
 # =============================================================
 # Load and print Stations & Measurements from PostgreSQL Database
 # =============================================================
-
+logging.info("Database report started.")
 station_rows, measurement_rows = fetch_database_report_data()
 print_database_report(station_rows, measurement_rows)
+logging.info("Database report finished.\n")
 
 # =============================================================
 # Application Shutdown
