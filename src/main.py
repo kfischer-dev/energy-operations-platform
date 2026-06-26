@@ -50,8 +50,8 @@ logging.info(f"Program started.\n")
 # =============================================================
 
 logging.info("Database report started.")
-station_rows, measurement_rows = fetch_database_report_data()
-print_database_report(station_rows, measurement_rows)
+station_data, measurement_data = fetch_database_report_data()
+print_database_report(station_data, measurement_data)
 logging.info("Database report finished.\n")
 
 # =============================================================

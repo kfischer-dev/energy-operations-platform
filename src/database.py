@@ -48,7 +48,12 @@ def fetch_joined_measurements(conn):
         """)
         rows = cursor.fetchall()
 
-    return rows
+    measurements = []
+    for row in rows:
+        measurement = map_measurement_row(row)
+        measurements.append(measurement)
+
+    return measurements
 
 def fetch_stations(conn):
 
@@ -65,7 +70,34 @@ def fetch_stations(conn):
         """)
         rows = cursor.fetchall()
     
-    return rows
+    stations = []
+    for row in rows:
+        station = map_station_row(row)
+        stations.append(station)
+    
+    return stations
+
+# ============================================================
+# Station Mapping
+# ============================================================
+def map_station_row(row):
+
+    station_id, station_name, station_type, station_location = row
+
+    station = {"station_id": station_id, "station_name": station_name, "station_type": station_type, "station_location": station_location}
+
+    return station
+
+# ============================================================
+# Measurement Mapping
+# ============================================================
+def map_measurement_row(row):
+
+    station_name, measurement_time, load_value, unit = row
+
+    measurement = {"station_name": station_name, "measurement_time": measurement_time, "load_value": load_value, "unit": unit}
+
+    return measurement
 
 # ============================================================
 # Database Report Data Loader
@@ -77,14 +109,13 @@ def fetch_database_report_data():
     logging.info("Loading database report data started.")
 
     try:
-        station_rows = fetch_stations(conn) # Values of database
-        logging.info(f"Loaded {len(station_rows)} stations from database.")
-        measurement_rows = fetch_joined_measurements(conn) # Values of database
-        logging.info(f"Loaded {len(measurement_rows)} joined measurements from database.")
+        station_data = fetch_stations(conn) # Values of database
+        logging.info(f"Loaded {len(station_data)} stations from database.")
+        measurement_data = fetch_joined_measurements(conn) # Values of database
+        logging.info(f"Loaded {len(measurement_data)} joined measurements from database.")
 
     finally:
         conn.close() # Close Database connection
         logging.info("Database connection closed.")
 
-    return station_rows, measurement_rows
-
+    return station_data, measurement_data

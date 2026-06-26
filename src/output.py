@@ -1,27 +1,26 @@
-def print_measurements(rows):
+def print_measurements(measurement_data):
 
     print("\nMeasurements by station:")
     print("-" * 70)
 
-    for row in rows:
-        station_name, time, load_value, unit = row
-        print(f"{station_name:10} | {time:%Y-%m-%d %H:%M} | {load_value:>8} {unit}")
+    for measurement in measurement_data:
+        #station_name, time, load_value, unit = measurement
+        print(f"{measurement['station_name']:10} | {measurement['measurement_time']:%Y-%m-%d %H:%M} | {measurement['load_value']:>8} {measurement['unit']}")
 
     print("-" * 70)
-    print(f"Total rows: {len(rows)}")
+    print(f"Total Measurements: {len(measurement_data)}")
 
-def print_stations(rows):
+def print_stations(station_data):
 
     print("\nStations:\n")
 
-    for row in rows:
-        station_id, station_name, station_type, station_location = row
-        print(f"{station_id} | {station_name:10} | {station_type:16} | {station_location}")
+    for station in station_data:
+        print(f"{station['station_id']} | {station['station_name']:10} | {station['station_type']:16} | {station['station_location']}")
 
     print()
-    print(f"Total stations: {len(rows)}")
+    print(f"Total Stations: {len(station_data)}")
 
-def print_database_report(station_rows, measurement_rows):
+def print_database_report(station_data, measurement_data):
 
-    print_stations(station_rows) # Print station data
-    print_measurements(measurement_rows) # Print joined measurement data
+    print_stations(station_data) # Print station data
+    print_measurements(measurement_data) # Print joined measurement data
