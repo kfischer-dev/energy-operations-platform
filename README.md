@@ -39,6 +39,7 @@ The current version focuses on:
 * SQL queries with `JOIN`, `WHERE`, `GROUP BY` and `HAVING`,
 * Python database access using `psycopg`,
 * environment-based database configuration with `.env`,
+* mapping PostgreSQL result rows into dictionaries with explicit field names,
 * separation of database access, output formatting and application flow,
 * and a reorganized project structure.
 
@@ -59,6 +60,7 @@ The project currently supports two workflows:
 * Database credentials are loaded from environment variables.
 * Python reads station data from PostgreSQL.
 * Python reads joined station and measurement data from PostgreSQL.
+* Raw PostgreSQL result rows are mapped into dictionaries with explicit field names.
 * The terminal output shows a basic database report.
 
 ### Legacy CSV/OOP workflow
@@ -324,6 +326,7 @@ The current project demonstrates practical knowledge in:
 * PostgreSQL setup,
 * Python-to-PostgreSQL access,
 * environment-based configuration,
+* mapping database query results into Python dictionaries,
 * and separation of responsibilities between files.
 
 ---

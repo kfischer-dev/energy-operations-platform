@@ -224,7 +224,7 @@ Current flow:
 3. `src/database.py` opens a PostgreSQL connection.
 4. `fetch_stations()` reads station records from PostgreSQL.
 5. `fetch_joined_measurements()` reads joined station and measurement records.
-6. `fetch_database_report_data()` returns both result sets.
+6. `fetch_database_report_data()` returns mapped station and measurement dictionaries.
 7. `src/output.py` prints the database report to the terminal.
 8. The database connection is closed safely.
 
@@ -240,7 +240,7 @@ Opens a PostgreSQL connection using environment variables.
 
 Reads station data from the `stations` table.
 
-Query result:
+Mapped result fields:
 
 ```text
 station_id, station_name, station_type, station_location
@@ -250,7 +250,7 @@ station_id, station_name, station_type, station_location
 
 Reads measurement data joined with station names.
 
-Query result:
+Mapped result fields:
 
 ```text
 station_name, measurement_time, load_value, unit
@@ -261,10 +261,60 @@ station_name, measurement_time, load_value, unit
 Coordinates the database report loading process:
 
 * opens a connection,
-* loads station rows,
-* loads joined measurement rows,
+* loads station data,
+* loads joined measurement data,
+* maps raw database rows into dictionaries with explicit field names,
 * closes the connection,
-* returns both result sets.
+* returns both mapped result sets.
+
+---
+
+## Database Result Mapping
+
+PostgreSQL query results are returned by `psycopg` as rows that behave like tuples.
+
+Earlier versions passed these raw result rows directly through the application. This worked, but the data was position-based and therefore less readable.
+
+Example of a raw station row:
+
+```text
+(1, "Station A", "solar_park", "Stuttgart")
+```
+
+The project now maps database rows into dictionaries with explicit field names.
+
+Example of a mapped station dictionary:
+
+```python
+{
+    "station_id": 1,
+    "station_name": "Station A",
+    "station_type": "solar_park",
+    "station_location": "Stuttgart"
+}
+```
+
+Example of a mapped measurement dictionary:
+
+```python
+{
+    "station_name": "Station A",
+    "measurement_time": "...",
+    "load_value": 80.50,
+    "unit": "kW"
+}
+```
+
+This improves readability because later code can access values by name instead of by tuple position.
+
+Example:
+
+```python
+station["station_name"]
+measurement["load_value"]
+```
+
+This structure also prepares the project for future FastAPI endpoints, where dictionary-like data can later be returned as JSON responses.
 
 ---
 
@@ -361,6 +411,7 @@ energy-operations-platform/
 * Loaded database configuration from environment variables.
 * Read station data from PostgreSQL.
 * Read joined station and measurement data from PostgreSQL.
+* Mapped PostgreSQL result rows into dictionaries with explicit field names.
 * Separated database access from terminal output formatting.
 * Preserved the old CSV/OOP workflow as a legacy demo.
 * Reorganized project files into `src/`, `sql/`, `docs/`, `data/` and `demos/`.
@@ -375,7 +426,7 @@ Current limitations:
 
 * Python only reads from PostgreSQL.
 * No insert/update/delete operations from Python yet.
-* Database rows are still returned as tuples.
+* Database result mapping is still simple and uses dictionaries instead of dedicated data objects or API schemas.
 * No FastAPI endpoints yet.
 * No automated tests yet.
 * No Docker setup yet.
@@ -390,7 +441,7 @@ These limitations are intentional for the current learning stage.
 Recommended next steps:
 
 1. Keep the v0.4 PostgreSQL integration stable.
-2. Add clearer data conversion from database rows to dictionaries or data objects.
+2. Improve mapped database dictionaries step by step or introduce dedicated data objects/API schemas later.
 3. Add basic error handling around database connection failures.
 4. Add a first FastAPI endpoint for station data.
 5. Add a first FastAPI endpoint for measurement data.
