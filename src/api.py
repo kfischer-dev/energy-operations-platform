@@ -2,7 +2,7 @@ import logging
 from src.logging_config import configure_logging
 
 from fastapi import FastAPI
-from src.database import get_connection, fetch_stations
+from src.database import get_connection, fetch_stations, fetch_joined_measurements
 
 configure_logging()
 logger = logging.getLogger(__name__)
@@ -30,7 +30,7 @@ def get_stations():
 
     conn = get_connection()
 
-    logger.info("Loading database report data started.")
+    logger.info("Loading station data from database.")
 
     try:
         station_data = fetch_stations(conn)
@@ -41,3 +41,22 @@ def get_stations():
         logger.info("Database connection closed.")
         logger.info("=" * 60)
     return station_data
+
+@app.get("/measurements")
+def get_measurements():
+    logger.info("=" * 60)
+    logger.info("GET /measurements request received. Opening database connection.")
+
+    conn = get_connection()
+
+    logger.info("Loading joined measurement data from database.")
+
+    try:
+        measurement_data = fetch_joined_measurements(conn)
+        logger.info(f"Loaded {len(measurement_data)} joined measurements from database.")
+
+    finally:
+        conn.close()
+        logger.info("Database connection closed.")
+        logger.info("=" * 60)
+    return measurement_data
