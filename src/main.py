@@ -41,29 +41,33 @@
 # ============================================================
 
 import logging
-logging.basicConfig(filename="app.log", level=logging.DEBUG,
-                    format="%(asctime)s - %(levelname)s - %(module)s.%(funcName)s - %(message)s")
+from src.logging_config import configure_logging
 
 from src.database import fetch_database_report_data
 from src.output import print_database_report
+
+configure_logging()
 
 # =============================================================
 # Application Startup
 # =============================================================
 
-logging.info(f"Program started.\n")
+logger = logging.getLogger(__name__)
+logger.info("=" * 60)
+logger.info(f"Program started.")
 
 # =============================================================
 # Load and print Stations & Measurements from PostgreSQL Database
 # =============================================================
 
-logging.info("Database report started.")
+logger.info("Database report started.")
 station_data, measurement_data = fetch_database_report_data()
 print_database_report(station_data, measurement_data)
-logging.info("Database report finished.\n")
+logger.info("Database report finished.")
 
 # =============================================================
 # Application Shutdown
 # =============================================================
 
-logging.info("Program finished.")
+logger.info("Program finished.")
+logger.info("=" * 60)

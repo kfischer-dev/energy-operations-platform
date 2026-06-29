@@ -5,3 +5,5 @@ app.log
 venv/
 .env
 private_learning_notes.md
+logs/
+*.log

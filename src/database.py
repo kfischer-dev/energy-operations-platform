@@ -3,6 +3,8 @@ from dotenv import load_dotenv
 import psycopg
 import logging
 
+logger = logging.getLogger(__name__)
+
 # ============================================================
 # PostgreSQL Connection Management
 # ============================================================
@@ -18,12 +20,12 @@ def get_connection():
     db_host = os.getenv("DB_HOST")
     db_port = os.getenv("DB_PORT")
 
-    logging.info("Connecting to PostgreSQL database...")
+    logger.info("Connecting to PostgreSQL database...")
 
     # psycopg.connect() creates a connection to the PostgreSQL database. | It needs the database name, user, password, host and port.
     conn = psycopg.connect(dbname = db_name, user = db_user, password = db_password, host = db_host, port = db_port) # conn is the active database connection object. It represents the open connection between Python and PostgreSQL.
 
-    logging.info("Database connection successful")
+    logger.info("Database connection successful")
 
     return conn
 
@@ -34,7 +36,7 @@ def get_connection():
 def fetch_joined_measurements(conn):
 
     with conn.cursor() as cursor: # cursor to execute SQL commands through the database connection
-        logging.debug("Executing joined measurements query.")
+        logger.debug("Executing joined measurements query.")
         cursor.execute("""
             SELECT
                 stations.station_name,
@@ -58,7 +60,7 @@ def fetch_joined_measurements(conn):
 def fetch_stations(conn):
 
     with conn.cursor() as cursor: # cursor to execute SQL commands through the database connection
-        logging.debug("Executing station query.")
+        logger.debug("Executing station query.")
         cursor.execute("""
             SELECT
                 station_id,
@@ -106,16 +108,16 @@ def map_measurement_row(row):
 def fetch_database_report_data():
     conn = get_connection() # Object for active database connection
 
-    logging.info("Loading database report data started.")
+    logger.info("Loading database report data started.")
 
     try:
         station_data = fetch_stations(conn) # Values of database
-        logging.info(f"Loaded {len(station_data)} stations from database.")
+        logger.info(f"Loaded {len(station_data)} stations from database.")
         measurement_data = fetch_joined_measurements(conn) # Values of database
-        logging.info(f"Loaded {len(measurement_data)} joined measurements from database.")
+        logger.info(f"Loaded {len(measurement_data)} joined measurements from database.")
 
     finally:
         conn.close() # Close Database connection
-        logging.info("Database connection closed.")
+        logger.info("Database connection closed.")
 
     return station_data, measurement_data

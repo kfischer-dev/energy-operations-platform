@@ -1,5 +1,7 @@
 import logging
 
+logger = logging.getLogger(__name__)
+
 class Station:
     
     LOW_LIMIT = 100 # Load Limit for stations
@@ -68,11 +70,11 @@ class Station:
             print(f"Min. Load: {self.minimum_load()}")
             print(f"Max. Load: {self.maximum_load()}")
             print()
-            logging.info(f"Report created for {self.name}.")
+            logger.info(f"Report created for {self.name}.")
             success = True
 
         else:
-            logging.warning(f"Not enough loads available for {self.name} to create report.")
+            logger.warning(f"Not enough loads available for {self.name} to create report.")
             success = False
         
         return success
@@ -88,14 +90,14 @@ class Station:
             if key.startswith("Load"):
 
                 if value == "" or value is None: # Check if value "Load" is empty
-                    logging.warning(f"{name}: Missing value in {key}.")
+                    logger.warning(f"{name}: Missing value in {key}.")
                     continue # um weitere gültige Werte zu erfassen
                 
                 try:
                     loads.append(int(value)) # Wandle jeden String Wert in Integer um und füge ihn in die loads Liste ein
 
                 except ValueError: # Falls Umwandlung nicht klappt - Schreibe Fehler aus und dokumentiere für Fehlerdaten
-                    logging.warning(f"{name}: Invalid value '{value}' in {key}.")
+                    logger.warning(f"{name}: Invalid value '{value}' in {key}.")
                     continue # um weitere gültige Werte zu erfassen
 
         return cls(name, loads)

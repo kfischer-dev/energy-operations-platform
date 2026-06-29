@@ -1,24 +1,43 @@
+import logging
+from src.logging_config import configure_logging
+
 from fastapi import FastAPI
 from src.database import get_connection, fetch_stations
+
+configure_logging()
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
 @app.get("/")
 def home():
+    logger.info("=" * 60)
+    logger.info("Root endpoint called")
+    logger.info("=" * 60)
     return {"message": "Energy Operations Platform API"}
 
 @app.get("/health")
 def app_status():
+    logger.info("=" * 60)
+    logger.info("Health endpoint called")
+    logger.info("=" * 60)   
     return {"status": "ok"}
 
 @app.get("/stations")
 def get_stations():
-    
+    logger.info("=" * 60)
+    logger.info("GET /stations request received. Opening database connection.")
+
     conn = get_connection()
+
+    logger.info("Loading database report data started.")
+
     try:
-        stations = fetch_stations(conn)
+        station_data = fetch_stations(conn)
+        logger.info(f"Loaded {len(station_data)} stations from database.")
 
     finally:
         conn.close()
-    
-    return stations
+        logger.info("Database connection closed.")
+        logger.info("=" * 60)
+    return station_data
