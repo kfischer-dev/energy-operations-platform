@@ -79,6 +79,52 @@ def fetch_stations(conn):
     
     return stations
 
+def fetch_measurements_by_station_id(conn, station_id):
+
+    with conn.cursor() as cursor: # cursor to execute SQL commands through the database connection
+        logger.debug("Executing joined measurements by station_id query.")
+        cursor.execute("""
+            SELECT
+                s.station_name,
+                m.measurement_time,
+                m.load_value,
+                m.unit
+            FROM measurements m
+            JOIN stations s
+                ON m.station_id = s.station_id
+            WHERE s.station_id = %s
+            ORDER BY s.station_name, m.measurement_time;
+        """, (station_id,))
+        rows = cursor.fetchall()
+
+    measurements = []
+    for row in rows:
+        measurement = map_measurement_row(row)
+        measurements.append(measurement)
+
+    return measurements
+
+def fetch_station_by_id(conn, station_id):
+
+    with conn.cursor() as cursor:
+        logger.debug("Executing station query.")
+        cursor.execute("""
+            SELECT
+                station_id,
+                station_name,
+                station_type,
+                station_location
+            FROM stations
+            WHERE station_id = %s;
+        """, (station_id,))
+
+        row = cursor.fetchone()
+
+        if row is None:
+            return None
+
+        return map_station_row(row)
+
 # ============================================================
 # Station Mapping
 # ============================================================
