@@ -10,10 +10,10 @@ logger = logging.getLogger(__name__)
 # ============================================================
 
 def get_connection():
+    """Load database configuration from environment variables and open a PostgreSQL connection."""
 
-    load_dotenv() # loads the values from the local .env file into the environment of the running Python program. This makes variables like DB_NAME, DB_USER and DB_PASSWORD available.
+    load_dotenv() 
 
-    # os.getenv() reads a specific environment variable. Example: os.getenv("DB_NAME") reads the value of DB_NAME.
     db_name = os.getenv("DB_NAME")
     db_user = os.getenv("DB_USER")
     db_password = os.getenv("DB_PASSWORD")
@@ -23,8 +23,7 @@ def get_connection():
     logger.info("Connecting to PostgreSQL database...")
 
     # psycopg.connect() creates a connection to the PostgreSQL database. | It needs the database name, user, password, host and port.
-    conn = psycopg.connect(dbname = db_name, user = db_user, password = db_password, host = db_host, port = db_port) # conn is the active database connection object. It represents the open connection between Python and PostgreSQL.
-
+    conn = psycopg.connect(dbname = db_name, user = db_user, password = db_password, host = db_host, port = db_port) # active database connection object
     logger.info("Database connection successful")
 
     return conn
@@ -34,8 +33,10 @@ def get_connection():
 # ============================================================
 
 def fetch_joined_measurements(conn):
+    """Return joined station and measurement data as dictionaries."""
 
-    with conn.cursor() as cursor: # cursor to execute SQL commands through the database connection
+    # The cursor executes SQL statements within the existing database connection.
+    with conn.cursor() as cursor: 
         logger.debug("Executing joined measurements query.")
         cursor.execute("""
             SELECT
@@ -58,8 +59,9 @@ def fetch_joined_measurements(conn):
     return measurements
 
 def fetch_stations(conn):
+    """Return all stations from the database as dictionaries."""
 
-    with conn.cursor() as cursor: # cursor to execute SQL commands through the database connection
+    with conn.cursor() as cursor: 
         logger.debug("Executing station query.")
         cursor.execute("""
             SELECT
@@ -80,9 +82,12 @@ def fetch_stations(conn):
     return stations
 
 def fetch_measurements_by_station_id(conn, station_id):
+    """Return all measurements for a specific station as dictionaries."""
 
-    with conn.cursor() as cursor: # cursor to execute SQL commands through the database connection
+    with conn.cursor() as cursor: 
         logger.debug("Executing joined measurements by station_id query.")
+
+        # Use a parameterized query instead of string formatting to keep SQL execution safe.
         cursor.execute("""
             SELECT
                 s.station_name,
@@ -105,6 +110,7 @@ def fetch_measurements_by_station_id(conn, station_id):
     return measurements
 
 def fetch_station_by_id(conn, station_id):
+    """Return one station by ID, or None if the station does not exist."""
 
     with conn.cursor() as cursor:
         logger.debug("Executing station query.")
@@ -152,18 +158,18 @@ def map_measurement_row(row):
 # ============================================================
 
 def fetch_database_report_data():
-    conn = get_connection() # Object for active database connection
+    conn = get_connection() 
 
     logger.info("Loading database report data started.")
 
     try:
-        station_data = fetch_stations(conn) # Values of database
+        station_data = fetch_stations(conn) 
         logger.info(f"Loaded {len(station_data)} stations from database.")
-        measurement_data = fetch_joined_measurements(conn) # Values of database
+        measurement_data = fetch_joined_measurements(conn) 
         logger.info(f"Loaded {len(measurement_data)} joined measurements from database.")
 
     finally:
-        conn.close() # Close Database connection
+        conn.close() 
         logger.info("Database connection closed.")
 
     return station_data, measurement_data

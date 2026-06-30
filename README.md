@@ -2,9 +2,9 @@
 
 ## Overview
 
-The **Energy Operations Platform** is a Python-based backend and data project for processing, validating and analyzing technical energy and station data.
+The **Energy Operations Platform** is a Python-based backend and data project for processing, validating and exposing technical energy and station data.
 
-The project started with CSV-based station data and object-oriented Python logic. The current development focus is the transition toward a PostgreSQL-backed data backend with relational station and measurement data.
+The project started with CSV-based station data and object-oriented Python logic. It has since evolved into a PostgreSQL-backed backend application with a first FastAPI layer that exposes station and measurement data through REST endpoints.
 
 This project is part of a structured learning path toward backend, data and cloud development with a focus on industrial and energy-related software systems.
 
@@ -30,18 +30,18 @@ The project is intentionally not a generic tutorial app. It is designed around t
 
 ## Current Version
 
-**Current development focus:** `v0.4`
+**Current development focus:** `v0.5`
 
 The current version focuses on:
 
-* PostgreSQL integration,
-* a relational data model with `stations` and `measurements`,
-* SQL queries with `JOIN`, `WHERE`, `GROUP BY` and `HAVING`,
-* Python database access using `psycopg`,
-* environment-based database configuration with `.env`,
-* mapping PostgreSQL result rows into dictionaries with explicit field names,
-* separation of database access, output formatting and application flow,
-* and a reorganized project structure.
+* introducing a FastAPI backend layer,
+* exposing PostgreSQL-backed station and measurement data as JSON,
+* providing REST endpoints for stations and measurements,
+* using path parameters for station-specific API calls,
+* returning proper HTTP errors for missing resources,
+* keeping the PostgreSQL workflow available as a terminal-based application flow,
+* centralizing logging configuration,
+* and continuing the separation of database access, API logic, output formatting and application flow.
 
 The earlier CSV/OOP workflow from v0.3 is still preserved as a separate legacy demo.
 
@@ -49,9 +49,21 @@ The earlier CSV/OOP workflow from v0.3 is still preserved as a separate legacy d
 
 ## Current Features
 
-The project currently supports two workflows:
+The project currently supports three workflows:
 
-### Current PostgreSQL workflow
+### FastAPI backend workflow
+
+* A FastAPI application is available in `src/api.py`.
+* The API exposes station and measurement data as JSON responses.
+* Station data is loaded from PostgreSQL through the existing database access layer.
+* Measurement data is loaded from PostgreSQL through joined SQL queries.
+* The API provides list endpoints and detail endpoints.
+* Path parameters are used to retrieve station-specific data.
+* Missing stations return a proper `404 Not Found` response.
+* Invalid path parameter types are validated automatically by FastAPI.
+* Interactive API documentation is available through Swagger UI at `/docs`.
+
+### Current PostgreSQL terminal workflow
 
 * Station data is stored in a PostgreSQL `stations` table.
 * Measurement data is stored in a PostgreSQL `measurements` table.
@@ -90,6 +102,9 @@ energy-operations-platform/
 ├── docs/
 │   └── database_notes.md
 │
+├── logs/
+│   └── app.log              # generated locally, not committed
+│
 ├── sql/
 │   ├── schema.sql
 │   ├── seed_data.sql
@@ -97,7 +112,9 @@ energy-operations-platform/
 │
 ├── src/
 │   ├── __init__.py
+│   ├── api.py
 │   ├── database.py
+│   ├── logging_config.py
 │   ├── main.py
 │   ├── output.py
 │   ├── read_documents.py
@@ -114,21 +131,23 @@ energy-operations-platform/
 
 ## Module Responsibilities
 
-| Path                       | Responsibility                                                           |
-| -------------------------- | ------------------------------------------------------------------------ |
-| `src/main.py`              | Current application entry point for the PostgreSQL-based v0.4 workflow.  |
-| `src/database.py`          | PostgreSQL connection management and read queries.                       |
-| `src/output.py`            | Terminal output formatting for database report results.                  |
-| `src/station.py`           | `Station` class and object-oriented station logic from earlier versions. |
-| `src/read_documents.py`    | CSV reading logic for the legacy CSV/OOP workflow.                       |
-| `src/server.py`            | Simulated additional station data from a server source.                  |
-| `demos/legacy_csv_demo.py` | Preserved v0.3 CSV/OOP workflow.                                         |
-| `demos/database_test.py`   | Legacy direct PostgreSQL test script for learning/reference purposes.    |
-| `sql/schema.sql`           | PostgreSQL table definitions.                                            |
-| `sql/seed_data.sql`        | Example station and measurement data.                                    |
-| `sql/example_queries.sql`  | Example SQL queries for filtering, joining and aggregating data.         |
-| `data/stations.csv`        | Example CSV input data for the legacy workflow.                          |
-| `docs/database_notes.md`   | Notes about the database model, SQL queries and Python integration.      |
+| Path                       | Responsibility                                                             |
+| -------------------------- | -------------------------------------------------------------------------- |
+| `src/api.py`               | FastAPI application and REST endpoints for station and measurement data.   |
+| `src/main.py`              | Terminal entry point for the PostgreSQL-based workflow.                    |
+| `src/database.py`          | PostgreSQL connection management and read queries.                         |
+| `src/logging_config.py`    | Central logging configuration used by the application.                     |
+| `src/output.py`            | Terminal output formatting for database report results.                    |
+| `src/station.py`           | `Station` class and object-oriented station logic from earlier versions.   |
+| `src/read_documents.py`    | CSV reading logic for the legacy CSV/OOP workflow.                         |
+| `src/server.py`            | Simulated additional station data from a server source.                    |
+| `demos/legacy_csv_demo.py` | Preserved v0.3 CSV/OOP workflow.                                           |
+| `demos/database_test.py`   | Legacy direct PostgreSQL test script for learning/reference purposes.      |
+| `sql/schema.sql`           | PostgreSQL table definitions.                                              |
+| `sql/seed_data.sql`        | Example station and measurement data.                                      |
+| `sql/example_queries.sql`  | Example SQL queries for filtering, joining and aggregating data.           |
+| `data/stations.csv`        | Example CSV input data for the legacy workflow.                            |
+| `docs/database_notes.md`   | Notes about the database model, SQL queries and Python integration.        |
 
 ---
 
@@ -146,6 +165,11 @@ energy-operations-platform/
 * SQL joins and aggregations
 * `psycopg`
 * `python-dotenv`
+* FastAPI
+* Uvicorn
+* REST APIs
+* JSON
+* OpenAPI / Swagger UI
 * Git/GitHub project structure
 
 ---
@@ -217,7 +241,53 @@ A safe template is provided in `.env.example`.
 pip install -r requirements.txt
 ```
 
-### Run the current PostgreSQL workflow
+### Run the FastAPI backend
+
+Run from the project root:
+
+```bash
+uvicorn src.api:app --reload
+```
+
+Open the interactive API documentation:
+
+```text
+http://localhost:8000/docs
+```
+
+Example API URLs:
+
+```text
+http://localhost:8000/
+http://localhost:8000/health
+http://localhost:8000/stations
+http://localhost:8000/stations/1
+http://localhost:8000/measurements
+http://localhost:8000/stations/1/measurements
+```
+
+### Available API Endpoints
+
+| Method | Endpoint                              | Description                                      |
+| ------ | ------------------------------------- | ------------------------------------------------ |
+| `GET`  | `/`                                   | Returns a welcome message for the API.           |
+| `GET`  | `/health`                            | Returns a basic API health check.                |
+| `GET`  | `/stations`                          | Returns all stations from PostgreSQL.            |
+| `GET`  | `/stations/{station_id}`             | Returns one station by station ID.               |
+| `GET`  | `/measurements`                      | Returns joined station and measurement data.     |
+| `GET`  | `/stations/{station_id}/measurements` | Returns measurements for one specific station.  |
+
+### API Error Behavior
+
+| Request example                         | Result                                                        |
+| --------------------------------------- | ------------------------------------------------------------- |
+| `/stations/1`                           | Returns station with ID `1`.                                  |
+| `/stations/999`                         | Returns `404 Not Found` if the station does not exist.         |
+| `/stations/abc`                         | Returns a validation error because `station_id` must be an integer. |
+| `/stations/1/measurements`              | Returns all measurements for station `1`.                     |
+| `/stations/999/measurements`            | Returns `404 Not Found` if the station does not exist.         |
+
+### Run the current PostgreSQL terminal workflow
 
 Run from the project root:
 
@@ -225,12 +295,12 @@ Run from the project root:
 python -m src.main
 ```
 
-This starts the current v0.4 workflow:
+This starts the current PostgreSQL terminal workflow:
 
 1. Load station and measurement data from PostgreSQL.
 2. Print station data.
 3. Print joined measurement data.
-4. Write technical runtime information to `app.log`.
+4. Write technical runtime information to the local log file.
 
 ### Run the legacy CSV/OOP workflow
 
@@ -283,14 +353,16 @@ Examples of logged events:
 | Situation                   | Log Level |
 | --------------------------- | --------- |
 | Program started             | `INFO`    |
+| API endpoint called         | `INFO`    |
 | Database connection started | `INFO`    |
 | Database query executed     | `DEBUG`   |
-| CSV file opened             | `INFO`    |
+| Database connection closed  | `INFO`    |
 | Missing load value          | `WARNING` |
 | Invalid load value          | `WARNING` |
+| Resource not found          | `WARNING` |
 | File not found              | `ERROR`   |
 
-The log file `app.log` is generated locally and should not be committed.
+The log file `logs/app.log` is generated locally and should not be committed.
 
 ---
 
@@ -304,6 +376,7 @@ The log file `app.log` is generated locally and should not be committed.
 | `v0.31` | Refactoring of CSV conversion into `Station.from_csv_row()`. More robust handling of invalid and missing load values.       |
 | `v0.32` | Basic logging introduced. Program flow and data-quality issues are written to `app.log`.                                    |
 | `v0.4`  | PostgreSQL integration added. SQL schema, seed data, example queries, Python database connection and project restructuring. |
+| `v0.5`  | FastAPI backend layer added. PostgreSQL-backed station and measurement data is exposed through REST endpoints as JSON.      |
 
 ---
 
@@ -327,7 +400,14 @@ The current project demonstrates practical knowledge in:
 * Python-to-PostgreSQL access,
 * environment-based configuration,
 * mapping database query results into Python dictionaries,
-* and separation of responsibilities between files.
+* separation of responsibilities between files,
+* REST API basics,
+* FastAPI routing,
+* JSON responses,
+* path parameters,
+* HTTP status codes,
+* automatic request validation,
+* and automatic API documentation with OpenAPI / Swagger UI.
 
 ---
 
@@ -335,12 +415,11 @@ The current project demonstrates practical knowledge in:
 
 Next planned steps:
 
-* Improve the PostgreSQL access layer step by step.
+* Add query parameters for filtering and limiting measurement data.
+* Introduce Pydantic models for clearer request and response structures.
 * Add more realistic database queries and KPIs.
-* Convert database rows into cleaner Python data structures.
-* Add first FastAPI endpoints.
-* Return station and measurement data as JSON.
-* Add basic tests.
+* Add basic automated tests.
+* Improve the PostgreSQL access layer step by step.
 * Add Docker setup.
 * Add basic cloud deployment preparation.
 * Add monitoring and security basics.

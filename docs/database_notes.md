@@ -2,15 +2,22 @@
 
 ## Purpose
 
-This document describes the database design and PostgreSQL integration of the Energy Operations Platform.
+This document explains the database design and PostgreSQL integration of the **Energy Operations Platform**.
 
-The goal is to move from a CSV-based data structure toward a relational database model that can later support backend services, REST APIs, cloud deployment and energy-related data analysis.
+The README gives a high-level project overview. This file is intentionally more technical and focuses on:
+
+- the relational database model,
+- PostgreSQL table relationships,
+- SQL concepts practiced in the project,
+- Python database access with `psycopg`,
+- database result mapping,
+- and how the database layer is used by the terminal workflow and the FastAPI API layer.
 
 ---
 
 ## Why Move from CSV to a Database?
 
-The earlier project versions used a CSV file as the main data source.
+Earlier project versions used a CSV file as the main data source.
 
 Example:
 
@@ -19,35 +26,39 @@ Station,Load1,Load2,Load3
 Station A,80,95,120
 ```
 
-This was useful for learning Python basics, file handling, error handling and object-oriented programming.
+This was useful for learning Python basics, file handling, validation, error handling and object-oriented programming.
 
-However, a CSV-based structure has important limitations:
+However, CSV files have important limitations for a backend-oriented energy platform:
 
-* the number of load values is fixed by columns,
-* measurement values do not have proper timestamps,
-* metadata such as source or quality status is difficult to store,
-* historical queries are inefficient,
-* relationships between technical assets and measurements are not explicit,
-* and the structure does not scale well toward APIs or backend services.
+- the number of load values is fixed by columns,
+- measurement values do not have proper timestamps,
+- metadata such as source or quality status is difficult to model,
+- historical queries are inefficient,
+- relationships between technical assets and measurements are not explicit,
+- and the structure does not scale well toward APIs, dashboards or cloud services.
 
-For a backend-oriented energy data platform, stations and measurements should be modeled separately.
+The current PostgreSQL model separates relatively stable station data from time-based measurement data.
 
 ---
 
 ## Relational Data Model
 
-The first relational model separates technical assets from measurement values.
+The first relational model contains two main tables:
 
-The two main tables are:
+- `stations`
+- `measurements`
 
-* `stations`
-* `measurements`
-
-This reflects a typical real-world structure:
+Relationship:
 
 ```text
 One station can have many measurements.
 Each measurement belongs to exactly one station.
+```
+
+This is implemented with a foreign key:
+
+```text
+measurements.station_id → stations.station_id
 ```
 
 ---
@@ -58,44 +69,48 @@ The `stations` table stores relatively stable asset information.
 
 Current fields:
 
-* `station_id`
-* `station_name`
-* `station_type`
-* `station_location`
-* `created_at`
+| Field | Purpose |
+|---|---|
+| `station_id` | Primary key of the station |
+| `station_name` | Human-readable station name |
+| `station_type` | Technical asset type, e.g. `solar_park`, `wind_park`, `battery_storage` |
+| `station_location` | Station location |
+| `created_at` | Timestamp when the record was created |
 
 Example:
 
 | station_id | station_name | station_type | station_location |
-| ---------: | ------------ | ------------ | ---------------- |
-|          1 | Station A    | solar_park   | Stuttgart        |
-|          2 | Station B    | wind_park    | Ulm              |
-|          3 | Station C    | hydro_power  | Heidelberg       |
+|---:|---|---|---|
+| 1 | Station A | solar_park | Stuttgart |
+| 2 | Station B | wind_park | Ulm |
+| 3 | Station C | hydro_power | Heidelberg |
 
 ---
 
 ## Table: `measurements`
 
-The `measurements` table stores changing measurement values.
+The `measurements` table stores time-based measurement values.
 
 Current fields:
 
-* `measurement_id`
-* `station_id`
-* `measurement_time`
-* `load_value`
-* `unit`
-* `source`
-* `quality_status`
-* `created_at`
+| Field | Purpose |
+|---|---|
+| `measurement_id` | Primary key of the measurement |
+| `station_id` | Foreign key to the related station |
+| `measurement_time` | Timestamp of the measurement |
+| `load_value` | Measured load value |
+| `unit` | Measurement unit, currently `kW` |
+| `source` | Data source |
+| `quality_status` | Basic quality flag |
+| `created_at` | Timestamp when the record was created |
 
 Example:
 
 | measurement_id | station_id | measurement_time | load_value | unit |
-| -------------: | ---------: | ---------------- | ---------: | ---- |
-|              1 |          1 | 2026-06-22 08:15 |      80.50 | kW   |
-|              2 |          1 | 2026-06-22 08:30 |      95.25 | kW   |
-|              3 |          2 | 2026-06-22 08:15 |     120.75 | kW   |
+|---:|---:|---|---:|---|
+| 1 | 1 | 2026-06-22 08:15 | 80.50 | kW |
+| 2 | 1 | 2026-06-22 08:30 | 95.25 | kW |
+| 3 | 2 | 2026-06-22 08:15 | 120.75 | kW |
 
 ---
 
@@ -113,15 +128,19 @@ Each measurement has its own unique primary key:
 measurements.measurement_id
 ```
 
-The field `measurements.station_id` is a foreign key that refers to `stations.station_id`.
-
-Relationship:
+The foreign key is:
 
 ```text
-stations.station_id → measurements.station_id
+measurements.station_id
 ```
 
-This enforces that each measurement belongs to an existing station.
+It refers to:
+
+```text
+stations.station_id
+```
+
+This means PostgreSQL enforces that a measurement can only exist for an existing station.
 
 ---
 
@@ -131,7 +150,7 @@ The foreign key constraint was tested by trying to insert a measurement with a n
 
 PostgreSQL rejected the insert because no station with this ID exists.
 
-This confirms that the relationship between `stations` and `measurements` is enforced by the database.
+This confirms that the relationship between `stations` and `measurements` is enforced at database level, not only in Python code.
 
 ---
 
@@ -139,11 +158,11 @@ This confirms that the relationship between `stations` and `measurements` is enf
 
 The SQL files are stored in the `sql/` directory.
 
-| File                      | Purpose                                                               |
-| ------------------------- | --------------------------------------------------------------------- |
-| `sql/schema.sql`          | Defines the database tables.                                          |
-| `sql/seed_data.sql`       | Inserts example station and measurement data.                         |
-| `sql/example_queries.sql` | Contains example queries for filtering, joining and aggregating data. |
+| File | Purpose |
+|---|---|
+| `sql/schema.sql` | Defines the `stations` and `measurements` tables |
+| `sql/seed_data.sql` | Inserts example station and measurement data |
+| `sql/example_queries.sql` | Contains example queries for filtering, joining and aggregating data |
 
 ---
 
@@ -151,27 +170,27 @@ The SQL files are stored in the `sql/` directory.
 
 The project currently includes example queries for:
 
-* `SELECT`
-* `WHERE`
-* `JOIN`
-* `ORDER BY`
-* `COUNT`
-* `AVG`
-* `MIN`
-* `MAX`
-* `GROUP BY`
-* `HAVING`
+- `SELECT`
+- `WHERE`
+- `JOIN`
+- `ORDER BY`
+- `COUNT`
+- `AVG`
+- `MIN`
+- `MAX`
+- `GROUP BY`
+- `HAVING`
 
-These queries make it possible to calculate basic energy KPIs directly in the database.
+These queries make it possible to calculate basic energy-related KPIs directly in the database.
 
 Examples:
 
-* number of measurements per station,
-* average load per station,
-* minimum and maximum load per station,
-* average load per station type,
-* high-load filtering,
-* grouped filtering with `HAVING`.
+- number of measurements per station,
+- average load per station,
+- minimum and maximum load per station,
+- average load per station type,
+- high-load filtering,
+- grouped filtering with `HAVING`.
 
 Important distinction:
 
@@ -186,8 +205,8 @@ HAVING = filters grouped results after aggregation
 
 The Python project connects to PostgreSQL using:
 
-* `psycopg`
-* `python-dotenv`
+- `psycopg`
+- `python-dotenv`
 
 Database credentials are not stored directly in the Python code.
 
@@ -205,28 +224,25 @@ DB_PORT=5432
 
 The real `.env` file must not be committed to GitHub.
 
-A safe `.env.example` file should be committed to document the required variables.
+A safe `.env.example` file is committed to document the required variables.
 
 ---
 
-## Current Python Database Flow
+## Current Database Module
 
-The current PostgreSQL-based application flow is started with:
+The main database logic is located in:
 
-```bash
-python -m src.main
+```text
+src/database.py
 ```
 
-Current flow:
+Current responsibilities:
 
-1. `src/main.py` starts the application.
-2. `src/database.py` loads database credentials from environment variables.
-3. `src/database.py` opens a PostgreSQL connection.
-4. `fetch_stations()` reads station records from PostgreSQL.
-5. `fetch_joined_measurements()` reads joined station and measurement records.
-6. `fetch_database_report_data()` returns mapped station and measurement dictionaries.
-7. `src/output.py` prints the database report to the terminal.
-8. The database connection is closed safely.
+- load database configuration from environment variables,
+- open PostgreSQL connections,
+- execute read queries,
+- map database rows into dictionaries,
+- provide reusable database functions for the terminal workflow and FastAPI endpoints.
 
 ---
 
@@ -236,36 +252,106 @@ Current flow:
 
 Opens a PostgreSQL connection using environment variables.
 
+Used by:
+
+- `src/main.py`
+- `src/api.py`
+
 ### `fetch_stations(conn)`
 
-Reads station data from the `stations` table.
+Reads all station data from the `stations` table.
 
-Mapped result fields:
+Returned fields:
 
 ```text
 station_id, station_name, station_type, station_location
 ```
 
+Returned structure:
+
+```python
+[
+    {
+        "station_id": 1,
+        "station_name": "Station A",
+        "station_type": "solar_park",
+        "station_location": "Stuttgart"
+    }
+]
+```
+
+### `fetch_station_by_id(conn, station_id)`
+
+Reads one station by ID.
+
+Expected behavior:
+
+```text
+Existing station     → returns one station dictionary
+Non-existing station → returns None
+```
+
+This function is used by the FastAPI detail endpoint and by nested station/measurement endpoints to distinguish between:
+
+```text
+Station does not exist
+```
+
+and:
+
+```text
+Station exists, but has no measurements
+```
+
 ### `fetch_joined_measurements(conn)`
 
-Reads measurement data joined with station names.
+Reads joined station and measurement data.
 
-Mapped result fields:
+Returned fields:
 
 ```text
 station_name, measurement_time, load_value, unit
 ```
 
+This is used for the general measurement overview endpoint and the terminal report.
+
+### `fetch_measurements_by_station_id(conn, station_id)`
+
+Reads all measurements for a specific station.
+
+The SQL query uses a parameterized query:
+
+```sql
+WHERE s.station_id = %s
+```
+
+with:
+
+```python
+(station_id,)
+```
+
+This avoids inserting user input directly into the SQL string and is the correct pattern for safe SQL execution.
+
+Expected behavior:
+
+```text
+Station has measurements       → returns a list of measurement dictionaries
+Station has no measurements    → returns []
+Station does not exist         → handled by the API layer before this function is called
+```
+
 ### `fetch_database_report_data()`
 
-Coordinates the database report loading process:
+Coordinates the terminal database report loading process:
 
-* opens a connection,
-* loads station data,
-* loads joined measurement data,
-* maps raw database rows into dictionaries with explicit field names,
-* closes the connection,
-* returns both mapped result sets.
+- opens a database connection,
+- loads station data,
+- loads joined measurement data,
+- returns both mapped result sets,
+- closes the database connection.
+
+This function is mainly used by the terminal workflow in `src/main.py`.
 
 ---
 
@@ -314,23 +400,170 @@ station["station_name"]
 measurement["load_value"]
 ```
 
-This structure also prepares the project for future FastAPI endpoints, where dictionary-like data can later be returned as JSON responses.
+This structure also works well with FastAPI because dictionaries can be returned as JSON responses.
+
+---
+
+## Terminal Workflow
+
+The PostgreSQL-based terminal workflow is started with:
+
+```bash
+python -m src.main
+```
+
+Current flow:
+
+1. `src/main.py` starts the application.
+2. `src/database.py` opens a PostgreSQL connection.
+3. `fetch_database_report_data()` loads station and measurement data.
+4. `src/output.py` prints the database report to the terminal.
+5. The database connection is closed safely.
+6. Runtime information is written to the local log file.
+
+This workflow is preserved for learning, testing and comparison with the API layer.
+
+---
+
+## FastAPI Database Flow
+
+The FastAPI application is started with:
+
+```bash
+uvicorn src.api:app --reload
+```
+
+The API layer is defined in:
+
+```text
+src/api.py
+```
+
+Current FastAPI endpoints using database data:
+
+| Method | Endpoint | Database function used |
+|---|---|---|
+| `GET` | `/stations` | `fetch_stations(conn)` |
+| `GET` | `/stations/{station_id}` | `fetch_station_by_id(conn, station_id)` |
+| `GET` | `/measurements` | `fetch_joined_measurements(conn)` |
+| `GET` | `/stations/{station_id}/measurements` | `fetch_station_by_id(conn, station_id)` and `fetch_measurements_by_station_id(conn, station_id)` |
+
+Current API flow per database-backed request:
+
+1. FastAPI receives the HTTP request.
+2. The endpoint opens a database connection.
+3. The required database function is called.
+4. The result is returned as JSON.
+5. The database connection is closed safely.
+
+Example:
+
+```text
+GET /stations/1/measurements
+→ check whether station 1 exists
+→ load measurements for station 1
+→ return measurement list as JSON
+```
+
+---
+
+## API Error Behavior
+
+The API distinguishes between different cases.
+
+### Existing station with measurements
+
+```text
+GET /stations/1/measurements
+```
+
+Result:
+
+```text
+200 OK
+```
+
+with a list of measurement dictionaries.
+
+### Existing station without measurements
+
+Result:
+
+```text
+200 OK
+```
+
+with an empty list:
+
+```json
+[]
+```
+
+This is correct because the station exists. The query result is simply empty.
+
+### Non-existing station
+
+```text
+GET /stations/999/measurements
+```
+
+Result:
+
+```text
+404 Not Found
+```
+
+because the parent station does not exist.
+
+### Invalid path parameter type
+
+```text
+GET /stations/abc
+```
+
+Result:
+
+```text
+422 Unprocessable Content
+```
+
+FastAPI returns this automatically because `station_id` is typed as `int`.
 
 ---
 
 ## Output Separation
 
-Database access and output formatting are separated.
+Database access, terminal output and API responses are separated.
 
 Current structure:
 
 ```text
 src/database.py → database connection and queries
 src/output.py   → terminal output formatting
-src/main.py     → application flow
+src/main.py     → terminal application flow
+src/api.py      → FastAPI routes and JSON responses
 ```
 
-This separation is important because later versions may return the same data through FastAPI instead of printing it to the terminal.
+This separation is important because the same database layer can be used by different application interfaces.
+
+---
+
+## Logging
+
+Logging is configured centrally in:
+
+```text
+src/logging_config.py
+```
+
+The logging setup is used by both:
+
+- the terminal workflow,
+- the FastAPI application.
+
+The local log directory is created automatically if needed.
+
+The generated log file is local runtime data and should not be committed.
 
 ---
 
@@ -344,10 +577,10 @@ demos/legacy_csv_demo.py
 
 It uses:
 
-* `data/stations.csv`
-* `src/read_documents.py`
-* `src/station.py`
-* `src/server.py`
+- `data/stations.csv`
+- `src/read_documents.py`
+- `src/station.py`
+- `src/server.py`
 
 This workflow demonstrates the earlier project stage:
 
@@ -355,66 +588,11 @@ This workflow demonstrates the earlier project stage:
 CSV data → Station objects → Python report
 ```
 
-The current v0.4 focus is:
+The current main workflow is:
 
 ```text
-PostgreSQL data → SQL queries → database report
+PostgreSQL data → Python database layer → terminal report and FastAPI JSON API
 ```
-
----
-
-## Project Structure After Reorganization
-
-```text
-energy-operations-platform/
-│
-├── data/
-│   └── stations.csv
-│
-├── demos/
-│   ├── database_test.py
-│   └── legacy_csv_demo.py
-│
-├── docs/
-│   └── database_notes.md
-│
-├── sql/
-│   ├── schema.sql
-│   ├── seed_data.sql
-│   └── example_queries.sql
-│
-├── src/
-│   ├── database.py
-│   ├── main.py
-│   ├── output.py
-│   ├── read_documents.py
-│   ├── server.py
-│   └── station.py
-│
-├── README.md
-├── requirements.txt
-├── .env.example
-└── .gitignore
-```
-
----
-
-## Completed in v0.4
-
-* Created first relational PostgreSQL schema.
-* Created `stations` and `measurements` tables.
-* Added primary keys and foreign key relationship.
-* Inserted example station and measurement data.
-* Added SQL example queries.
-* Practiced filtering, joining and aggregating data.
-* Connected Python to PostgreSQL using `psycopg`.
-* Loaded database configuration from environment variables.
-* Read station data from PostgreSQL.
-* Read joined station and measurement data from PostgreSQL.
-* Mapped PostgreSQL result rows into dictionaries with explicit field names.
-* Separated database access from terminal output formatting.
-* Preserved the old CSV/OOP workflow as a legacy demo.
-* Reorganized project files into `src/`, `sql/`, `docs/`, `data/` and `demos/`.
 
 ---
 
@@ -424,15 +602,50 @@ The current implementation is intentionally simple.
 
 Current limitations:
 
-* Python only reads from PostgreSQL.
-* No insert/update/delete operations from Python yet.
-* Database result mapping is still simple and uses dictionaries instead of dedicated data objects or API schemas.
-* No FastAPI endpoints yet.
-* No automated tests yet.
-* No Docker setup yet.
-* No cloud deployment yet.
+- Python currently only reads from PostgreSQL.
+- No insert/update/delete operations from Python yet.
+- Database result mapping uses dictionaries instead of dedicated API schemas.
+- API endpoints do not use Pydantic response models yet.
+- Error handling around database connection failures is still basic.
+- No automated tests yet.
+- No Docker setup yet.
+- No cloud deployment yet.
 
 These limitations are intentional for the current learning stage.
+
+---
+
+## Completed in v0.4
+
+- Created first relational PostgreSQL schema.
+- Created `stations` and `measurements` tables.
+- Added primary keys and foreign key relationship.
+- Inserted example station and measurement data.
+- Added SQL example queries.
+- Practiced filtering, joining and aggregating data.
+- Connected Python to PostgreSQL using `psycopg`.
+- Loaded database configuration from environment variables.
+- Read station data from PostgreSQL.
+- Read joined station and measurement data from PostgreSQL.
+- Mapped PostgreSQL result rows into dictionaries with explicit field names.
+- Separated database access from terminal output formatting.
+- Preserved the old CSV/OOP workflow as a legacy demo.
+- Reorganized project files into `src/`, `sql/`, `docs/`, `data/` and `demos/`.
+
+---
+
+## Completed in v0.5 So Far
+
+- Added a first FastAPI application.
+- Added health and welcome endpoints.
+- Added `/stations` endpoint.
+- Added `/stations/{station_id}` endpoint with path parameter and 404 behavior.
+- Added `/measurements` endpoint.
+- Added `/stations/{station_id}/measurements` endpoint.
+- Returned PostgreSQL-backed station and measurement data as JSON.
+- Added automatic API documentation through OpenAPI/Swagger UI.
+- Centralized logging configuration for terminal and API workflows.
+- Kept database access separated from API route definitions.
 
 ---
 
@@ -440,12 +653,10 @@ These limitations are intentional for the current learning stage.
 
 Recommended next steps:
 
-1. Keep the v0.4 PostgreSQL integration stable.
-2. Improve mapped database dictionaries step by step or introduce dedicated data objects/API schemas later.
-3. Add basic error handling around database connection failures.
-4. Add a first FastAPI endpoint for station data.
-5. Add a first FastAPI endpoint for measurement data.
-6. Return database data as JSON.
-7. Add basic tests for database-related functions.
-8. Add Docker setup for the application and PostgreSQL.
-9. Prepare a simple cloud deployment scenario.
+1. Add query parameters for measurement endpoints, for example `limit` or `station_id`.
+2. Add Pydantic response models for clearer API schemas.
+3. Improve database error handling.
+4. Add basic automated tests for database and API functions.
+5. Add insert endpoints later, for example `POST /measurements`.
+6. Add Docker setup for the application and PostgreSQL.
+7. Prepare a simple cloud deployment scenario.

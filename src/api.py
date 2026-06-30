@@ -25,6 +25,8 @@ def app_status():
 
 @app.get("/stations")
 def get_stations():
+    """Return all stations."""
+
     logger.info("=" * 60)
     logger.info("GET /stations request received. Opening database connection.")
 
@@ -44,6 +46,8 @@ def get_stations():
 
 @app.get("/stations/{station_id}")
 def get_station_by_id(station_id: int):
+    """Return one station by ID."""
+
     logger.info("=" * 60)
     logger.info(f"GET /stations/{station_id} request received. Opening database connection.")
 
@@ -86,6 +90,7 @@ def get_measurements():
 
 @app.get("/stations/{station_id}/measurements")
 def get_measurements_by_station_id(station_id: int):
+    """Return all measurements for one station."""
 
     logger.info("=" * 60)
     logger.info(f"GET /stations/{station_id}/measurements request received. Opening database connection.")
@@ -93,14 +98,13 @@ def get_measurements_by_station_id(station_id: int):
     conn = get_connection()
 
     try:
-        # Check if station is available
+        # Check the parent station first so a missing station returns 404 instead of [].
         logger.info("Loading station data from database.")
         station = fetch_station_by_id(conn, station_id)
         if station is None:
             logger.warning(f"Station with id {station_id} not found.")
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Station with id {station_id} not found")
         
-        # Load measurements of station if station is available
         logger.info("Loading joined measurement data from database.")
         measurement_data = fetch_measurements_by_station_id(conn, station_id)
         logger.info(f"Loaded {len(measurement_data)} joined measurements of station_id {station_id} from database.")
