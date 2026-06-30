@@ -1,7 +1,7 @@
 import logging
 from src.logging_config import configure_logging
 
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, Query
 from src.database import get_connection, fetch_stations, fetch_joined_measurements, fetch_measurements_by_station_id, fetch_station_by_id
 
 configure_logging()
@@ -70,7 +70,7 @@ def get_station_by_id(station_id: int):
         logger.info("=" * 60)
 
 @app.get("/measurements")
-def get_measurements():
+def get_measurements(limit: int | None = Query(default=None, ge=1, le=100)):
     logger.info("=" * 60)
     logger.info("GET /measurements request received. Opening database connection.")
 
@@ -82,11 +82,16 @@ def get_measurements():
         measurement_data = fetch_joined_measurements(conn)
         logger.info(f"Loaded {len(measurement_data)} joined measurements from database.")
 
+        if limit is not None:
+            logger.info(f"Applying limit={limit} to measurement response.")
+            return measurement_data[:limit]
+        
+        return measurement_data
+
     finally:
         conn.close()
         logger.info("Database connection closed.")
         logger.info("=" * 60)
-    return measurement_data
 
 @app.get("/stations/{station_id}/measurements")
 def get_measurements_by_station_id(station_id: int):
