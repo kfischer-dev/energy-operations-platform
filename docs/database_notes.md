@@ -11,6 +11,8 @@ The README gives a high-level project overview. This file is intentionally more 
 - SQL concepts practiced in the project,
 - Python database access with `psycopg`,
 - database result mapping,
+- FastAPI path and query parameter behavior,
+- FastAPI API documentation metadata,
 - and how the database layer is used by the terminal workflow and the FastAPI API layer.
 
 ---
@@ -439,6 +441,8 @@ The API layer is defined in:
 src/api.py
 ```
 
+The FastAPI app also contains project-specific OpenAPI metadata such as API title, description, version, tags, endpoint summaries, endpoint descriptions, parameter descriptions and response descriptions.
+
 Current FastAPI endpoints using database data:
 
 | Method | Endpoint | Database function used | Notes |
@@ -500,6 +504,32 @@ The `limit` parameter is validated with FastAPI `Query` constraints. Current beh
 
 The `station_type` parameter currently filters in Python after loading station data from the database. This is intentionally simple for the current learning stage. Later, filtering can be moved into SQL for larger datasets.
 
+---
+
+## FastAPI Documentation and Parameter Validation
+
+The API documentation has been improved in `v0.5.1`. This is mainly a polish step for Swagger/OpenAPI and does not change the underlying database model.
+
+Current documentation improvements:
+
+| Area | Current implementation | Benefit |
+|---|---|---|
+| API metadata | Custom title, description and version | Swagger UI clearly identifies the portfolio API. |
+| Tags | `General`, `Stations`, `Measurements` | Endpoints are grouped by responsibility. |
+| Summaries | Short route summaries | The endpoint overview is easier to scan. |
+| Descriptions | Longer route descriptions | API behavior is easier to understand without reading the code. |
+| Response descriptions | Documented response meaning | Swagger UI explains what each route returns. |
+| Query parameter descriptions | `station_type`, `limit` | Optional filters are documented directly in the API docs. |
+| Path parameter descriptions | `station_id` | Station-specific routes are easier to understand. |
+
+Current validation behavior:
+
+| Parameter | Location | Constraint | Example invalid request | Result |
+|---|---|---|---|---|
+| `station_id` | Path | Integer, minimum `1` | `/stations/0` | `422 Unprocessable Content` |
+| `station_id` | Path | Integer, minimum `1` | `/stations/abc` | `422 Unprocessable Content` |
+| `limit` | Query | Integer, minimum `1`, maximum `100` | `/measurements?limit=0` | `422 Unprocessable Content` |
+| `limit` | Query | Integer, minimum `1`, maximum `100` | `/measurements?limit=101` | `422 Unprocessable Content` |
 
 ---
 
@@ -564,6 +594,20 @@ Result:
 ```
 
 FastAPI returns this automatically because `station_id` is typed as `int`.
+
+### Invalid path parameter range
+
+```text
+GET /stations/0
+```
+
+Result:
+
+```text
+422 Unprocessable Content
+```
+
+FastAPI returns this because `station_id` is constrained to a minimum value of `1`.
 
 ### Query parameter without matching results
 
@@ -676,6 +720,7 @@ Current limitations:
 - No insert/update/delete operations from Python yet.
 - Database result mapping uses dictionaries instead of dedicated API schemas.
 - API endpoints do not use Pydantic response models yet.
+- API routes are still kept in `src/api.py`; routers can be introduced later when the API grows.
 - Current query parameter filtering is intentionally simple and partly happens in Python instead of SQL.
 - Error handling around database connection failures is still basic.
 - No automated tests yet.
@@ -713,7 +758,7 @@ These limitations are intentional for the current learning stage.
 
 ---
 
-## Completed in v0.5 So Far
+## Completed in v0.5
 
 - Added a first FastAPI application.
 - Added health and welcome endpoints.
@@ -729,6 +774,17 @@ These limitations are intentional for the current learning stage.
 
 ---
 
+## Completed in v0.5.1
+
+- Added project-specific FastAPI metadata: API title, description and version.
+- Added OpenAPI tags for grouping endpoints in Swagger UI.
+- Added endpoint summaries, descriptions and response descriptions.
+- Added descriptions for path and query parameters.
+- Added `Path` constraints for `station_id` so invalid values such as `0` are rejected.
+- Kept the release intentionally small as API documentation and validation polish before introducing Pydantic response models.
+
+---
+
 ## Next Steps
 
 Recommended next steps:
@@ -736,6 +792,7 @@ Recommended next steps:
 1. Add Pydantic response models for clearer API schemas.
 2. Improve database error handling.
 3. Add basic automated tests for database and API functions.
-4. Add insert endpoints later, for example `POST /measurements`.
-5. Add Docker setup for the application and PostgreSQL.
-6. Prepare a simple cloud deployment scenario.
+4. Introduce routers later when the API contains more endpoints.
+5. Add insert endpoints later, for example `POST /measurements`.
+6. Add Docker setup for the application and PostgreSQL.
+7. Prepare a simple cloud deployment scenario.

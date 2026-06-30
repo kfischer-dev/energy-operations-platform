@@ -30,16 +30,17 @@ The project is intentionally not a generic tutorial app. It is designed around t
 
 ## Current Version
 
-**Current development focus:** `v0.5`
+**Current development focus:** `v0.5.1`
 
 The current version focuses on:
 
-* introducing a FastAPI backend layer,
-* exposing PostgreSQL-backed station and measurement data as JSON,
+* exposing PostgreSQL-backed station and measurement data through a FastAPI backend layer,
 * providing REST endpoints for stations and measurements,
 * using path parameters for station-specific API calls,
 * using query parameters for filtering and limiting API responses,
+* validating path and query parameters with FastAPI constraints,
 * returning proper HTTP errors for missing resources,
+* improving Swagger/OpenAPI documentation with API metadata, endpoint tags, summaries and descriptions,
 * keeping the PostgreSQL workflow available as a terminal-based application flow,
 * centralizing logging configuration,
 * and continuing the separation of database access, API logic, output formatting and application flow.
@@ -63,6 +64,7 @@ The project currently supports three workflows:
 * Query parameters can filter stations by type and limit measurement results.
 * Missing stations return a proper `404 Not Found` response.
 * Invalid path and query parameter values are validated automatically by FastAPI.
+* The API uses custom OpenAPI metadata, endpoint tags, summaries, descriptions and response descriptions.
 * Interactive API documentation is available through Swagger UI at `/docs`.
 
 ### Current PostgreSQL terminal workflow
@@ -172,6 +174,7 @@ energy-operations-platform/
 * REST APIs
 * JSON
 * OpenAPI / Swagger UI
+* FastAPI `Path` and `Query` parameter constraints
 * Git/GitHub project structure
 
 ---
@@ -257,6 +260,8 @@ Open the interactive API documentation:
 http://localhost:8000/docs
 ```
 
+The Swagger UI shows the custom API title, version, endpoint groups, parameter descriptions and response descriptions.
+
 Example API URLs:
 
 ```text
@@ -290,6 +295,23 @@ http://localhost:8000/stations/1/measurements
 | `/stations` | `station_type` | `/stations?station_type=solar_park` | Optional filter that returns only stations of the selected type. If no station matches, the API returns an empty list `[]`. |
 | `/measurements` | `limit` | `/measurements?limit=5` | Optional limit for the number of returned measurement records. The value must be between `1` and `100`. |
 
+### API Documentation
+
+The FastAPI application includes custom OpenAPI metadata for a clearer portfolio presentation.
+
+Current API documentation features:
+
+| Feature | Purpose |
+| ------- | ------- |
+| API title | Shows the project-specific API name in Swagger UI. |
+| API description | Explains the purpose of the Energy Operations Platform API. |
+| API version | Documents the current API version, currently `0.5.1`. |
+| Endpoint tags | Groups routes into `General`, `Stations` and `Measurements`. |
+| Endpoint summaries | Make the route overview easier to scan. |
+| Endpoint descriptions | Explain what each route returns and how it should be used. |
+| Parameter descriptions | Explain path and query parameters directly in Swagger UI. |
+| Response descriptions | Describe the returned response type in the generated API documentation. |
+
 ### API Error Behavior
 
 | Request example                         | Result                                                            |
@@ -297,6 +319,7 @@ http://localhost:8000/stations/1/measurements
 | `/stations/1`                           | Returns station with ID `1`.                                      |
 | `/stations/999`                         | Returns `404 Not Found` if the station does not exist.             |
 | `/stations/abc`                         | Returns a validation error because `station_id` must be an integer. |
+| `/stations/0`                           | Returns a validation error because `station_id` must be at least `1`. |
 | `/stations?station_type=unknown`        | Returns an empty list `[]` because the filter has no matches.      |
 | `/measurements?limit=5`                 | Returns the first five joined measurement records.                 |
 | `/measurements?limit=0`                 | Returns a validation error because `limit` must be at least `1`.   |
@@ -396,6 +419,7 @@ The log file `logs/app.log` is generated locally and should not be committed.
 | `v0.4`  | PostgreSQL integration added. SQL schema, seed data, example queries, Python database connection and project restructuring. |
 | `v0.4.1`| Database query results are mapped from raw PostgreSQL rows into dictionaries with explicit field names as preparation for JSON and FastAPI responses. |
 | `v0.5`  | FastAPI backend layer added. PostgreSQL-backed station and measurement data is exposed through REST endpoints as JSON, including path and query parameters. |
+| `v0.5.1`| API documentation polish. FastAPI metadata, endpoint tags, summaries, descriptions, response descriptions and parameter constraints are improved for Swagger/OpenAPI. |
 
 ---
 
@@ -426,6 +450,8 @@ The current project demonstrates practical knowledge in:
 * path parameters,
 * query parameters,
 * parameter constraints with FastAPI `Query`,
+* path constraints with FastAPI `Path`,
+* API metadata and endpoint documentation with FastAPI,
 * HTTP status codes,
 * automatic request validation,
 * and automatic API documentation with OpenAPI / Swagger UI.
@@ -438,6 +464,7 @@ Next planned steps:
 
 * Introduce Pydantic models for clearer request and response structures.
 * Add more realistic database queries and KPIs.
+* Introduce routers later when the number of endpoints grows.
 * Add basic automated tests.
 * Improve the PostgreSQL access layer step by step.
 * Add Docker setup.
