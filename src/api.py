@@ -24,8 +24,8 @@ def app_status():
     return {"status": "ok"}
 
 @app.get("/stations")
-def get_stations():
-    """Return all stations."""
+def get_stations(station_type: str | None = None):
+    """Return all stations, optionally filtered by station type."""
 
     logger.info("=" * 60)
     logger.info("GET /stations request received. Opening database connection.")
@@ -38,11 +38,22 @@ def get_stations():
         station_data = fetch_stations(conn)
         logger.info(f"Loaded {len(station_data)} stations from database.")
 
+        if station_type is not None:
+            logger.info(f"Applying station_type filter: {station_type}")
+            station_by_type = []
+            for station in station_data:
+                if station_type == station["station_type"]:
+                    station_by_type.append(station)
+            logger.info(f"Returned {len(station_by_type)} stations")
+            return station_by_type
+
+        return station_data
+
     finally:
         conn.close()
         logger.info("Database connection closed.")
         logger.info("=" * 60)
-    return station_data
+
 
 @app.get("/stations/{station_id}")
 def get_station_by_id(station_id: int):
@@ -71,6 +82,8 @@ def get_station_by_id(station_id: int):
 
 @app.get("/measurements")
 def get_measurements(limit: int | None = Query(default=None, ge=1, le=100)):
+    """Return measurements filtered by limit."""
+
     logger.info("=" * 60)
     logger.info("GET /measurements request received. Opening database connection.")
 
