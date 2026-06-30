@@ -441,12 +441,12 @@ src/api.py
 
 Current FastAPI endpoints using database data:
 
-| Method | Endpoint | Database function used |
-|---|---|---|
-| `GET` | `/stations` | `fetch_stations(conn)` |
-| `GET` | `/stations/{station_id}` | `fetch_station_by_id(conn, station_id)` |
-| `GET` | `/measurements` | `fetch_joined_measurements(conn)` |
-| `GET` | `/stations/{station_id}/measurements` | `fetch_station_by_id(conn, station_id)` and `fetch_measurements_by_station_id(conn, station_id)` |
+| Method | Endpoint | Database function used | Notes |
+|---|---|---|---|
+| `GET` | `/stations` | `fetch_stations(conn)` | Can optionally filter the returned list by `station_type`. |
+| `GET` | `/stations/{station_id}` | `fetch_station_by_id(conn, station_id)` | Returns one station or `404 Not Found`. |
+| `GET` | `/measurements` | `fetch_joined_measurements(conn)` | Can optionally limit the returned list with `limit`. |
+| `GET` | `/stations/{station_id}/measurements` | `fetch_station_by_id(conn, station_id)` and `fetch_measurements_by_station_id(conn, station_id)` | Checks the parent station before loading measurements. |
 
 Current API flow per database-backed request:
 
@@ -464,6 +464,42 @@ GET /stations/1/measurements
 → load measurements for station 1
 → return measurement list as JSON
 ```
+
+---
+
+## API Query Parameters
+
+The API currently uses query parameters for optional filtering and limiting.
+
+Query parameters do not identify one specific resource. Instead, they modify how a list endpoint is returned.
+
+Examples:
+
+```text
+GET /stations?station_type=solar_park
+GET /measurements?limit=5
+```
+
+Current query parameters:
+
+| Endpoint | Query parameter | Purpose | Behavior |
+|---|---|---|---|
+| `/stations` | `station_type` | Filters stations by technical asset type. | Unknown types return an empty list `[]`. |
+| `/measurements` | `limit` | Limits the number of returned measurement records. | Invalid values are rejected by FastAPI validation. |
+
+The `limit` parameter is validated with FastAPI `Query` constraints. Current behavior:
+
+| Request example | Result |
+|---|---|
+| `/measurements` | Returns all measurements. |
+| `/measurements?limit=5` | Returns the first 5 measurements. |
+| `/measurements?limit=0` | Returns `422 Unprocessable Content`. |
+| `/measurements?limit=-1` | Returns `422 Unprocessable Content`. |
+| `/measurements?limit=101` | Returns `422 Unprocessable Content` if the configured upper limit is 100. |
+| `/measurements?limit=abc` | Returns `422 Unprocessable Content` because the value is not an integer. |
+
+The `station_type` parameter currently filters in Python after loading station data from the database. This is intentionally simple for the current learning stage. Later, filtering can be moved into SQL for larger datasets.
+
 
 ---
 
@@ -528,6 +564,40 @@ Result:
 ```
 
 FastAPI returns this automatically because `station_id` is typed as `int`.
+
+### Query parameter without matching results
+
+```text
+GET /stations?station_type=unknown
+```
+
+Result:
+
+```text
+200 OK
+```
+
+with an empty list:
+
+```json
+[]
+```
+
+This is correct because the list endpoint exists. The filter simply has no matching records.
+
+### Invalid query parameter value
+
+```text
+GET /measurements?limit=-1
+```
+
+Result:
+
+```text
+422 Unprocessable Content
+```
+
+FastAPI returns this because the `limit` query parameter is constrained to valid positive values.
 
 ---
 
@@ -606,6 +676,7 @@ Current limitations:
 - No insert/update/delete operations from Python yet.
 - Database result mapping uses dictionaries instead of dedicated API schemas.
 - API endpoints do not use Pydantic response models yet.
+- Current query parameter filtering is intentionally simple and partly happens in Python instead of SQL.
 - Error handling around database connection failures is still basic.
 - No automated tests yet.
 - No Docker setup yet.
@@ -627,10 +698,18 @@ These limitations are intentional for the current learning stage.
 - Loaded database configuration from environment variables.
 - Read station data from PostgreSQL.
 - Read joined station and measurement data from PostgreSQL.
-- Mapped PostgreSQL result rows into dictionaries with explicit field names.
 - Separated database access from terminal output formatting.
 - Preserved the old CSV/OOP workflow as a legacy demo.
 - Reorganized project files into `src/`, `sql/`, `docs/`, `data/` and `demos/`.
+
+---
+
+## Completed in v0.4.1
+
+- Mapped PostgreSQL result rows into dictionaries with explicit field names.
+- Replaced tuple-position access with dictionary-key access for database results.
+- Prepared station and measurement data for JSON responses in the later FastAPI layer.
+- Improved readability of downstream code by using keys such as `station_name`, `station_type`, `measurement_time` and `load_value`.
 
 ---
 
@@ -646,6 +725,7 @@ These limitations are intentional for the current learning stage.
 - Added automatic API documentation through OpenAPI/Swagger UI.
 - Centralized logging configuration for terminal and API workflows.
 - Kept database access separated from API route definitions.
+- Added query parameters for list endpoints, including `station_type` on `/stations` and `limit` on `/measurements`.
 
 ---
 
@@ -653,10 +733,9 @@ These limitations are intentional for the current learning stage.
 
 Recommended next steps:
 
-1. Add query parameters for measurement endpoints, for example `limit` or `station_id`.
-2. Add Pydantic response models for clearer API schemas.
-3. Improve database error handling.
-4. Add basic automated tests for database and API functions.
-5. Add insert endpoints later, for example `POST /measurements`.
-6. Add Docker setup for the application and PostgreSQL.
-7. Prepare a simple cloud deployment scenario.
+1. Add Pydantic response models for clearer API schemas.
+2. Improve database error handling.
+3. Add basic automated tests for database and API functions.
+4. Add insert endpoints later, for example `POST /measurements`.
+5. Add Docker setup for the application and PostgreSQL.
+6. Prepare a simple cloud deployment scenario.

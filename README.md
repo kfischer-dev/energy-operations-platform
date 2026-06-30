@@ -38,6 +38,7 @@ The current version focuses on:
 * exposing PostgreSQL-backed station and measurement data as JSON,
 * providing REST endpoints for stations and measurements,
 * using path parameters for station-specific API calls,
+* using query parameters for filtering and limiting API responses,
 * returning proper HTTP errors for missing resources,
 * keeping the PostgreSQL workflow available as a terminal-based application flow,
 * centralizing logging configuration,
@@ -59,8 +60,9 @@ The project currently supports three workflows:
 * Measurement data is loaded from PostgreSQL through joined SQL queries.
 * The API provides list endpoints and detail endpoints.
 * Path parameters are used to retrieve station-specific data.
+* Query parameters can filter stations by type and limit measurement results.
 * Missing stations return a proper `404 Not Found` response.
-* Invalid path parameter types are validated automatically by FastAPI.
+* Invalid path and query parameter values are validated automatically by FastAPI.
 * Interactive API documentation is available through Swagger UI at `/docs`.
 
 ### Current PostgreSQL terminal workflow
@@ -261,31 +263,47 @@ Example API URLs:
 http://localhost:8000/
 http://localhost:8000/health
 http://localhost:8000/stations
+http://localhost:8000/stations?station_type=solar_park
 http://localhost:8000/stations/1
 http://localhost:8000/measurements
+http://localhost:8000/measurements?limit=5
 http://localhost:8000/stations/1/measurements
 ```
 
 ### Available API Endpoints
 
-| Method | Endpoint                              | Description                                      |
-| ------ | ------------------------------------- | ------------------------------------------------ |
-| `GET`  | `/`                                   | Returns a welcome message for the API.           |
-| `GET`  | `/health`                            | Returns a basic API health check.                |
-| `GET`  | `/stations`                          | Returns all stations from PostgreSQL.            |
-| `GET`  | `/stations/{station_id}`             | Returns one station by station ID.               |
-| `GET`  | `/measurements`                      | Returns joined station and measurement data.     |
-| `GET`  | `/stations/{station_id}/measurements` | Returns measurements for one specific station.  |
+| Method | Endpoint                               | Description                                          |
+| ------ | -------------------------------------- | ---------------------------------------------------- |
+| `GET`  | `/`                                    | Returns a welcome message for the API.               |
+| `GET`  | `/health`                             | Returns a basic API health check.                    |
+| `GET`  | `/stations`                           | Returns all stations from PostgreSQL.                |
+| `GET`  | `/stations?station_type=solar_park`   | Returns stations filtered by station type.           |
+| `GET`  | `/stations/{station_id}`              | Returns one station by station ID.                   |
+| `GET`  | `/measurements`                       | Returns joined station and measurement data.         |
+| `GET`  | `/measurements?limit=5`               | Returns a limited number of measurement records.     |
+| `GET`  | `/stations/{station_id}/measurements` | Returns measurements for one specific station.       |
+
+### API Query Parameters
+
+| Endpoint | Query parameter | Example | Description |
+| -------- | --------------- | ------- | ----------- |
+| `/stations` | `station_type` | `/stations?station_type=solar_park` | Optional filter that returns only stations of the selected type. If no station matches, the API returns an empty list `[]`. |
+| `/measurements` | `limit` | `/measurements?limit=5` | Optional limit for the number of returned measurement records. The value must be between `1` and `100`. |
 
 ### API Error Behavior
 
-| Request example                         | Result                                                        |
-| --------------------------------------- | ------------------------------------------------------------- |
-| `/stations/1`                           | Returns station with ID `1`.                                  |
-| `/stations/999`                         | Returns `404 Not Found` if the station does not exist.         |
+| Request example                         | Result                                                            |
+| --------------------------------------- | ----------------------------------------------------------------- |
+| `/stations/1`                           | Returns station with ID `1`.                                      |
+| `/stations/999`                         | Returns `404 Not Found` if the station does not exist.             |
 | `/stations/abc`                         | Returns a validation error because `station_id` must be an integer. |
-| `/stations/1/measurements`              | Returns all measurements for station `1`.                     |
-| `/stations/999/measurements`            | Returns `404 Not Found` if the station does not exist.         |
+| `/stations?station_type=unknown`        | Returns an empty list `[]` because the filter has no matches.      |
+| `/measurements?limit=5`                 | Returns the first five joined measurement records.                 |
+| `/measurements?limit=0`                 | Returns a validation error because `limit` must be at least `1`.   |
+| `/measurements?limit=101`               | Returns a validation error because `limit` must be at most `100`.  |
+| `/measurements?limit=abc`               | Returns a validation error because `limit` must be an integer.     |
+| `/stations/1/measurements`              | Returns all measurements for station `1`.                         |
+| `/stations/999/measurements`            | Returns `404 Not Found` if the station does not exist.             |
 
 ### Run the current PostgreSQL terminal workflow
 
@@ -376,7 +394,8 @@ The log file `logs/app.log` is generated locally and should not be committed.
 | `v0.31` | Refactoring of CSV conversion into `Station.from_csv_row()`. More robust handling of invalid and missing load values.       |
 | `v0.32` | Basic logging introduced. Program flow and data-quality issues are written to `app.log`.                                    |
 | `v0.4`  | PostgreSQL integration added. SQL schema, seed data, example queries, Python database connection and project restructuring. |
-| `v0.5`  | FastAPI backend layer added. PostgreSQL-backed station and measurement data is exposed through REST endpoints as JSON.      |
+| `v0.4.1`| Database query results are mapped from raw PostgreSQL rows into dictionaries with explicit field names as preparation for JSON and FastAPI responses. |
+| `v0.5`  | FastAPI backend layer added. PostgreSQL-backed station and measurement data is exposed through REST endpoints as JSON, including path and query parameters. |
 
 ---
 
@@ -405,6 +424,8 @@ The current project demonstrates practical knowledge in:
 * FastAPI routing,
 * JSON responses,
 * path parameters,
+* query parameters,
+* parameter constraints with FastAPI `Query`,
 * HTTP status codes,
 * automatic request validation,
 * and automatic API documentation with OpenAPI / Swagger UI.
@@ -415,7 +436,6 @@ The current project demonstrates practical knowledge in:
 
 Next planned steps:
 
-* Add query parameters for filtering and limiting measurement data.
 * Introduce Pydantic models for clearer request and response structures.
 * Add more realistic database queries and KPIs.
 * Add basic automated tests.
