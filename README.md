@@ -30,7 +30,7 @@ The project is intentionally not a generic tutorial app. It is designed around t
 
 ## Current Version
 
-**Current development focus:** `v0.5.2`
+**Current development focus:** `v0.5.3`
 
 The current version focuses on:
 
@@ -41,6 +41,8 @@ The current version focuses on:
 * validating path and query parameters with FastAPI constraints,
 * returning proper HTTP errors for missing resources,
 * defining typed API response schemas with Pydantic response models,
+* adding automated API tests with pytest and FastAPI TestClient,
+* checking successful responses, validation errors and not-found cases automatically,
 * improving Swagger/OpenAPI documentation with API metadata, endpoint tags, summaries, descriptions and schemas,
 * keeping the PostgreSQL workflow available as a terminal-based application flow,
 * centralizing logging configuration,
@@ -66,6 +68,8 @@ The project currently supports three workflows:
 * Missing stations return a proper `404 Not Found` response.
 * Invalid path and query parameter values are validated automatically by FastAPI.
 * Pydantic response models define the expected API response structures.
+* Automated API tests verify core endpoint behavior with pytest and FastAPI TestClient.
+* The tests cover successful responses, empty filter results, `404 Not Found` cases and `422` validation errors.
 * The API uses custom OpenAPI metadata, endpoint tags, summaries, descriptions, response descriptions and schemas.
 * Interactive API documentation is available through Swagger UI at `/docs`.
 
@@ -108,6 +112,9 @@ energy-operations-platform/
 ├── docs/
 │   └── database_notes.md
 │
+├── tests/
+│   └── test_api.py
+│
 ├── logs/
 │   └── app.log              # generated locally, not committed
 │
@@ -149,6 +156,7 @@ energy-operations-platform/
 | `src/read_documents.py`    | CSV reading logic for the legacy CSV/OOP workflow.                         |
 | `src/schemas.py`           | Pydantic response models that define the public API response structures.   |
 | `src/server.py`            | Simulated additional station data from a server source.                    |
+| `tests/test_api.py`        | Automated FastAPI endpoint tests using pytest and TestClient.              |
 | `demos/legacy_csv_demo.py` | Preserved v0.3 CSV/OOP workflow.                                           |
 | `demos/database_test.py`   | Legacy direct PostgreSQL test script for learning/reference purposes.      |
 | `sql/schema.sql`           | PostgreSQL table definitions.                                              |
@@ -182,6 +190,8 @@ energy-operations-platform/
 * FastAPI `Path` and `Query` parameter constraints
 * FastAPI `response_model`
 * Pydantic `BaseModel`
+* pytest
+* FastAPI `TestClient`
 * Git/GitHub project structure
 
 ---
@@ -280,6 +290,7 @@ http://localhost:8000/stations/1
 http://localhost:8000/measurements
 http://localhost:8000/measurements?limit=5
 http://localhost:8000/stations/1/measurements
+http://localhost:8000/stations/1/measurements?limit=5
 ```
 
 ### Available API Endpoints
@@ -294,6 +305,7 @@ http://localhost:8000/stations/1/measurements
 | `GET`  | `/measurements`                       | Returns joined station and measurement data.         |
 | `GET`  | `/measurements?limit=5`               | Returns a limited number of measurement records.     |
 | `GET`  | `/stations/{station_id}/measurements` | Returns measurements for one specific station.       |
+| `GET`  | `/stations/{station_id}/measurements?limit=5` | Returns a limited number of measurements for one station. |
 
 ### API Query Parameters
 
@@ -301,6 +313,7 @@ http://localhost:8000/stations/1/measurements
 | -------- | --------------- | ------- | ----------- |
 | `/stations` | `station_type` | `/stations?station_type=solar_park` | Optional filter that returns only stations of the selected type. If no station matches, the API returns an empty list `[]`. |
 | `/measurements` | `limit` | `/measurements?limit=5` | Optional limit for the number of returned measurement records. The value must be between `1` and `100`. |
+| `/stations/{station_id}/measurements` | `limit` | `/stations/1/measurements?limit=5` | Optional limit for the number of returned measurement records for one station. The value must be between `1` and `100`. |
 
 ### API Response Models
 
@@ -338,7 +351,7 @@ Current API documentation features:
 | ------- | ------- |
 | API title | Shows the project-specific API name in Swagger UI. |
 | API description | Explains the purpose of the Energy Operations Platform API. |
-| API version | Documents the current API version, currently `0.5.2`. |
+| API version | Documents the current API version, currently `0.5.3`. |
 | Endpoint tags | Groups routes into `General`, `Stations` and `Measurements`. |
 | Endpoint summaries | Make the route overview easier to scan. |
 | Endpoint descriptions | Explain what each route returns and how it should be used. |
@@ -360,7 +373,43 @@ Current API documentation features:
 | `/measurements?limit=101`               | Returns a validation error because `limit` must be at most `100`.  |
 | `/measurements?limit=abc`               | Returns a validation error because `limit` must be an integer.     |
 | `/stations/1/measurements`              | Returns all measurements for station `1`.                         |
+| `/stations/1/measurements?limit=5`       | Returns at most five measurements for station `1`.                 |
+| `/stations/1/measurements?limit=0`       | Returns a validation error because `limit` must be at least `1`.   |
 | `/stations/999/measurements`            | Returns `404 Not Found` if the station does not exist.             |
+| `/stations/abc/measurements`            | Returns a validation error because `station_id` must be an integer. |
+
+### Automated API Tests
+
+The project includes automated API tests for the current FastAPI endpoints.
+
+The tests are located in:
+
+```text
+tests/test_api.py
+```
+
+Run the tests from the project root:
+
+```bash
+py -m pytest -v
+```
+
+Current test scope:
+
+| Area | Tested behavior |
+| ---- | --------------- |
+| General endpoints | `/` and `/health` return `200 OK` and the expected JSON responses. |
+| Station list endpoint | `/stations` returns a list with the expected station fields. |
+| Station filtering | `/stations?station_type=unknown` returns an empty list `[]`. |
+| Station detail endpoint | `/stations/1` returns one station object. |
+| Station errors | Non-existing IDs return `404`; invalid path parameters return `422`. |
+| Measurement list endpoint | `/measurements` returns a list with the expected measurement fields. |
+| Measurement limiting | `/measurements?limit=5` returns at most five records. |
+| Measurement validation | Invalid `limit` values return `422`. |
+| Nested station measurements | `/stations/1/measurements` returns measurements for one station. |
+| Nested endpoint errors | Missing stations return `404`; invalid station IDs or limits return `422`. |
+
+The tests currently use the local PostgreSQL database and the existing seed data. A separate test database or dependency overrides can be introduced later when the project structure becomes more advanced.
 
 ### Run the current PostgreSQL terminal workflow
 
@@ -455,6 +504,7 @@ The log file `logs/app.log` is generated locally and should not be committed.
 | `v0.5`  | FastAPI backend layer added. PostgreSQL-backed station and measurement data is exposed through REST endpoints as JSON, including path and query parameters. |
 | `v0.5.1`| API documentation polish. FastAPI metadata, endpoint tags, summaries, descriptions, response descriptions and parameter constraints are improved for Swagger/OpenAPI. |
 | `v0.5.2`| Pydantic response models added. Station and measurement endpoints now use typed response schemas through FastAPI `response_model`. |
+| `v0.5.3`| Automated API tests added with pytest and FastAPI TestClient for success cases, validation errors, not-found responses, query parameters and nested station measurement endpoints. |
 
 ---
 
@@ -490,6 +540,10 @@ The current project demonstrates practical knowledge in:
 * Pydantic response models,
 * typed API response schemas,
 * FastAPI `response_model`,
+* pytest basics,
+* FastAPI `TestClient`,
+* automated API endpoint tests,
+* testing successful responses and expected error cases,
 * HTTP status codes,
 * automatic request validation,
 * and automatic API documentation with OpenAPI / Swagger UI.
@@ -500,7 +554,6 @@ The current project demonstrates practical knowledge in:
 
 Next planned steps:
 
-* Add automated API tests for the existing FastAPI endpoints.
 * Add more realistic database queries and KPIs.
 * Introduce routers later when the number of endpoints grows.
 * Improve the PostgreSQL access layer step by step.

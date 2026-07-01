@@ -14,6 +14,7 @@ The README gives a high-level project overview. This file is intentionally more 
 - FastAPI path and query parameter behavior,
 - FastAPI API documentation metadata,
 - Pydantic response models,
+- automated API tests with pytest and FastAPI TestClient,
 - and how the database layer is used by the terminal workflow and the FastAPI API layer.
 
 ---
@@ -451,7 +452,7 @@ Current FastAPI endpoints using database data:
 | `GET` | `/stations` | `fetch_stations(conn)` | Can optionally filter the returned list by `station_type`. |
 | `GET` | `/stations/{station_id}` | `fetch_station_by_id(conn, station_id)` | Returns one station or `404 Not Found`. |
 | `GET` | `/measurements` | `fetch_joined_measurements(conn)` | Can optionally limit the returned list with `limit`. |
-| `GET` | `/stations/{station_id}/measurements` | `fetch_station_by_id(conn, station_id)` and `fetch_measurements_by_station_id(conn, station_id)` | Checks the parent station before loading measurements. |
+| `GET` | `/stations/{station_id}/measurements` | `fetch_station_by_id(conn, station_id)` and `fetch_measurements_by_station_id(conn, station_id)` | Checks the parent station before loading measurements; can optionally limit the returned list with `limit`. |
 
 Current API flow per database-backed request:
 
@@ -483,6 +484,7 @@ Examples:
 ```text
 GET /stations?station_type=solar_park
 GET /measurements?limit=5
+GET /stations/1/measurements?limit=5
 ```
 
 Current query parameters:
@@ -491,6 +493,7 @@ Current query parameters:
 |---|---|---|---|
 | `/stations` | `station_type` | Filters stations by technical asset type. | Unknown types return an empty list `[]`. |
 | `/measurements` | `limit` | Limits the number of returned measurement records. | Invalid values are rejected by FastAPI validation. |
+| `/stations/{station_id}/measurements` | `limit` | Limits the number of returned measurement records for one station. | Invalid values are rejected by FastAPI validation. |
 
 The `limit` parameter is validated with FastAPI `Query` constraints. Current behavior:
 
@@ -502,6 +505,15 @@ The `limit` parameter is validated with FastAPI `Query` constraints. Current beh
 | `/measurements?limit=-1` | Returns `422 Unprocessable Content`. |
 | `/measurements?limit=101` | Returns `422 Unprocessable Content` if the configured upper limit is 100. |
 | `/measurements?limit=abc` | Returns `422 Unprocessable Content` because the value is not an integer. |
+
+The same `limit` validation pattern is also used by the nested station measurement endpoint:
+
+| Request example | Result |
+|---|---|
+| `/stations/1/measurements` | Returns all measurements for station `1`. |
+| `/stations/1/measurements?limit=5` | Returns the first 5 measurements for station `1`. |
+| `/stations/1/measurements?limit=0` | Returns `422 Unprocessable Content`. |
+| `/stations/1/measurements?limit=abc` | Returns `422 Unprocessable Content` because the value is not an integer. |
 
 The `station_type` parameter currently filters in Python after loading station data from the database. This is intentionally simple for the current learning stage. Later, filtering can be moved into SQL for larger datasets.
 
@@ -531,6 +543,7 @@ Current validation behavior:
 | `station_id` | Path | Integer, minimum `1` | `/stations/abc` | `422 Unprocessable Content` |
 | `limit` | Query | Integer, minimum `1`, maximum `100` | `/measurements?limit=0` | `422 Unprocessable Content` |
 | `limit` | Query | Integer, minimum `1`, maximum `100` | `/measurements?limit=101` | `422 Unprocessable Content` |
+| `limit` | Query | Integer, minimum `1`, maximum `100` | `/stations/1/measurements?limit=0` | `422 Unprocessable Content` |
 
 ---
 
@@ -626,6 +639,54 @@ With response models:
 This is standard API behavior and should not be changed to a manually formatted string unless there is a specific client requirement.
 
 ---
+
+## Automated API Tests
+
+In `v0.5.3`, automated API tests were added with pytest and FastAPI `TestClient`.
+
+The tests are located in:
+
+```text
+tests/test_api.py
+```
+
+They are executed from the project root with:
+
+```bash
+py -m pytest -v
+```
+
+Current test coverage:
+
+| Test area | Examples | Expected behavior |
+|---|---|---|
+| General endpoints | `/`, `/health` | Return `200 OK` and expected JSON responses. |
+| Station list | `/stations` | Returns a list with station dictionaries matching the API schema. |
+| Station type filter | `/stations?station_type=unknown` | Returns `200 OK` with an empty list `[]`. |
+| Station detail | `/stations/1` | Returns one station object. |
+| Station not found | `/stations/9999` | Returns `404 Not Found`. |
+| Invalid station path values | `/stations/0`, `/stations/abc` | Return `422 Unprocessable Content`. |
+| Measurement list | `/measurements` | Returns a list with measurement dictionaries matching the API schema. |
+| Measurement limit | `/measurements?limit=5` | Returns at most five records. |
+| Invalid measurement limit | `/measurements?limit=0`, `/measurements?limit=101`, `/measurements?limit=abc` | Return `422 Unprocessable Content`. |
+| Nested station measurements | `/stations/1/measurements` | Returns measurements for one station. |
+| Nested endpoint errors | `/stations/9999/measurements`, `/stations/abc/measurements`, `/stations/1/measurements?limit=0` | Return expected `404` or `422` responses. |
+
+The current tests are integration-style API tests. They import the real FastAPI app from `src.api` and call endpoints through `TestClient`.
+
+Important current limitation:
+
+```text
+The tests use the local PostgreSQL database and existing seed data.
+```
+
+This is acceptable for the current learning stage because it verifies the real FastAPI-to-database flow. Later improvements can introduce:
+
+- a separate test database,
+- test fixtures,
+- dependency overrides,
+- mocked database access,
+- or CI execution through GitHub Actions.
 
 ## API Error Behavior
 
@@ -817,7 +878,7 @@ Current limitations:
 - API routes are still kept in `src/api.py`; routers can be introduced later when the API grows.
 - Current query parameter filtering is intentionally simple and partly happens in Python instead of SQL.
 - Error handling around database connection failures is still basic.
-- No automated tests yet.
+- Automated tests currently use the local PostgreSQL database instead of an isolated test database.
 - No Docker setup yet.
 - No cloud deployment yet.
 
@@ -891,12 +952,27 @@ These limitations are intentional for the current learning stage.
 
 ---
 
+## Completed in v0.5.3
+
+- Added `tests/test_api.py` for automated FastAPI endpoint tests.
+- Added pytest-based tests using FastAPI `TestClient`.
+- Tested general endpoints such as `/` and `/health`.
+- Tested station list and station detail endpoints.
+- Tested query parameter behavior for station type filtering.
+- Tested measurement list endpoints and `limit` behavior.
+- Tested nested station measurement endpoints.
+- Tested expected `404 Not Found` behavior for non-existing stations.
+- Tested expected `422 Unprocessable Content` behavior for invalid path and query parameters.
+- Confirmed that the current FastAPI/PostgreSQL integration can be checked automatically with a single pytest command.
+
+---
+
 ## Next Steps
 
 Recommended next steps:
 
-1. Add automated API tests for existing FastAPI endpoints.
-2. Improve database error handling.
+1. Improve database error handling.
+2. Add more realistic database queries and KPI endpoints.
 3. Introduce routers later when the API contains more endpoints.
 4. Add insert endpoints later, for example `POST /measurements`.
 5. Add Docker setup for the application and PostgreSQL.
