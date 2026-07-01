@@ -14,7 +14,7 @@ app = FastAPI(
         "REST API for accessing energy station and measurement data. "
         "This API is part of the Energy Operations Platform portfolio project."
     ),
-    version="0.5.1",
+    version="0.5.3",
     openapi_tags=[
         {
             "name": "General",
@@ -197,7 +197,10 @@ def get_measurements(limit: int | None = Query(default=None, ge=1, le=100, descr
     ),
     response_description="List of measurement records for the requested station.",   
 )
-def get_measurements_by_station_id(station_id: int = Path(..., ge=1, description="Unique ID of the requested energy station.")):
+def get_measurements_by_station_id(
+    station_id: int = Path(..., ge=1, description="Unique ID of the requested energy station."),
+    limit: int | None = Query(default=None, ge=1, le=100, description="Optional maximum number of measurement records to return.",),
+    ):
     """Return all measurements for one station."""
 
     logger.info("=" * 60)
@@ -217,11 +220,16 @@ def get_measurements_by_station_id(station_id: int = Path(..., ge=1, description
         measurement_data = fetch_measurements_by_station_id(conn, station_id)
         logger.info(f"Loaded {len(measurement_data)} joined measurements of station_id {station_id} from database.")
 
+        if limit is not None:
+            logger.info(f"Applying limit={limit} to station measurement response.")
+            return measurement_data[:limit]
+
+        return measurement_data
+
     finally:
         conn.close()
         logger.info("Database connection closed.")
         logger.info("=" * 60)
 
-    return measurement_data
 
     
