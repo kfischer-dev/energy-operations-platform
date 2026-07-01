@@ -30,7 +30,7 @@ The project is intentionally not a generic tutorial app. It is designed around t
 
 ## Current Version
 
-**Current development focus:** `v0.5.1`
+**Current development focus:** `v0.5.2`
 
 The current version focuses on:
 
@@ -40,7 +40,8 @@ The current version focuses on:
 * using query parameters for filtering and limiting API responses,
 * validating path and query parameters with FastAPI constraints,
 * returning proper HTTP errors for missing resources,
-* improving Swagger/OpenAPI documentation with API metadata, endpoint tags, summaries and descriptions,
+* defining typed API response schemas with Pydantic response models,
+* improving Swagger/OpenAPI documentation with API metadata, endpoint tags, summaries, descriptions and schemas,
 * keeping the PostgreSQL workflow available as a terminal-based application flow,
 * centralizing logging configuration,
 * and continuing the separation of database access, API logic, output formatting and application flow.
@@ -64,7 +65,8 @@ The project currently supports three workflows:
 * Query parameters can filter stations by type and limit measurement results.
 * Missing stations return a proper `404 Not Found` response.
 * Invalid path and query parameter values are validated automatically by FastAPI.
-* The API uses custom OpenAPI metadata, endpoint tags, summaries, descriptions and response descriptions.
+* Pydantic response models define the expected API response structures.
+* The API uses custom OpenAPI metadata, endpoint tags, summaries, descriptions, response descriptions and schemas.
 * Interactive API documentation is available through Swagger UI at `/docs`.
 
 ### Current PostgreSQL terminal workflow
@@ -122,6 +124,7 @@ energy-operations-platform/
 │   ├── main.py
 │   ├── output.py
 │   ├── read_documents.py
+│   ├── schemas.py
 │   ├── server.py
 │   └── station.py
 │
@@ -144,6 +147,7 @@ energy-operations-platform/
 | `src/output.py`            | Terminal output formatting for database report results.                    |
 | `src/station.py`           | `Station` class and object-oriented station logic from earlier versions.   |
 | `src/read_documents.py`    | CSV reading logic for the legacy CSV/OOP workflow.                         |
+| `src/schemas.py`           | Pydantic response models that define the public API response structures.   |
 | `src/server.py`            | Simulated additional station data from a server source.                    |
 | `demos/legacy_csv_demo.py` | Preserved v0.3 CSV/OOP workflow.                                           |
 | `demos/database_test.py`   | Legacy direct PostgreSQL test script for learning/reference purposes.      |
@@ -170,11 +174,14 @@ energy-operations-platform/
 * `psycopg`
 * `python-dotenv`
 * FastAPI
+* Pydantic
 * Uvicorn
 * REST APIs
 * JSON
 * OpenAPI / Swagger UI
 * FastAPI `Path` and `Query` parameter constraints
+* FastAPI `response_model`
+* Pydantic `BaseModel`
 * Git/GitHub project structure
 
 ---
@@ -260,7 +267,7 @@ Open the interactive API documentation:
 http://localhost:8000/docs
 ```
 
-The Swagger UI shows the custom API title, version, endpoint groups, parameter descriptions and response descriptions.
+The Swagger UI shows the custom API title, version, endpoint groups, parameter descriptions, response descriptions and Pydantic response schemas.
 
 Example API URLs:
 
@@ -295,6 +302,32 @@ http://localhost:8000/stations/1/measurements
 | `/stations` | `station_type` | `/stations?station_type=solar_park` | Optional filter that returns only stations of the selected type. If no station matches, the API returns an empty list `[]`. |
 | `/measurements` | `limit` | `/measurements?limit=5` | Optional limit for the number of returned measurement records. The value must be between `1` and `100`. |
 
+### API Response Models
+
+The API uses Pydantic response models to define the expected response structures for station and measurement endpoints.
+
+| Model | Used by | Fields |
+| ----- | ------- | ------ |
+| `StationResponse` | `/stations`, `/stations/{station_id}` | `station_id`, `station_name`, `station_type`, `station_location` |
+| `MeasurementResponse` | `/measurements`, `/stations/{station_id}/measurements` | `station_name`, `measurement_time`, `load_value`, `unit` |
+
+The response models are defined in `src/schemas.py` and connected to the FastAPI routes through `response_model`.
+
+This improves the API because:
+
+* Swagger UI shows clear response schemas,
+* FastAPI validates that returned data matches the declared API contract,
+* response structures are easier to understand for external users,
+* and later tests can check API behavior against stable schemas.
+
+`measurement_time` is returned in ISO 8601 date-time format, for example:
+
+```json
+"2026-06-22T08:15:00"
+```
+
+This is the standard JSON/API representation for date-time values.
+
 ### API Documentation
 
 The FastAPI application includes custom OpenAPI metadata for a clearer portfolio presentation.
@@ -305,12 +338,13 @@ Current API documentation features:
 | ------- | ------- |
 | API title | Shows the project-specific API name in Swagger UI. |
 | API description | Explains the purpose of the Energy Operations Platform API. |
-| API version | Documents the current API version, currently `0.5.1`. |
+| API version | Documents the current API version, currently `0.5.2`. |
 | Endpoint tags | Groups routes into `General`, `Stations` and `Measurements`. |
 | Endpoint summaries | Make the route overview easier to scan. |
 | Endpoint descriptions | Explain what each route returns and how it should be used. |
 | Parameter descriptions | Explain path and query parameters directly in Swagger UI. |
 | Response descriptions | Describe the returned response type in the generated API documentation. |
+| Response schemas | Show `StationResponse` and `MeasurementResponse` as typed API response models. |
 
 ### API Error Behavior
 
@@ -420,6 +454,7 @@ The log file `logs/app.log` is generated locally and should not be committed.
 | `v0.4.1`| Database query results are mapped from raw PostgreSQL rows into dictionaries with explicit field names as preparation for JSON and FastAPI responses. |
 | `v0.5`  | FastAPI backend layer added. PostgreSQL-backed station and measurement data is exposed through REST endpoints as JSON, including path and query parameters. |
 | `v0.5.1`| API documentation polish. FastAPI metadata, endpoint tags, summaries, descriptions, response descriptions and parameter constraints are improved for Swagger/OpenAPI. |
+| `v0.5.2`| Pydantic response models added. Station and measurement endpoints now use typed response schemas through FastAPI `response_model`. |
 
 ---
 
@@ -452,6 +487,9 @@ The current project demonstrates practical knowledge in:
 * parameter constraints with FastAPI `Query`,
 * path constraints with FastAPI `Path`,
 * API metadata and endpoint documentation with FastAPI,
+* Pydantic response models,
+* typed API response schemas,
+* FastAPI `response_model`,
 * HTTP status codes,
 * automatic request validation,
 * and automatic API documentation with OpenAPI / Swagger UI.
@@ -462,10 +500,9 @@ The current project demonstrates practical knowledge in:
 
 Next planned steps:
 
-* Introduce Pydantic models for clearer request and response structures.
+* Add automated API tests for the existing FastAPI endpoints.
 * Add more realistic database queries and KPIs.
 * Introduce routers later when the number of endpoints grows.
-* Add basic automated tests.
 * Improve the PostgreSQL access layer step by step.
 * Add Docker setup.
 * Add basic cloud deployment preparation.

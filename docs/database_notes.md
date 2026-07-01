@@ -13,6 +13,7 @@ The README gives a high-level project overview. This file is intentionally more 
 - database result mapping,
 - FastAPI path and query parameter behavior,
 - FastAPI API documentation metadata,
+- Pydantic response models,
 - and how the database layer is used by the terminal workflow and the FastAPI API layer.
 
 ---
@@ -441,7 +442,7 @@ The API layer is defined in:
 src/api.py
 ```
 
-The FastAPI app also contains project-specific OpenAPI metadata such as API title, description, version, tags, endpoint summaries, endpoint descriptions, parameter descriptions and response descriptions.
+The FastAPI app also contains project-specific OpenAPI metadata such as API title, description, version, tags, endpoint summaries, endpoint descriptions, parameter descriptions, response descriptions and Pydantic response schemas.
 
 Current FastAPI endpoints using database data:
 
@@ -530,6 +531,99 @@ Current validation behavior:
 | `station_id` | Path | Integer, minimum `1` | `/stations/abc` | `422 Unprocessable Content` |
 | `limit` | Query | Integer, minimum `1`, maximum `100` | `/measurements?limit=0` | `422 Unprocessable Content` |
 | `limit` | Query | Integer, minimum `1`, maximum `100` | `/measurements?limit=101` | `422 Unprocessable Content` |
+
+---
+
+## Pydantic Response Models
+
+In `v0.5.2`, the FastAPI layer was improved with Pydantic response models.
+
+The response models are defined in:
+
+```text
+src/schemas.py
+```
+
+Current response models:
+
+### `StationResponse`
+
+Used for station endpoints.
+
+Fields:
+
+```text
+station_id: int
+station_name: str
+station_type: str
+station_location: str
+```
+
+Used by:
+
+```text
+GET /stations
+GET /stations/{station_id}
+```
+
+The list endpoint returns:
+
+```python
+list[StationResponse]
+```
+
+The detail endpoint returns:
+
+```python
+StationResponse
+```
+
+This distinction is important. Returning a single dictionary while declaring `list[StationResponse]` causes a FastAPI response validation error, because the declared API contract does not match the returned data.
+
+### `MeasurementResponse`
+
+Used for measurement endpoints.
+
+Fields:
+
+```text
+station_name: str
+measurement_time: datetime
+load_value: float
+unit: str
+```
+
+Used by:
+
+```text
+GET /measurements
+GET /stations/{station_id}/measurements
+```
+
+Both endpoints return:
+
+```python
+list[MeasurementResponse]
+```
+
+### Why Response Models Matter
+
+Before `v0.5.2`, the API returned dictionaries directly. This worked, but the public API contract was implicit.
+
+With response models:
+
+- Swagger UI shows explicit response schemas,
+- FastAPI validates that returned data matches the declared schema,
+- station and measurement response structures are easier to understand,
+- and later automated API tests can check a stable response contract.
+
+`measurement_time` is modeled as a Python `datetime`. In JSON responses, FastAPI/Pydantic serializes it in ISO 8601 format:
+
+```json
+"2026-06-22T08:15:00"
+```
+
+This is standard API behavior and should not be changed to a manually formatted string unless there is a specific client requirement.
 
 ---
 
@@ -656,6 +750,7 @@ src/database.py → database connection and queries
 src/output.py   → terminal output formatting
 src/main.py     → terminal application flow
 src/api.py      → FastAPI routes and JSON responses
+src/schemas.py  → Pydantic response models for API response schemas
 ```
 
 This separation is important because the same database layer can be used by different application interfaces.
@@ -718,8 +813,7 @@ Current limitations:
 
 - Python currently only reads from PostgreSQL.
 - No insert/update/delete operations from Python yet.
-- Database result mapping uses dictionaries instead of dedicated API schemas.
-- API endpoints do not use Pydantic response models yet.
+- Database result mapping still uses dictionaries internally before FastAPI validates the response models.
 - API routes are still kept in `src/api.py`; routers can be introduced later when the API grows.
 - Current query parameter filtering is intentionally simple and partly happens in Python instead of SQL.
 - Error handling around database connection failures is still basic.
@@ -785,14 +879,25 @@ These limitations are intentional for the current learning stage.
 
 ---
 
+## Completed in v0.5.2
+
+- Added `src/schemas.py` for Pydantic response models.
+- Added `StationResponse` for station API responses.
+- Added `MeasurementResponse` for measurement API responses.
+- Connected FastAPI endpoints to response models through `response_model`.
+- Validated the difference between list responses and single-object responses.
+- Confirmed that `measurement_time` is returned in standard ISO 8601 date-time format.
+- Improved Swagger/OpenAPI output with explicit response schemas.
+
+---
+
 ## Next Steps
 
 Recommended next steps:
 
-1. Add Pydantic response models for clearer API schemas.
+1. Add automated API tests for existing FastAPI endpoints.
 2. Improve database error handling.
-3. Add basic automated tests for database and API functions.
-4. Introduce routers later when the API contains more endpoints.
-5. Add insert endpoints later, for example `POST /measurements`.
-6. Add Docker setup for the application and PostgreSQL.
-7. Prepare a simple cloud deployment scenario.
+3. Introduce routers later when the API contains more endpoints.
+4. Add insert endpoints later, for example `POST /measurements`.
+5. Add Docker setup for the application and PostgreSQL.
+6. Prepare a simple cloud deployment scenario.
