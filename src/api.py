@@ -3,6 +3,7 @@ from src.logging_config import configure_logging
 
 from fastapi import FastAPI, HTTPException, status, Query, Path
 from src.database import get_connection, fetch_stations, fetch_joined_measurements, fetch_measurements_by_station_id, fetch_station_by_id
+from src.schemas import StationResponse, MeasurementResponse
 
 configure_logging()
 logger = logging.getLogger(__name__)
@@ -68,7 +69,8 @@ def app_status():
 # Station Endpoints
 # ============================================================
 
-@app.get("/stations", 
+@app.get("/stations",
+    response_model=list[StationResponse],
     tags=["Stations"],
     summary="Get all stations",
     description=(
@@ -111,6 +113,7 @@ def get_stations(station_type: str | None = Query(default=None, description="Opt
 
 
 @app.get("/stations/{station_id}", 
+    response_model=StationResponse,
     tags=["Stations"],
     summary="Get station by ID",
     description=(
@@ -148,6 +151,7 @@ def get_station_by_id(station_id: int = Path(..., ge=1, description="Unique ID o
 # ============================================================
 
 @app.get("/measurements", 
+    response_model=list[MeasurementResponse],
     tags=["Measurements"],
     summary="Get measurements",
     description=(
@@ -183,6 +187,7 @@ def get_measurements(limit: int | None = Query(default=None, ge=1, le=100, descr
         logger.info("=" * 60)
 
 @app.get("/stations/{station_id}/measurements", 
+    response_model=list[MeasurementResponse],
     tags=["Stations", "Measurements"],
     summary="Get measurements by station ID",
     description=(
