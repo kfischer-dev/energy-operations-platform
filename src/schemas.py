@@ -14,3 +14,20 @@ class MeasurementResponse(BaseModel):
     measurement_time: datetime
     load_value: float
     unit: str
+
+class MeasurementCreate(BaseModel):
+    station_id: int
+    measurement_time: datetime
+    load_value: float
+    unit: str
+    source: str
+    quality_status: str
+
+class MeasurementDetailResponse(BaseModel):
+    measurement_id: int
+    station_id: int
+    measurement_time: datetime
+    load_value: float
+    unit: str
+    source: str
+    quality_status: str

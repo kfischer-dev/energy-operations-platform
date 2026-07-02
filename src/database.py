@@ -173,3 +173,54 @@ def fetch_database_report_data():
         logger.info("Database connection closed.")
 
     return station_data, measurement_data
+
+# ============================================================
+# Database Create Measurement
+# ============================================================
+
+def create_measurement(conn, measurement_data):
+
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            INSERT INTO measurements (
+                station_id,
+                measurement_time,
+                load_value,
+                unit,
+                source,
+                quality_status
+            )
+            VALUES (%s, %s, %s, %s, %s, %s)
+            RETURNING
+                measurement_id,
+                station_id,
+                measurement_time,
+                load_value,
+                unit,
+                source,
+                quality_status;
+""", (
+            measurement_data.station_id,
+            measurement_data.measurement_time,
+            measurement_data.load_value,
+            measurement_data.unit,
+            measurement_data.source,
+            measurement_data.quality_status,
+))
+    
+        row = cursor.fetchone()
+
+    conn.commit()
+
+    return map_created_measurement_row(row)
+
+def map_created_measurement_row(row):
+    return {        
+        "measurement_id": row[0],
+        "station_id": row[1],
+        "measurement_time": row[2],
+        "load_value": float(row[3]),
+        "unit": row[4],
+        "source": row[5],
+        "quality_status": row[6],
+    }

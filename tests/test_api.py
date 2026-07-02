@@ -145,3 +145,56 @@ def test_get_measurements_of_station_id_with_limit_zero_returns_422():
 
     assert response.status_code == 422
 
+def test_create_measurement_returns_201():
+
+    new_measurement = {
+        "station_id": 1,
+        "measurement_time": "2026-07-02T08:15:00",
+        "load_value": 123.45,
+        "unit": "kW",
+        "source": "pytest",
+        "quality_status": "test",
+    }
+
+    response = client.post("/measurements", json=new_measurement)
+
+    assert response.status_code == 201
+
+    data = response.json()
+
+    assert "measurement_id" in data
+    assert data["station_id"] == 1
+    assert data["load_value"] == 123.45
+    assert data["unit"] == "kW"
+    assert data["source"] == "pytest"
+    assert data["quality_status"] == "test"
+    
+
+def test_create_measurement_with_unknown_station_returns_404():
+    
+    new_measurement = {
+        "station_id": 9999,
+        "measurement_time": "2026-07-02T08:15:00",
+        "load_value": 123.45,
+        "unit": "kW",
+        "source": "pytest",
+        "quality_status": "test",
+    }
+
+    response = client.post("/measurements", json=new_measurement)
+
+    assert response.status_code == 404
+
+def test_create_measurement_with_missing_field_returns_422():
+    
+    new_measurement = {
+        "station_id": 1,
+        "measurement_time": "2026-07-02T08:15:00",
+        "load_value": 123.45,
+        "source": "pytest",
+        "quality_status": "test",
+    }
+
+    response = client.post("/measurements", json=new_measurement)
+
+    assert response.status_code == 422

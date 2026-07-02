@@ -2,8 +2,8 @@ import logging
 from src.logging_config import configure_logging
 
 from fastapi import FastAPI, HTTPException, status, Query, Path
-from src.database import get_connection, fetch_stations, fetch_joined_measurements, fetch_measurements_by_station_id, fetch_station_by_id
-from src.schemas import StationResponse, MeasurementResponse
+from src.database import get_connection, fetch_stations, fetch_joined_measurements, fetch_measurements_by_station_id, fetch_station_by_id, create_measurement
+from src.schemas import StationResponse, MeasurementResponse, MeasurementCreate, MeasurementDetailResponse
 
 configure_logging()
 logger = logging.getLogger(__name__)
@@ -14,7 +14,7 @@ app = FastAPI(
         "REST API for accessing energy station and measurement data. "
         "This API is part of the Energy Operations Platform portfolio project."
     ),
-    version="0.5.3",
+    version="0.6.0",
     openapi_tags=[
         {
             "name": "General",
@@ -81,7 +81,10 @@ def app_status():
     ),
     response_description="List of station records.",
 )
-def get_stations(station_type: str | None = Query(default=None, description="Optional filter by station type, for example solar_park or wind_park.")):
+def get_stations(station_type: str | None = Query(
+    default=None, 
+    description="Optional filter by station type, for example solar_park or wind_park.")
+):
     """Return all stations, optionally filtered by station type."""
 
     logger.info("=" * 60)
@@ -122,7 +125,11 @@ def get_stations(station_type: str | None = Query(default=None, description="Opt
     ),
     response_description="Single station record.",
 )
-def get_station_by_id(station_id: int = Path(..., ge=1, description="Unique ID of the requested energy station.")):
+def get_station_by_id(station_id: int = Path(
+    ..., 
+    ge=1, 
+    description="Unique ID of the requested energy station.")
+):
     """Return one station by ID."""
 
     logger.info("=" * 60)
@@ -161,7 +168,12 @@ def get_station_by_id(station_id: int = Path(..., ge=1, description="Unique ID o
     ),
     response_description="List of measurement records, optionally limited by the query parameter.",
 )
-def get_measurements(limit: int | None = Query(default=None, ge=1, le=100, description="optional maximum number of returned measurements, 1 to 100")):
+def get_measurements(limit: int | None = Query(
+    default=None, 
+    ge=1, 
+    le=100, 
+    description="optional maximum number of returned measurements, 1 to 100")
+):
     """Return measurements filtered by limit."""
 
     logger.info("=" * 60)
@@ -198,9 +210,16 @@ def get_measurements(limit: int | None = Query(default=None, ge=1, le=100, descr
     response_description="List of measurement records for the requested station.",   
 )
 def get_measurements_by_station_id(
-    station_id: int = Path(..., ge=1, description="Unique ID of the requested energy station."),
-    limit: int | None = Query(default=None, ge=1, le=100, description="Optional maximum number of measurement records to return.",),
-    ):
+    station_id: int = Path(
+        ..., 
+        ge=1, 
+        description="Unique ID of the requested energy station."),
+    limit: int | None = Query(
+        default=None, 
+        ge=1, 
+        le=100, 
+        description="Optional maximum number of measurement records to return for this station.",),
+):
     """Return all measurements for one station."""
 
     logger.info("=" * 60)
@@ -231,5 +250,45 @@ def get_measurements_by_station_id(
         logger.info("Database connection closed.")
         logger.info("=" * 60)
 
+@app.post("/measurements",
+    response_model=MeasurementDetailResponse,
+    status_code=status.HTTP_201_CREATED, 
+    tags=["Measurements"],
+    summary="Create a new station measurement",
+    description=(
+        "Creates a new measurement record and assigns it to an existing energy station. "
+        "The endpoint accepts measurement data such as station ID, timestamp, load value and unit. "
+        "After validation, the measurement is stored in the PostgreSQL database and can be retrieved "
+        "through the measurement endpoints."
+    ),
+    response_description="The newly created measurement record.",
+)
+def post_measurement(measurement_data: MeasurementCreate):
+    """Post measurement for specific station."""
+
+    logger.info("=" * 60)
+    logger.info(f"POST /measurements request received for station_id {measurement_data.station_id}. ")
+
+    conn = get_connection()
+
+    try:
+        station = fetch_station_by_id(conn, measurement_data.station_id)
+
+        if station is None:
+            logger.warning(f"Station with id {measurement_data.station_id} not found.")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Station with id {measurement_data.station_id} not found")
+        
+        measurement = create_measurement(conn, measurement_data)
+        logger.info(f"Measurement for station_id {measurement['station_id']} successfully saved to measurement_id {measurement['measurement_id']}.")
+
+        return measurement
+    
+    finally:
+        conn.close()
+        logger.info("Database connection closed.")
+        logger.info("=" * 60)
+
+
+        
 
     
