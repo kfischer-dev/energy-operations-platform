@@ -2,7 +2,7 @@ import logging
 from src.logging_config import configure_logging
 
 from fastapi import FastAPI, HTTPException, status, Query, Path
-from src.database import get_connection, fetch_stations, fetch_joined_measurements, fetch_measurements_by_station_id, fetch_station_by_id, create_measurement
+from src.database import get_connection, fetch_stations, fetch_joined_measurements, fetch_measurements_by_station_id, fetch_station_by_id, create_measurement, fetch_measurement_by_id
 from src.schemas import StationResponse, MeasurementResponse, MeasurementCreate, MeasurementDetailResponse
 
 configure_logging()
@@ -249,6 +249,49 @@ def get_measurements_by_station_id(
         conn.close()
         logger.info("Database connection closed.")
         logger.info("=" * 60)
+
+@app.get("/measurements/{measurement_id}",
+    response_model=MeasurementDetailResponse,
+    tags=["Measurements"],
+    summary="Get measurement by ID",
+    description=(
+        "Returns one specific measurement record by its measurement ID. "
+        "The response includes measurement details such as station ID, timestamp, load value, unit, "
+        "source and quality status. "
+        "If no measurement exists for the given ID, the API returns a 404 error."
+    ),
+    response_description="Single measurement record.",
+)
+def get_measurement_by_id(
+    measurement_id: int = Path(
+        ..., 
+        ge=1, 
+        description="Unique ID of the requested measurement record.")
+):
+    logger.info("=" * 60)
+    logger.info(f"GET /measurements/{measurement_id} request received. Opening database connection.")
+
+    conn = get_connection()
+
+    logger.info("Loading measurement data from database.")
+
+    try:
+        measurement = fetch_measurement_by_id(conn, measurement_id)
+
+        if measurement is None:
+            logger.warning(f"Measurement with id {measurement_id} not found.")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Measurement with id {measurement_id} not found")
+
+        return measurement
+
+    finally:
+        conn.close()
+        logger.info("Database connection closed.")
+        logger.info("=" * 60)
+
+# ============================================================
+# POST Measurement Endpoints
+# ============================================================
 
 @app.post("/measurements",
     response_model=MeasurementDetailResponse,

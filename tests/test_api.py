@@ -5,6 +5,24 @@ from src.api import app
 
 client = TestClient(app)
 
+# ============================================================
+# Payload
+# ============================================================
+
+def valid_measurement_payload():
+    return {
+        "station_id": 1,
+        "measurement_time": "2026-07-02T08:15:00",
+        "load_value": 123.45,
+        "unit": "kW",
+        "source": "pytest",
+        "quality_status": "valid",
+    }
+
+# ============================================================
+# Validation test for General Endpoints
+# ============================================================
+
 def test_health_returns_ok():
     response = client.get("/health")
     assert response.status_code == 200
@@ -14,6 +32,10 @@ def test_home():
     response = client.get("/")
     assert response.status_code == 200
     assert response.json() == {"message": "Energy Operations Platform API"}
+
+# ============================================================
+# Validation test for GET /station Endpoints
+# ============================================================
 
 def test_get_stations():
     response = client.get("/stations")
@@ -68,6 +90,10 @@ def test_get_station_id_with_invalid_type_returns_422():
     response = client.get("/stations/abc")
 
     assert response.status_code == 422
+
+# ============================================================
+# Validation test for GET /measurement Endpoint
+# ============================================================
 
 def test_get_measurements():
     response = client.get("/measurements")
@@ -145,16 +171,15 @@ def test_get_measurements_of_station_id_with_limit_zero_returns_422():
 
     assert response.status_code == 422
 
+# ============================================================
+# Validation test for POST /measurement Endpoint
+# ============================================================
+
 def test_create_measurement_returns_201():
 
-    new_measurement = {
-        "station_id": 1,
-        "measurement_time": "2026-07-02T08:15:00",
-        "load_value": 123.45,
-        "unit": "kW",
-        "source": "pytest",
-        "quality_status": "invalid",
-    }
+    new_measurement = valid_measurement_payload()
+    new_measurement["station_id"] = 8
+    new_measurement["load_value"] = 105.25
 
     response = client.post("/measurements", json=new_measurement)
 
@@ -163,23 +188,17 @@ def test_create_measurement_returns_201():
     data = response.json()
 
     assert "measurement_id" in data
-    assert data["station_id"] == 1
-    assert data["load_value"] == 123.45
+    assert data["station_id"] == 8
+    assert data["load_value"] == 105.25
     assert data["unit"] == "kW"
     assert data["source"] == "pytest"
-    assert data["quality_status"] == "invalid"
+    assert data["quality_status"] == "valid"
     
 
 def test_create_measurement_with_unknown_station_returns_404():
     
-    new_measurement = {
-        "station_id": 9999,
-        "measurement_time": "2026-07-02T08:15:00",
-        "load_value": 123.45,
-        "unit": "kW",
-        "source": "pytest",
-        "quality_status": "invalid",
-    }
+    new_measurement = valid_measurement_payload()
+    new_measurement["station_id"] = 9999
 
     response = client.post("/measurements", json=new_measurement)
 
@@ -187,13 +206,8 @@ def test_create_measurement_with_unknown_station_returns_404():
 
 def test_create_measurement_with_missing_field_returns_422():
     
-    new_measurement = {
-        "station_id": 1,
-        "measurement_time": "2026-07-02T08:15:00",
-        "load_value": 123.45,
-        "unit": "kW",
-        "quality_status": "invalid",
-    }
+    new_measurement = valid_measurement_payload()
+    del new_measurement["source"]
 
     response = client.post("/measurements", json=new_measurement)
 
@@ -201,14 +215,8 @@ def test_create_measurement_with_missing_field_returns_422():
 
 def test_create_measurement_negative_load_returns_422():
     
-    new_measurement = {
-        "station_id": 1,
-        "measurement_time": "2026-07-02T08:15:00",
-        "load_value": -123.45,
-        "unit": "kW",
-        "source": "pytest",
-        "quality_status": "invalid",
-    }
+    new_measurement = valid_measurement_payload()
+    new_measurement["load_value"] = -123.45
 
     response = client.post("/measurements", json=new_measurement)
 
@@ -216,14 +224,9 @@ def test_create_measurement_negative_load_returns_422():
 
 def test_create_measurement_invalid_quality_status_returns_422():
     
-    new_measurement = {
-        "station_id": 1,
-        "measurement_time": "2026-07-02T08:15:00",
-        "load_value": 123.45,
-        "unit": "kW",
-        "source": "pytest",
-        "quality_status": "invalid_status",
-    }
+    new_measurement = valid_measurement_payload()
+    new_measurement["quality_status"] = "invalid_status"
+
 
     response = client.post("/measurements", json=new_measurement)
 
@@ -231,14 +234,8 @@ def test_create_measurement_invalid_quality_status_returns_422():
 
 def test_create_measurement_empty_source_returns_422():
     
-    new_measurement = {
-        "station_id": 1,
-        "measurement_time": "2026-07-02T08:15:00",
-        "load_value": 123.45,
-        "unit": "kW",
-        "source": "",
-        "quality_status": "invalid",
-    }
+    new_measurement = valid_measurement_payload()
+    new_measurement["source"] = ""
 
     response = client.post("/measurements", json=new_measurement)
 
@@ -246,15 +243,63 @@ def test_create_measurement_empty_source_returns_422():
 
 def test_create_measurement_invalid_unit_returns_422():
     
+    new_measurement = valid_measurement_payload()
+    new_measurement["unit"] = "kWh"
+
+    response = client.post("/measurements", json=new_measurement)
+
+    assert response.status_code == 422
+
+# ============================================================
+# Validation test for GET /measurements/{measurement_id} Endpoint
+# ============================================================
+
+def test_get_measurement_by_id_returns_measurement():
+
     new_measurement = {
-        "station_id": 1,
-        "measurement_time": "2026-07-02T08:15:00",
-        "load_value": 123.45,
-        "unit": "kWh",
+        "station_id": 8,
+        "measurement_time": "2026-07-02T10:15:00",
+        "load_value": 150.00,
+        "unit": "kW",
         "source": "pytest",
         "quality_status": "invalid",
     }
 
-    response = client.post("/measurements", json=new_measurement)
+    response_post = client.post("/measurements", json=new_measurement)
+
+    assert response_post.status_code == 201
+
+    data_post = response_post.json()
+    measurement_id = data_post["measurement_id"]
+
+    response_get = client.get(f"/measurements/{measurement_id}")
+
+    assert response_get.status_code == 200
+
+    data_get = response_get.json()
+
+    assert data_get["measurement_id"] == measurement_id
+    assert data_get["station_id"] == data_post["station_id"]
+    assert data_get["measurement_time"] == data_post["measurement_time"]
+    assert data_get["load_value"] == data_post["load_value"]
+    assert data_get["unit"] == data_post["unit"]
+    assert data_get["source"] == data_post["source"]
+    assert data_get["quality_status"] == data_post["quality_status"]
+
+def test_get_measurement_by_id_not_found_returns_404():
+    response = client.get("/measurements/99999999")
+
+    assert response.status_code == 404
+
+    assert response.json() == {"detail": "Measurement with id 99999999 not found"}
+
+def test_get_measurement_by_id_with_invalid_range_returns_422():
+    response = client.get("/measurements/0")
+
+    assert response.status_code == 422
+
+
+def test_get_measurement_by_id_with_invalid_type_returns_422():
+    response = client.get("/measurements/abc")
 
     assert response.status_code == 422

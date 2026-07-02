@@ -130,6 +130,31 @@ def fetch_station_by_id(conn, station_id):
             return None
 
         return map_station_row(row)
+    
+def fetch_measurement_by_id(conn, measurement_id):
+    """Return measurements of a specific measurement id as dictionary."""
+
+    with conn.cursor() as cursor:
+        logger.debug("Executing measurement query.")
+        cursor.execute("""
+            SELECT
+                measurement_id,
+                station_id,
+                measurement_time,
+                load_value,
+                unit,
+                source,
+                quality_status
+            FROM measurements
+            WHERE measurement_id = %s;
+        """, (measurement_id,))
+
+        row = cursor.fetchone()
+
+        if row is None:
+            return None
+        
+        return map_detailed_measurement_row(row)
 
 # ============================================================
 # Station Mapping
@@ -152,6 +177,21 @@ def map_measurement_row(row):
     measurement = {"station_name": station_name, "measurement_time": measurement_time, "load_value": load_value, "unit": unit}
 
     return measurement
+
+# ============================================================
+# Detailed Measurement Mapping
+# ============================================================
+def map_detailed_measurement_row(row):
+
+    return {        
+        "measurement_id": row[0],
+        "station_id": row[1],
+        "measurement_time": row[2],
+        "load_value": float(row[3]),
+        "unit": row[4],
+        "source": row[5],
+        "quality_status": row[6],
+    }
 
 # ============================================================
 # Database Report Data Loader
@@ -212,15 +252,4 @@ def create_measurement(conn, measurement_data):
 
     conn.commit()
 
-    return map_created_measurement_row(row)
-
-def map_created_measurement_row(row):
-    return {        
-        "measurement_id": row[0],
-        "station_id": row[1],
-        "measurement_time": row[2],
-        "load_value": float(row[3]),
-        "unit": row[4],
-        "source": row[5],
-        "quality_status": row[6],
-    }
+    return map_detailed_measurement_row(row)
