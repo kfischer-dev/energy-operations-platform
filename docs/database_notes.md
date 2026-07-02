@@ -11,9 +11,10 @@ The README gives a high-level project overview. This file is intentionally more 
 - SQL concepts practiced in the project,
 - Python database access with `psycopg`,
 - database result mapping,
+- measurement creation through parameterized SQL inserts,
 - FastAPI path and query parameter behavior,
 - FastAPI API documentation metadata,
-- Pydantic response models,
+- Pydantic request and response models,
 - automated API tests with pytest and FastAPI TestClient,
 - and how the database layer is used by the terminal workflow and the FastAPI API layer.
 
@@ -245,6 +246,7 @@ Current responsibilities:
 - load database configuration from environment variables,
 - open PostgreSQL connections,
 - execute read queries,
+- insert new measurement records,
 - map database rows into dictionaries,
 - provide reusable database functions for the terminal workflow and FastAPI endpoints.
 
@@ -345,6 +347,67 @@ Station has no measurements    → returns []
 Station does not exist         → handled by the API layer before this function is called
 ```
 
+### `fetch_measurement_by_id(conn, measurement_id)`
+
+Reads one detailed measurement record by measurement ID.
+
+Returned fields:
+
+```text
+measurement_id, station_id, measurement_time, load_value, unit, source, quality_status
+```
+
+Expected behavior:
+
+```text
+Existing measurement     → returns one detailed measurement dictionary
+Non-existing measurement → returns None
+```
+
+This function is used by:
+
+```text
+GET /measurements/{measurement_id}
+```
+
+The endpoint uses this distinction to return either a detailed measurement response or a `404 Not Found` error.
+
+### `create_measurement(conn, measurement_data)`
+
+Creates a new measurement record in PostgreSQL.
+
+The function uses a parameterized SQL insert:
+
+```sql
+INSERT INTO measurements (...)
+VALUES (%s, %s, %s, %s, %s, %s)
+RETURNING measurement_id, station_id, measurement_time, load_value, unit, source, quality_status;
+```
+
+The `RETURNING` clause is important because PostgreSQL creates the new `measurement_id`. The API can return the saved record immediately after insertion.
+
+The function calls:
+
+```python
+conn.commit()
+```
+
+so that the new measurement is persisted in the database.
+
+Used by:
+
+```text
+POST /measurements
+```
+
+Expected behavior:
+
+```text
+Valid measurement data → inserts row and returns detailed measurement dictionary
+Invalid station_id     → handled by API layer before insert
+Invalid request body   → rejected by Pydantic before database access
+```
+
 ### `fetch_database_report_data()`
 
 Coordinates the terminal database report loading process:
@@ -384,7 +447,7 @@ Example of a mapped station dictionary:
 }
 ```
 
-Example of a mapped measurement dictionary:
+Example of a mapped measurement overview dictionary:
 
 ```python
 {
@@ -392,6 +455,20 @@ Example of a mapped measurement dictionary:
     "measurement_time": "...",
     "load_value": 80.50,
     "unit": "kW"
+}
+```
+
+Example of a mapped detailed measurement dictionary:
+
+```python
+{
+    "measurement_id": 42,
+    "station_id": 1,
+    "measurement_time": "...",
+    "load_value": 123.45,
+    "unit": "kW",
+    "source": "pytest",
+    "quality_status": "valid"
 }
 ```
 
@@ -452,6 +529,8 @@ Current FastAPI endpoints using database data:
 | `GET` | `/stations` | `fetch_stations(conn)` | Can optionally filter the returned list by `station_type`. |
 | `GET` | `/stations/{station_id}` | `fetch_station_by_id(conn, station_id)` | Returns one station or `404 Not Found`. |
 | `GET` | `/measurements` | `fetch_joined_measurements(conn)` | Can optionally limit the returned list with `limit`. |
+| `GET` | `/measurements/{measurement_id}` | `fetch_measurement_by_id(conn, measurement_id)` | Returns one detailed measurement or `404 Not Found`. |
+| `POST` | `/measurements` | `fetch_station_by_id(conn, station_id)` and `create_measurement(conn, measurement_data)` | Checks that the station exists before inserting a new measurement. |
 | `GET` | `/stations/{station_id}/measurements` | `fetch_station_by_id(conn, station_id)` and `fetch_measurements_by_station_id(conn, station_id)` | Checks the parent station before loading measurements; can optionally limit the returned list with `limit`. |
 
 Current API flow per database-backed request:
@@ -469,6 +548,25 @@ GET /stations/1/measurements
 → check whether station 1 exists
 → load measurements for station 1
 → return measurement list as JSON
+```
+
+Example write flow:
+
+```text
+POST /measurements
+→ validate JSON request body with MeasurementCreate
+→ check whether the referenced station exists
+→ insert measurement into PostgreSQL
+→ commit transaction
+→ return created measurement with measurement_id
+```
+
+Example detail flow:
+
+```text
+GET /measurements/42
+→ load measurement 42 from PostgreSQL
+→ return detailed measurement as JSON
 ```
 
 ---
@@ -544,20 +642,27 @@ Current validation behavior:
 | `limit` | Query | Integer, minimum `1`, maximum `100` | `/measurements?limit=0` | `422 Unprocessable Content` |
 | `limit` | Query | Integer, minimum `1`, maximum `100` | `/measurements?limit=101` | `422 Unprocessable Content` |
 | `limit` | Query | Integer, minimum `1`, maximum `100` | `/stations/1/measurements?limit=0` | `422 Unprocessable Content` |
+| `measurement_id` | Path | Integer, minimum `1` | `/measurements/0` | `422 Unprocessable Content` |
+| `measurement_id` | Path | Integer, minimum `1` | `/measurements/abc` | `422 Unprocessable Content` |
+| `station_id` | Request body | Integer, minimum `1` | `POST /measurements` with `station_id = 0` | `422 Unprocessable Content` |
+| `load_value` | Request body | Number, minimum `0` | `POST /measurements` with negative load value | `422 Unprocessable Content` |
+| `unit` | Request body | Allowed values `kW`, `MW` | `POST /measurements` with `unit = "kWh"` | `422 Unprocessable Content` |
+| `source` | Request body | Non-empty string | `POST /measurements` with empty source | `422 Unprocessable Content` |
+| `quality_status` | Request body | Allowed values `valid`, `invalid`, `estimated` | `POST /measurements` with invalid status | `422 Unprocessable Content` |
 
 ---
 
-## Pydantic Response Models
+## Pydantic Request and Response Models
 
-In `v0.5.2`, the FastAPI layer was improved with Pydantic response models.
+The FastAPI layer uses Pydantic models for both API responses and JSON request bodies.
 
-The response models are defined in:
+The models are defined in:
 
 ```text
 src/schemas.py
 ```
 
-Current response models:
+Current models:
 
 ### `StationResponse`
 
@@ -579,23 +684,9 @@ GET /stations
 GET /stations/{station_id}
 ```
 
-The list endpoint returns:
-
-```python
-list[StationResponse]
-```
-
-The detail endpoint returns:
-
-```python
-StationResponse
-```
-
-This distinction is important. Returning a single dictionary while declaring `list[StationResponse]` causes a FastAPI response validation error, because the declared API contract does not match the returned data.
-
 ### `MeasurementResponse`
 
-Used for measurement endpoints.
+Used for measurement overview endpoints.
 
 Fields:
 
@@ -613,22 +704,79 @@ GET /measurements
 GET /stations/{station_id}/measurements
 ```
 
-Both endpoints return:
+This model is intentionally smaller than the full measurement record because it represents joined overview data that includes the station name.
 
-```python
-list[MeasurementResponse]
+### `MeasurementCreate`
+
+Used as the request body model for creating new measurement records.
+
+Fields:
+
+```text
+station_id: int
+measurement_time: datetime
+load_value: float
+unit: Literal["kW", "MW"]
+source: str
+quality_status: Literal["valid", "invalid", "estimated"]
 ```
 
-### Why Response Models Matter
+Used by:
 
-Before `v0.5.2`, the API returned dictionaries directly. This worked, but the public API contract was implicit.
+```text
+POST /measurements
+```
 
-With response models:
+Current validation rules:
 
-- Swagger UI shows explicit response schemas,
-- FastAPI validates that returned data matches the declared schema,
+| Field | Rule |
+|---|---|
+| `station_id` | Must be at least `1`. |
+| `measurement_time` | Must be a valid date-time value. |
+| `load_value` | Must be greater than or equal to `0`. |
+| `unit` | Must be one of `kW` or `MW`. |
+| `source` | Must be a non-empty string. |
+| `quality_status` | Must be one of `valid`, `invalid` or `estimated`. |
+
+Invalid request bodies are rejected by FastAPI/Pydantic before the database insert is executed.
+
+### `MeasurementDetailResponse`
+
+Used for detailed measurement responses.
+
+Fields:
+
+```text
+measurement_id: int
+station_id: int
+measurement_time: datetime
+load_value: float
+unit: str
+source: str
+quality_status: str
+```
+
+Used by:
+
+```text
+POST /measurements
+GET /measurements/{measurement_id}
+```
+
+This model represents a complete measurement record as returned by the database.
+
+### Why These Models Matter
+
+Before the API used Pydantic models, dictionaries were returned directly. This worked, but the public API contract was implicit.
+
+With request and response models:
+
+- Swagger UI shows explicit request and response schemas,
+- FastAPI validates that returned data matches the declared response schema,
+- FastAPI validates incoming JSON before database writes happen,
+- invalid payloads return consistent `422 Unprocessable Content` responses,
 - station and measurement response structures are easier to understand,
-- and later automated API tests can check a stable response contract.
+- and automated API tests can check stable API contracts.
 
 `measurement_time` is modeled as a Python `datetime`. In JSON responses, FastAPI/Pydantic serializes it in ISO 8601 format:
 
@@ -637,8 +785,6 @@ With response models:
 ```
 
 This is standard API behavior and should not be changed to a manually formatted string unless there is a specific client requirement.
-
----
 
 ## Automated API Tests
 
@@ -669,6 +815,12 @@ Current test coverage:
 | Measurement list | `/measurements` | Returns a list with measurement dictionaries matching the API schema. |
 | Measurement limit | `/measurements?limit=5` | Returns at most five records. |
 | Invalid measurement limit | `/measurements?limit=0`, `/measurements?limit=101`, `/measurements?limit=abc` | Return `422 Unprocessable Content`. |
+| Measurement creation | `POST /measurements` | Creates a new measurement and returns `201 Created`. |
+| Measurement creation validation | negative load, invalid unit, invalid quality status, empty or missing source | Return `422 Unprocessable Content`. |
+| Measurement creation not found | `POST /measurements` with unknown station ID | Returns `404 Not Found`. |
+| Measurement detail | `/measurements/{measurement_id}` | Returns one detailed measurement record. |
+| Measurement detail errors | `/measurements/0`, `/measurements/abc`, unknown measurement ID | Return expected `422` or `404` responses. |
+| Create-then-read flow | `POST /measurements` followed by `GET /measurements/{measurement_id}` | Confirms that a created measurement can be retrieved by its generated ID. |
 | Nested station measurements | `/stations/1/measurements` | Returns measurements for one station. |
 | Nested endpoint errors | `/stations/9999/measurements`, `/stations/abc/measurements`, `/stations/1/measurements?limit=0` | Return expected `404` or `422` responses. |
 
@@ -798,6 +950,89 @@ Result:
 
 FastAPI returns this because the `limit` query parameter is constrained to valid positive values.
 
+### Creating a measurement
+
+```text
+POST /measurements
+```
+
+with a valid request body creates a new measurement record in PostgreSQL.
+
+Result:
+
+```text
+201 Created
+```
+
+The response contains the new `measurement_id` generated by the database.
+
+### Creating a measurement for a non-existing station
+
+```text
+POST /measurements
+```
+
+with an unknown `station_id` returns:
+
+```text
+404 Not Found
+```
+
+The API checks the parent station before inserting the measurement. This produces a clearer API error than relying only on the database foreign key error.
+
+### Invalid measurement creation payload
+
+Invalid request body values return:
+
+```text
+422 Unprocessable Content
+```
+
+Examples include:
+
+- negative `load_value`,
+- invalid `unit`,
+- invalid `quality_status`,
+- missing or empty `source`,
+- invalid `station_id`.
+
+### Reading a measurement by ID
+
+```text
+GET /measurements/42
+```
+
+returns one detailed measurement record if the measurement exists.
+
+### Non-existing measurement ID
+
+```text
+GET /measurements/999999999
+```
+
+returns:
+
+```text
+404 Not Found
+```
+
+because no measurement with this ID exists.
+
+### Invalid measurement ID
+
+```text
+GET /measurements/0
+GET /measurements/abc
+```
+
+returns:
+
+```text
+422 Unprocessable Content
+```
+
+because `measurement_id` is constrained to an integer with a minimum value of `1`.
+
 ---
 
 ## Output Separation
@@ -872,8 +1107,8 @@ The current implementation is intentionally simple.
 
 Current limitations:
 
-- Python currently only reads from PostgreSQL.
-- No insert/update/delete operations from Python yet.
+- Python currently supports reading from PostgreSQL and inserting new measurement records.
+- No update/delete operations from Python yet.
 - Database result mapping still uses dictionaries internally before FastAPI validates the response models.
 - API routes are still kept in `src/api.py`; routers can be introduced later when the API grows.
 - Current query parameter filtering is intentionally simple and partly happens in Python instead of SQL.
@@ -965,15 +1200,46 @@ These limitations are intentional for the current learning stage.
 - Tested expected `422 Unprocessable Content` behavior for invalid path and query parameters.
 - Confirmed that the current FastAPI/PostgreSQL integration can be checked automatically with a single pytest command.
 
+## Completed in v0.6.0
+
+- Added the first write endpoint: `POST /measurements`.
+- Added `MeasurementCreate` as request body model for measurement creation.
+- Added `MeasurementDetailResponse` for full measurement responses.
+- Added `create_measurement(conn, measurement_data)` in `src/database.py`.
+- Used a parameterized `INSERT INTO measurements (...) VALUES (...)` query.
+- Used PostgreSQL `RETURNING` to get the created measurement including its generated `measurement_id`.
+- Added `conn.commit()` after successful insert.
+- Added `201 Created` as the successful response status for measurement creation.
+- Checked whether the referenced station exists before inserting the measurement.
+- Returned `404 Not Found` when trying to create a measurement for a non-existing station.
+
+## Completed in v0.6.1
+
+- Added request validation for measurement creation.
+- Added Pydantic `Field` constraints for values such as `station_id` and `load_value`.
+- Added constrained allowed values for `unit` and `quality_status`.
+- Rejected invalid measurement creation payloads with `422 Unprocessable Content`.
+- Added automated tests for invalid payload cases, including negative load values, invalid units, invalid quality status and empty or missing source fields.
+
+## Completed in v0.6.2
+
+- Added `GET /measurements/{measurement_id}`.
+- Added `fetch_measurement_by_id(conn, measurement_id)` in `src/database.py`.
+- Added detailed measurement mapping for full measurement records.
+- Returned `404 Not Found` for non-existing measurement IDs.
+- Added `Path(..., ge=1)` validation for `measurement_id`.
+- Added automated tests for measurement detail success, not-found cases and invalid measurement IDs.
+- Added a create-then-read API flow test that creates a measurement and retrieves it again by the generated `measurement_id`.
+
 ---
 
 ## Next Steps
 
 Recommended next steps:
 
-1. Improve database error handling.
-2. Add more realistic database queries and KPI endpoints.
-3. Introduce routers later when the API contains more endpoints.
-4. Add insert endpoints later, for example `POST /measurements`.
+1. Add a targeted update endpoint for measurement quality status, for example `PATCH /measurements/{measurement_id}/quality-status`.
+2. Improve database error handling.
+3. Add more realistic database queries and KPI endpoints.
+4. Introduce routers later when the API contains more endpoints.
 5. Add Docker setup for the application and PostgreSQL.
 6. Prepare a simple cloud deployment scenario.
