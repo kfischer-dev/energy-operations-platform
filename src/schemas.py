@@ -32,3 +32,6 @@ class MeasurementDetailResponse(BaseModel):
     unit: str
     source: str
     quality_status: str
+
+class MeasurementQualityUpdate(BaseModel):
+    quality_status: Literal["valid", "invalid", "estimated"]

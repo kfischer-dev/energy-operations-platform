@@ -2,8 +2,8 @@ import logging
 from src.logging_config import configure_logging
 
 from fastapi import FastAPI, HTTPException, status, Query, Path
-from src.database import get_connection, fetch_stations, fetch_joined_measurements, fetch_measurements_by_station_id, fetch_station_by_id, create_measurement, fetch_measurement_by_id
-from src.schemas import StationResponse, MeasurementResponse, MeasurementCreate, MeasurementDetailResponse
+from src.database import get_connection, fetch_stations, fetch_joined_measurements, fetch_measurements_by_station_id, fetch_station_by_id, create_measurement, fetch_measurement_by_id, update_measurement_quality_status
+from src.schemas import StationResponse, MeasurementResponse, MeasurementCreate, MeasurementDetailResponse, MeasurementQualityUpdate
 
 configure_logging()
 logger = logging.getLogger(__name__)
@@ -325,6 +325,44 @@ def post_measurement(measurement_data: MeasurementCreate):
         logger.info(f"Measurement for station_id {measurement['station_id']} successfully saved to measurement_id {measurement['measurement_id']}.")
 
         return measurement
+    
+    finally:
+        conn.close()
+        logger.info("Database connection closed.")
+        logger.info("=" * 60)
+
+@app.patch("/measurements/{measurement_id}",
+    response_model=MeasurementQualityUpdate,
+    status_code=status.HTTP_201_CREATED, 
+    tags=["Measurements"],
+)
+def patch_quality_status_by_measurement_id(
+    measurement_id: int = Path(
+    ..., 
+    ge=1, 
+    description="Unique ID of the requested measurement record."),
+    quality_status: str = Query(
+    default=None, 
+    description="Quality status of measurement. Example: valid, invalid, estimated",)
+):
+    """Patch quality_status for specific measurement."""
+
+    logger.info("=" * 60)
+    logger.info(f"PATCH /measurements/{measurement_id} request received for measurement_id {measurement_id}. ")
+
+    conn = get_connection()
+
+    try:
+
+        measurement = fetch_measurement_by_id(conn, measurement_id)
+
+        if measurement is None:
+            logger.warning(f"Measurement with id {measurement_id} not found.")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Measurement with id {measurement_id} not found")
+        
+        new_measurement = update_measurement_quality_status(conn, measurement_id, quality_status)
+
+        return new_measurement
     
     finally:
         conn.close()

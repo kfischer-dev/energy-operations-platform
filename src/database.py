@@ -239,17 +239,47 @@ def create_measurement(conn, measurement_data):
                 unit,
                 source,
                 quality_status;
-""", (
+        """, (
             measurement_data.station_id,
             measurement_data.measurement_time,
             measurement_data.load_value,
             measurement_data.unit,
             measurement_data.source,
             measurement_data.quality_status,
-))
+        ))
     
         row = cursor.fetchone()
 
+    conn.commit()
+
+    return map_detailed_measurement_row(row)
+
+# ============================================================
+# Database Patch Measurement
+# ============================================================
+
+def update_measurement_quality_status(conn, measurement_id, quality_status):
+
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            UPDATE measurements
+            SET quality_status = %s
+            WHERE measurement_id = %s
+            RETURNING 
+                measurement_id, 
+                station_id, 
+                measurement_time, 
+                load_value, 
+                unit, 
+                source, 
+                quality_status;     
+        """, (
+            quality_status,
+            measurement_id,
+        ))
+
+        row = cursor.fetchone()
+    
     conn.commit()
 
     return map_detailed_measurement_row(row)
