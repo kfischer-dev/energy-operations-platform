@@ -153,7 +153,7 @@ def test_create_measurement_returns_201():
         "load_value": 123.45,
         "unit": "kW",
         "source": "pytest",
-        "quality_status": "test",
+        "quality_status": "invalid",
     }
 
     response = client.post("/measurements", json=new_measurement)
@@ -167,7 +167,7 @@ def test_create_measurement_returns_201():
     assert data["load_value"] == 123.45
     assert data["unit"] == "kW"
     assert data["source"] == "pytest"
-    assert data["quality_status"] == "test"
+    assert data["quality_status"] == "invalid"
     
 
 def test_create_measurement_with_unknown_station_returns_404():
@@ -178,7 +178,7 @@ def test_create_measurement_with_unknown_station_returns_404():
         "load_value": 123.45,
         "unit": "kW",
         "source": "pytest",
-        "quality_status": "test",
+        "quality_status": "invalid",
     }
 
     response = client.post("/measurements", json=new_measurement)
@@ -191,8 +191,68 @@ def test_create_measurement_with_missing_field_returns_422():
         "station_id": 1,
         "measurement_time": "2026-07-02T08:15:00",
         "load_value": 123.45,
+        "unit": "kW",
+        "quality_status": "invalid",
+    }
+
+    response = client.post("/measurements", json=new_measurement)
+
+    assert response.status_code == 422
+
+def test_create_measurement_negative_load_returns_422():
+    
+    new_measurement = {
+        "station_id": 1,
+        "measurement_time": "2026-07-02T08:15:00",
+        "load_value": -123.45,
+        "unit": "kW",
         "source": "pytest",
-        "quality_status": "test",
+        "quality_status": "invalid",
+    }
+
+    response = client.post("/measurements", json=new_measurement)
+
+    assert response.status_code == 422
+
+def test_create_measurement_invalid_quality_status_returns_422():
+    
+    new_measurement = {
+        "station_id": 1,
+        "measurement_time": "2026-07-02T08:15:00",
+        "load_value": 123.45,
+        "unit": "kW",
+        "source": "pytest",
+        "quality_status": "invalid_status",
+    }
+
+    response = client.post("/measurements", json=new_measurement)
+
+    assert response.status_code == 422
+
+def test_create_measurement_empty_source_returns_422():
+    
+    new_measurement = {
+        "station_id": 1,
+        "measurement_time": "2026-07-02T08:15:00",
+        "load_value": 123.45,
+        "unit": "kW",
+        "source": "",
+        "quality_status": "invalid",
+    }
+
+    response = client.post("/measurements", json=new_measurement)
+
+    assert response.status_code == 422
+
+def test_create_measurement_invalid_unit_returns_422():
+    
+    new_measurement = {
+        "station_id": 1,
+        "measurement_time": "2026-07-02T08:15:00",
+        "load_value": 123.45,
+        "unit": "kWh",
+        "source": "pytest",
+        "quality_status": "invalid",
     }
 
     response = client.post("/measurements", json=new_measurement)
