@@ -35,3 +35,10 @@ class MeasurementDetailResponse(BaseModel):
 
 class MeasurementQualityUpdate(BaseModel):
     quality_status: Literal["valid", "invalid", "estimated"]
+
+class MeasurementKPIsResponse(BaseModel):
+    measurement_count: int = Field(..., ge=0)
+    average_load: float | None
+    min_load: float | None
+    max_load: float | None
+    latest_measurement_time: datetime | None

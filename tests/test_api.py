@@ -378,5 +378,22 @@ def test_patch_measurement_quality_status_with_invalid_measurement_id_returns_42
 
     assert response.status_code == 422
 
+# ============================================================
+# Validation test for GET /kpis/measurements Endpoint
+# ============================================================
+def test_get_measurement_kpi_summary_returns_kpis():
+    response = client.get("/kpis/measurements")
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert isinstance(data, dict)
+    assert len(data) > 0
+    assert data["measurement_count"] >= 0
+    assert "average_load" in data
+    assert "min_load" in data
+    assert "max_load" in data
+    assert "latest_measurement_time" in data
 
 

@@ -283,3 +283,40 @@ def update_measurement_quality_status(conn, measurement_id, quality_status):
     conn.commit()
 
     return map_detailed_measurement_row(row)
+
+# ============================================================
+# KPI Measurement Mapping
+# ============================================================
+def map_kpi_measurement_row(row):
+
+    return {        
+        "measurement_count": row[0],
+        "average_load": float(row[1]) if row[1] is not None else None,
+        "min_load": float(row[2]) if row[2] is not None else None,
+        "max_load": float(row[3]) if row[3] is not None else None,
+        "latest_measurement_time": row[4],
+    }
+
+# ============================================================
+# Database Read KPIs
+# ============================================================
+def fetch_measurement_kpi_summary(conn):
+
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT
+                COUNT(*) AS measurement_count,
+                ROUND(AVG(load_value), 2) AS average_load,
+                MIN(load_value) AS min_load,
+                MAX(load_value) AS max_load,
+                MAX(measurement_time) AS latest_measurement_time
+            FROM measurements
+            WHERE quality_status = 'valid';
+        """)
+
+        row = cursor.fetchone()
+    
+    return map_kpi_measurement_row(row)
+
+
+    

@@ -2,8 +2,8 @@ import logging
 from src.logging_config import configure_logging
 
 from fastapi import FastAPI, HTTPException, status, Query, Path
-from src.database import get_connection, fetch_stations, fetch_joined_measurements, fetch_measurements_by_station_id, fetch_station_by_id, create_measurement, fetch_measurement_by_id, update_measurement_quality_status
-from src.schemas import StationResponse, MeasurementResponse, MeasurementCreate, MeasurementDetailResponse, MeasurementQualityUpdate
+from src.database import get_connection, fetch_stations, fetch_joined_measurements, fetch_measurements_by_station_id, fetch_station_by_id, create_measurement, fetch_measurement_by_id, update_measurement_quality_status, fetch_measurement_kpi_summary
+from src.schemas import StationResponse, MeasurementResponse, MeasurementCreate, MeasurementDetailResponse, MeasurementQualityUpdate, MeasurementKPIsResponse
 
 configure_logging()
 logger = logging.getLogger(__name__)
@@ -27,6 +27,10 @@ app = FastAPI(
         {
             "name": "Measurements",
             "description": "Endpoints for accessing station measurement data.",
+        },
+        {
+            "name": "KPIs",
+            "description": "Endpoints for accessing KPI data.",
         },
     ],
 )
@@ -374,7 +378,29 @@ def patch_quality_status_by_measurement_id(
         logger.info("Database connection closed.")
         logger.info("=" * 60)
 
-
+# ============================================================
+# GET kpi Endpoints
+# ============================================================
         
+@app.get("/kpis/measurements",
+    response_model=MeasurementKPIsResponse,
+    status_code=status.HTTP_200_OK, 
+    tags=["KPIs"],             
+)
+def get_measurement_kpi_summary():
+    """Get measurement KPI summary."""
 
-    
+    logger.info("=" * 60)
+    logger.info(f"GET /kpis/measurements request received. ")
+
+    conn = get_connection()
+
+    try:
+        kpi_summary = fetch_measurement_kpi_summary(conn)
+        logger.info(f"Loaded {kpi_summary['measurement_count']} valid measurements from database.")
+        return kpi_summary
+
+    finally:
+        conn.close()
+        logger.info("Database connection closed.")
+        logger.info("=" * 60)
