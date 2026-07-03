@@ -30,7 +30,7 @@ The project is intentionally not a generic tutorial app. It is designed around t
 
 ## Current Version
 
-**Current development focus:** `v0.6.2`
+**Current development focus:** `v0.6.3`
 
 The current version focuses on:
 
@@ -45,6 +45,8 @@ The current version focuses on:
 * writing new measurements to PostgreSQL with a parameterized `INSERT ... RETURNING` query,
 * returning `201 Created` after successful measurement creation,
 * retrieving individual measurement records through `GET /measurements/{measurement_id}`,
+* updating measurement quality status through `PATCH /measurements/{measurement_id}`,
+* using targeted `UPDATE ... RETURNING` statements for measurement quality updates,
 * adding automated API tests with pytest and FastAPI TestClient,
 * checking successful responses, validation errors, not-found cases and write/read flows automatically,
 * improving Swagger/OpenAPI documentation with API metadata, endpoint tags, summaries, descriptions and schemas,
@@ -70,11 +72,12 @@ The project currently supports three workflows:
 * Path parameters are used to retrieve station- and measurement-specific data.
 * Query parameters can filter stations by type and limit measurement results.
 * New measurement records can be created through `POST /measurements`.
+* Existing measurement quality status values can be updated through `PATCH /measurements/{measurement_id}`.
 * Missing stations or measurements return proper `404 Not Found` responses.
 * Invalid path parameters, query parameters and request body values are validated automatically by FastAPI and Pydantic.
 * Pydantic request and response models define the expected API input and output structures.
 * Automated API tests verify core endpoint behavior with pytest and FastAPI TestClient.
-* The tests cover successful responses, empty filter results, `404 Not Found` cases, `422` validation errors and a create-then-read measurement flow.
+* The tests cover successful responses, empty filter results, `404 Not Found` cases, `422` validation errors, a create-then-read measurement flow and measurement quality status updates.
 * The API uses custom OpenAPI metadata, endpoint tags, summaries, descriptions, response descriptions and schemas.
 * Interactive API documentation is available through Swagger UI at `/docs`.
 
@@ -89,6 +92,7 @@ The project currently supports three workflows:
 * Python reads joined station and measurement data from PostgreSQL.
 * Python reads individual measurement records by `measurement_id`.
 * Python writes new measurement records to PostgreSQL.
+* Python updates measurement quality status values in PostgreSQL.
 * Raw PostgreSQL result rows are mapped into dictionaries with explicit field names.
 * The terminal output shows a basic database report.
 
@@ -156,7 +160,7 @@ energy-operations-platform/
 | -------------------------- | -------------------------------------------------------------------------- |
 | `src/api.py`               | FastAPI application and REST endpoints for station and measurement data.   |
 | `src/main.py`              | Terminal entry point for the PostgreSQL-based workflow.                    |
-| `src/database.py`          | PostgreSQL connection management, read queries and measurement insert logic. |
+| `src/database.py`          | PostgreSQL connection management, read queries, measurement inserts and measurement quality updates. |
 | `src/logging_config.py`    | Central logging configuration used by the application.                     |
 | `src/output.py`            | Terminal output formatting for database report results.                    |
 | `src/station.py`           | `Station` class and object-oriented station logic from earlier versions.   |
@@ -201,7 +205,9 @@ energy-operations-platform/
 * Python `Literal` types for constrained API values
 * FastAPI request body validation
 * HTTP `POST` and `201 Created`
+* HTTP `PATCH` and `200 OK`
 * SQL `INSERT ... RETURNING`
+* SQL `UPDATE ... RETURNING`
 * pytest
 * FastAPI `TestClient`
 * Git/GitHub project structure
@@ -302,6 +308,7 @@ http://localhost:8000/stations/1
 http://localhost:8000/measurements
 http://localhost:8000/measurements?limit=5
 http://localhost:8000/measurements/1
+PATCH http://localhost:8000/measurements/1
 http://localhost:8000/stations/1/measurements
 http://localhost:8000/stations/1/measurements?limit=5
 ```
@@ -319,6 +326,7 @@ http://localhost:8000/stations/1/measurements?limit=5
 | `GET`  | `/measurements?limit=5`               | Returns a limited number of measurement records.     |
 | `GET`  | `/measurements/{measurement_id}`      | Returns one detailed measurement by measurement ID.  |
 | `POST` | `/measurements`                       | Creates a new measurement record for an existing station. |
+| `PATCH`| `/measurements/{measurement_id}`      | Updates the quality status of an existing measurement record. |
 | `GET`  | `/stations/{station_id}/measurements` | Returns measurements for one specific station.       |
 | `GET`  | `/stations/{station_id}/measurements?limit=5` | Returns a limited number of measurements for one station. |
 
@@ -339,7 +347,8 @@ The API uses Pydantic models to define the expected input and output structures 
 | `StationResponse` | `/stations`, `/stations/{station_id}` | Station API response model | `station_id`, `station_name`, `station_type`, `station_location` |
 | `MeasurementResponse` | `/measurements`, `/stations/{station_id}/measurements` | Measurement overview response model with station name | `station_name`, `measurement_time`, `load_value`, `unit` |
 | `MeasurementCreate` | `POST /measurements` | Request body model for creating new measurements | `station_id`, `measurement_time`, `load_value`, `unit`, `source`, `quality_status` |
-| `MeasurementDetailResponse` | `POST /measurements`, `/measurements/{measurement_id}` | Detailed measurement response model | `measurement_id`, `station_id`, `measurement_time`, `load_value`, `unit`, `source`, `quality_status` |
+| `MeasurementQualityUpdate` | `PATCH /measurements/{measurement_id}` | Request body model for updating measurement quality status | `quality_status` |
+| `MeasurementDetailResponse` | `POST /measurements`, `/measurements/{measurement_id}`, `PATCH /measurements/{measurement_id}` | Detailed measurement response model | `measurement_id`, `station_id`, `measurement_time`, `load_value`, `unit`, `source`, `quality_status` |
 
 The models are defined in `src/schemas.py` and connected to the FastAPI routes through request body type annotations and `response_model`.
 
@@ -399,6 +408,40 @@ A successful request returns:
 
 with the created measurement record including the database-generated `measurement_id`.
 
+### Update Measurement Quality Status Request
+
+Measurement quality status can be updated with:
+
+```text
+PATCH /measurements/{measurement_id}
+```
+
+Example request body:
+
+```json
+{
+  "quality_status": "invalid"
+}
+```
+
+Allowed values for `quality_status` are currently:
+
+```text
+valid
+invalid
+estimated
+```
+
+A successful request returns:
+
+```text
+200 OK
+```
+
+with the updated detailed measurement record.
+
+This endpoint is used to mark a measurement as valid, invalid or estimated without deleting the measurement record. This is intentionally closer to realistic measurement-data workflows than immediately removing technical history from the database.
+
 ### API Documentation
 
 The FastAPI application includes custom OpenAPI metadata for a clearer portfolio presentation.
@@ -409,13 +452,13 @@ Current API documentation features:
 | ------- | ------- |
 | API title | Shows the project-specific API name in Swagger UI. |
 | API description | Explains the purpose of the Energy Operations Platform API. |
-| API version | Documents the current API version, currently `0.6.2`. |
+| API version | Documents the current API version, currently `0.6.3`. |
 | Endpoint tags | Groups routes into `General`, `Stations` and `Measurements`. |
 | Endpoint summaries | Make the route overview easier to scan. |
 | Endpoint descriptions | Explain what each route returns and how it should be used. |
 | Parameter descriptions | Explain path and query parameters directly in Swagger UI. |
 | Response descriptions | Describe the returned response type in the generated API documentation. |
-| Request and response schemas | Show `StationResponse`, `MeasurementResponse`, `MeasurementCreate` and `MeasurementDetailResponse` as typed API schemas. |
+| Request and response schemas | Show `StationResponse`, `MeasurementResponse`, `MeasurementCreate`, `MeasurementQualityUpdate` and `MeasurementDetailResponse` as typed API schemas. |
 
 ### API Error Behavior
 
@@ -437,6 +480,10 @@ Current API documentation features:
 | `POST /measurements` with valid body    | Creates a new measurement and returns `201 Created`.              |
 | `POST /measurements` with unknown `station_id` | Returns `404 Not Found` if the station does not exist.      |
 | `POST /measurements` with invalid body  | Returns a validation error, for example for negative load values or invalid quality status. |
+| `PATCH /measurements/1` with valid body | Updates the measurement quality status and returns `200 OK`. |
+| `PATCH /measurements/999999` | Returns `404 Not Found` if the measurement does not exist. |
+| `PATCH /measurements/abc` | Returns a validation error because `measurement_id` must be an integer. |
+| `PATCH /measurements/1` with invalid body | Returns a validation error, for example for missing or invalid `quality_status`. |
 | `/stations/1/measurements`              | Returns all measurements for station `1`.                         |
 | `/stations/1/measurements?limit=5`       | Returns at most five measurements for station `1`.                 |
 | `/stations/1/measurements?limit=0`       | Returns a validation error because `limit` must be at least `1`.   |
@@ -476,6 +523,8 @@ Current test scope:
 | Measurement detail endpoint | `/measurements/{measurement_id}` returns one detailed measurement record. |
 | Measurement detail errors | Non-existing measurement IDs return `404`; invalid IDs return `422`. |
 | Measurement write/read flow | A test creates a measurement and then retrieves it again by `measurement_id`. |
+| Measurement quality update | `PATCH /measurements/{measurement_id}` updates `quality_status` and returns `200 OK`. |
+| Measurement quality update errors | Missing, invalid or wrong-typed `quality_status` values return `422`; unknown measurement IDs return `404`. |
 | Nested station measurements | `/stations/1/measurements` returns measurements for one station. |
 | Nested endpoint errors | Missing stations return `404`; invalid station IDs or limits return `422`. |
 
@@ -578,6 +627,7 @@ The log file `logs/app.log` is generated locally and should not be committed.
 | `v0.6.0`| First write endpoint added. `POST /measurements` accepts validated JSON request bodies, writes new measurement records to PostgreSQL and returns `201 Created`. |
 | `v0.6.1`| Measurement creation validation added with Pydantic `Field` constraints and `Literal` values for units and quality status. |
 | `v0.6.2`| Measurement detail endpoint added. `GET /measurements/{measurement_id}` retrieves one full measurement record by ID and is covered by automated tests. |
+| `v0.6.3`| Measurement quality status update endpoint added. `PATCH /measurements/{measurement_id}` updates `quality_status` for existing measurements and is covered by automated tests. |
 
 ---
 
@@ -619,6 +669,9 @@ The current project demonstrates practical knowledge in:
 * HTTP `POST` endpoints,
 * `201 Created` responses,
 * PostgreSQL `INSERT ... RETURNING`,
+* PostgreSQL `UPDATE ... RETURNING`,
+* HTTP `PATCH` endpoints,
+* updating existing resources,
 * reading individual resources by ID,
 * pytest basics,
 * FastAPI `TestClient`,
@@ -635,7 +688,6 @@ The current project demonstrates practical knowledge in:
 
 Next planned steps:
 
-* Add a targeted update endpoint for measurement quality status, for example `PATCH /measurements/{measurement_id}/quality-status`.
 * Improve database error handling.
 * Add more realistic database queries and KPI endpoints.
 * Introduce routers later when the number of endpoints grows.

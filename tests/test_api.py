@@ -303,3 +303,80 @@ def test_get_measurement_by_id_with_invalid_type_returns_422():
     response = client.get("/measurements/abc")
 
     assert response.status_code == 422
+
+# ============================================================
+# Validation test for PATCH /measurements/{measurement_id} Endpoint
+# ============================================================
+
+def test_patch_existing_measurement_quality_status():
+    new_measurement = valid_measurement_payload()
+    new_measurement["station_id"] = 7
+    new_measurement["quality_status"] = "valid"
+    new_measurement["source"] = "pytest PATCH"
+
+    response = client.post("/measurements", json=new_measurement)
+    assert response.status_code == 201
+
+    data_post = response.json()
+
+    measurement_id = data_post["measurement_id"]
+    new_quality_status = {"quality_status": "invalid"}
+    response = client.patch(f"/measurements/{measurement_id}", json=new_quality_status)
+
+    assert response.status_code == 200
+
+    response = client.get(f"/measurements/{measurement_id}")
+
+    assert response.status_code == 200
+
+    data_get = response.json()
+
+    assert data_get["measurement_id"] == measurement_id
+    assert data_get["station_id"] == data_post["station_id"]
+    assert data_get["measurement_time"] == data_post["measurement_time"]
+    assert data_get["load_value"] == data_post["load_value"]
+    assert data_get["unit"] == data_post["unit"]
+    assert data_get["source"] == data_post["source"]
+    assert data_get["quality_status"] == "invalid"
+
+def test_patch_measurement_quality_status_not_found_returns_404():
+    measurement_id = 999999
+    new_quality_status = {"quality_status": "invalid"}
+
+    response = client.patch(f"/measurements/{measurement_id}", json=new_quality_status)
+
+    assert response.status_code == 404
+
+def test_patch_measurement_quality_status_with_missing_status_returns_422():
+    measurement_id = 5
+    new_quality_status = {}
+
+    response = client.patch(f"/measurements/{measurement_id}", json=new_quality_status)
+
+    assert response.status_code == 422
+
+def test_patch_measurement_quality_status_with_invalid_type_returns_422():
+    measurement_id = 5
+    new_quality_status = {"quality_status": 2}
+
+    response = client.patch(f"/measurements/{measurement_id}", json=new_quality_status)
+
+    assert response.status_code == 422
+
+def test_patch_measurement_quality_status_with_invalid_status_returns_422():
+    measurement_id = 5
+    new_quality_status = {"quality_status": "wrong_status"}
+
+    response = client.patch(f"/measurements/{measurement_id}", json=new_quality_status)
+
+    assert response.status_code == 422
+
+def test_patch_measurement_quality_status_with_invalid_measurement_id_returns_422():
+    new_quality_status = {"quality_status": "invalid"}
+
+    response = client.patch("/measurements/abc", json=new_quality_status)
+
+    assert response.status_code == 422
+
+
+

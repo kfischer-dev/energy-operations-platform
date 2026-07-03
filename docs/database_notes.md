@@ -12,6 +12,7 @@ The README gives a high-level project overview. This file is intentionally more 
 - Python database access with `psycopg`,
 - database result mapping,
 - measurement creation through parameterized SQL inserts,
+- measurement quality updates through parameterized SQL updates,
 - FastAPI path and query parameter behavior,
 - FastAPI API documentation metadata,
 - Pydantic request and response models,
@@ -247,6 +248,7 @@ Current responsibilities:
 - open PostgreSQL connections,
 - execute read queries,
 - insert new measurement records,
+- update measurement quality status values,
 - map database rows into dictionaries,
 - provide reusable database functions for the terminal workflow and FastAPI endpoints.
 
@@ -408,6 +410,43 @@ Invalid station_id     → handled by API layer before insert
 Invalid request body   → rejected by Pydantic before database access
 ```
 
+### `update_measurement_quality_status(conn, measurement_id, quality_status)`
+
+Updates the `quality_status` of one existing measurement record.
+
+The function uses a parameterized SQL update:
+
+```sql
+UPDATE measurements
+SET quality_status = %s
+WHERE measurement_id = %s
+RETURNING measurement_id, station_id, measurement_time, load_value, unit, source, quality_status;
+```
+
+The `RETURNING` clause makes it possible to return the updated measurement record directly after the update.
+
+The function calls:
+
+```python
+conn.commit()
+```
+
+so that the updated quality status is persisted in the database.
+
+Used by:
+
+```text
+PATCH /measurements/{measurement_id}
+```
+
+Expected behavior:
+
+```text
+Existing measurement       → updates quality_status and returns detailed measurement dictionary
+Non-existing measurement   → returns None, handled by API layer as 404 Not Found
+Invalid request body       → rejected by Pydantic before database access
+```
+
 ### `fetch_database_report_data()`
 
 Coordinates the terminal database report loading process:
@@ -531,6 +570,7 @@ Current FastAPI endpoints using database data:
 | `GET` | `/measurements` | `fetch_joined_measurements(conn)` | Can optionally limit the returned list with `limit`. |
 | `GET` | `/measurements/{measurement_id}` | `fetch_measurement_by_id(conn, measurement_id)` | Returns one detailed measurement or `404 Not Found`. |
 | `POST` | `/measurements` | `fetch_station_by_id(conn, station_id)` and `create_measurement(conn, measurement_data)` | Checks that the station exists before inserting a new measurement. |
+| `PATCH` | `/measurements/{measurement_id}` | `update_measurement_quality_status(conn, measurement_id, quality_status)` | Updates the quality status of an existing measurement or returns `404 Not Found`. |
 | `GET` | `/stations/{station_id}/measurements` | `fetch_station_by_id(conn, station_id)` and `fetch_measurements_by_station_id(conn, station_id)` | Checks the parent station before loading measurements; can optionally limit the returned list with `limit`. |
 
 Current API flow per database-backed request:
@@ -567,6 +607,16 @@ Example detail flow:
 GET /measurements/42
 → load measurement 42 from PostgreSQL
 → return detailed measurement as JSON
+```
+
+Example update flow:
+
+```text
+PATCH /measurements/42
+→ validate JSON request body with MeasurementQualityUpdate
+→ update quality_status in PostgreSQL
+→ commit transaction
+→ return updated detailed measurement as JSON
 ```
 
 ---
@@ -649,6 +699,8 @@ Current validation behavior:
 | `unit` | Request body | Allowed values `kW`, `MW` | `POST /measurements` with `unit = "kWh"` | `422 Unprocessable Content` |
 | `source` | Request body | Non-empty string | `POST /measurements` with empty source | `422 Unprocessable Content` |
 | `quality_status` | Request body | Allowed values `valid`, `invalid`, `estimated` | `POST /measurements` with invalid status | `422 Unprocessable Content` |
+| `quality_status` | Request body | Allowed values `valid`, `invalid`, `estimated` | `PATCH /measurements/1` with invalid status | `422 Unprocessable Content` |
+| `quality_status` | Request body | Required field | `PATCH /measurements/1` with missing status | `422 Unprocessable Content` |
 
 ---
 
@@ -740,6 +792,24 @@ Current validation rules:
 
 Invalid request bodies are rejected by FastAPI/Pydantic before the database insert is executed.
 
+### `MeasurementQualityUpdate`
+
+Used as the request body model for updating the quality status of an existing measurement.
+
+Fields:
+
+```text
+quality_status: Literal["valid", "invalid", "estimated"]
+```
+
+Used by:
+
+```text
+PATCH /measurements/{measurement_id}
+```
+
+This model intentionally only contains the field that may be changed through the current update endpoint.
+
 ### `MeasurementDetailResponse`
 
 Used for detailed measurement responses.
@@ -761,6 +831,7 @@ Used by:
 ```text
 POST /measurements
 GET /measurements/{measurement_id}
+PATCH /measurements/{measurement_id}
 ```
 
 This model represents a complete measurement record as returned by the database.
@@ -821,6 +892,9 @@ Current test coverage:
 | Measurement detail | `/measurements/{measurement_id}` | Returns one detailed measurement record. |
 | Measurement detail errors | `/measurements/0`, `/measurements/abc`, unknown measurement ID | Return expected `422` or `404` responses. |
 | Create-then-read flow | `POST /measurements` followed by `GET /measurements/{measurement_id}` | Confirms that a created measurement can be retrieved by its generated ID. |
+| Measurement quality update | `PATCH /measurements/{measurement_id}` | Confirms that quality status can be updated for an existing measurement. |
+| Patch-then-read flow | `PATCH /measurements/{measurement_id}` followed by `GET /measurements/{measurement_id}` | Confirms that the updated quality status is persisted. |
+| Measurement quality update errors | Missing, invalid or wrong-typed `quality_status` values and unknown measurement IDs | Return expected `422` or `404` responses. |
 | Nested station measurements | `/stations/1/measurements` | Returns measurements for one station. |
 | Nested endpoint errors | `/stations/9999/measurements`, `/stations/abc/measurements`, `/stations/1/measurements?limit=0` | Return expected `404` or `422` responses. |
 
@@ -1033,6 +1107,58 @@ returns:
 
 because `measurement_id` is constrained to an integer with a minimum value of `1`.
 
+### Updating measurement quality status
+
+```text
+PATCH /measurements/42
+```
+
+with a valid request body updates the `quality_status` of an existing measurement.
+
+Example request body:
+
+```json
+{
+  "quality_status": "invalid"
+}
+```
+
+Result:
+
+```text
+200 OK
+```
+
+with the updated detailed measurement record.
+
+### Updating a non-existing measurement
+
+```text
+PATCH /measurements/999999
+```
+
+returns:
+
+```text
+404 Not Found
+```
+
+because no measurement with this ID exists.
+
+### Invalid measurement quality update payload
+
+Invalid update request bodies return:
+
+```text
+422 Unprocessable Content
+```
+
+Examples include:
+
+- missing `quality_status`,
+- wrong type for `quality_status`,
+- invalid status values such as `wrong_status`.
+
 ---
 
 ## Output Separation
@@ -1107,8 +1233,8 @@ The current implementation is intentionally simple.
 
 Current limitations:
 
-- Python currently supports reading from PostgreSQL and inserting new measurement records.
-- No update/delete operations from Python yet.
+- Python currently supports reading from PostgreSQL, inserting new measurement records and updating measurement quality status values.
+- No delete operations from Python yet; measurement quality changes are handled through a targeted update endpoint.
 - Database result mapping still uses dictionaries internally before FastAPI validates the response models.
 - API routes are still kept in `src/api.py`; routers can be introduced later when the API grows.
 - Current query parameter filtering is intentionally simple and partly happens in Python instead of SQL.
@@ -1231,15 +1357,27 @@ These limitations are intentional for the current learning stage.
 - Added automated tests for measurement detail success, not-found cases and invalid measurement IDs.
 - Added a create-then-read API flow test that creates a measurement and retrieves it again by the generated `measurement_id`.
 
+## Completed in v0.6.3
+
+- Added a targeted PATCH endpoint for measurement quality status updates.
+- Added `MeasurementQualityUpdate` as request body model.
+- Added `update_measurement_quality_status(conn, measurement_id, quality_status)` in `src/database.py`.
+- Used a parameterized `UPDATE measurements SET quality_status = %s WHERE measurement_id = %s RETURNING ...` query.
+- Returned the updated detailed measurement record after a successful update.
+- Returned `404 Not Found` for non-existing measurement IDs.
+- Reused Pydantic validation so invalid, missing or wrong-typed quality status values return `422 Unprocessable Content`.
+- Added automated PATCH tests for success, not-found and validation cases.
+- Added a patch-then-read flow that confirms the updated `quality_status` is persisted.
+
 ---
 
 ## Next Steps
 
 Recommended next steps:
 
-1. Add a targeted update endpoint for measurement quality status, for example `PATCH /measurements/{measurement_id}/quality-status`.
+1. Add more realistic database queries and KPI endpoints.
 2. Improve database error handling.
-3. Add more realistic database queries and KPI endpoints.
-4. Introduce routers later when the API contains more endpoints.
+3. Introduce routers later when the API contains more endpoints.
+4. Improve the PostgreSQL access layer step by step.
 5. Add Docker setup for the application and PostgreSQL.
 6. Prepare a simple cloud deployment scenario.

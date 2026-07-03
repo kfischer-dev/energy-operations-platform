@@ -14,7 +14,7 @@ app = FastAPI(
         "REST API for accessing energy station and measurement data. "
         "This API is part of the Energy Operations Platform portfolio project."
     ),
-    version="0.6.0",
+    version="0.6.3",
     openapi_tags=[
         {
             "name": "General",
@@ -332,18 +332,23 @@ def post_measurement(measurement_data: MeasurementCreate):
         logger.info("=" * 60)
 
 @app.patch("/measurements/{measurement_id}",
-    response_model=MeasurementQualityUpdate,
-    status_code=status.HTTP_201_CREATED, 
+    response_model=MeasurementDetailResponse,
+    status_code=status.HTTP_200_OK, 
     tags=["Measurements"],
+    summary="Update measurement quality status",
+    description=(
+        "Updates the quality status of an existing measurement record. "
+        "Allowed values are valid, invalid and estimated. "
+        "The endpoint returns the updated measurement record."
+    ),
+    response_description="Updated measurement record.",
 )
 def patch_quality_status_by_measurement_id(
     measurement_id: int = Path(
-    ..., 
-    ge=1, 
-    description="Unique ID of the requested measurement record."),
-    quality_status: str = Query(
-    default=None, 
-    description="Quality status of measurement. Example: valid, invalid, estimated",)
+        ..., 
+        ge=1, 
+        description="Unique ID of the requested measurement record."),
+    update_data: MeasurementQualityUpdate = ...,
 ):
     """Patch quality_status for specific measurement."""
 
@@ -360,7 +365,7 @@ def patch_quality_status_by_measurement_id(
             logger.warning(f"Measurement with id {measurement_id} not found.")
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Measurement with id {measurement_id} not found")
         
-        new_measurement = update_measurement_quality_status(conn, measurement_id, quality_status)
+        new_measurement = update_measurement_quality_status(conn, measurement_id, update_data.quality_status)
 
         return new_measurement
     
