@@ -396,4 +396,61 @@ def test_get_measurement_kpi_summary_returns_kpis():
     assert "max_load" in data
     assert "latest_measurement_time" in data
 
+# ============================================================
+# Validation test for GET station/{station_id}/kpis Endpoint
+# ============================================================
+def test_get_station_kpi_summary_returns_kpis():
+    response = client.get("/stations/1/kpis")
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert isinstance(data, dict)
+    assert len(data) > 0
+    assert data["measurement_count"] >= 0
+    assert "station_id" in data
+    assert "station_name" in data
+    assert "average_load" in data
+    assert "min_load" in data
+    assert "max_load" in data
+    assert "latest_measurement_time" in data
+
+# ============================================================
+# Validation test for GET station/{station_id}/kpis Endpoint
+# ============================================================
+def test_get_station_kpis_without_measurements_returns_empty_kpis():
+    response = client.get("/stations/9/kpis")
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert isinstance(data, dict)
+    assert data["station_id"] == 9
+    assert data["station_name"] == "Station Z"
+    assert data["measurement_count"] == 0
+    assert data["average_load"] is None
+    assert data["min_load"] is None
+    assert data["max_load"] is None
+    assert data["latest_measurement_time"] is None
+
+def test_get_station_not_found_returns_404():
+    response = client.get("/stations/9999/kpis")
+
+    assert response.status_code == 404
+
+    assert response.json() == {"detail": "Station with id 9999 not found"}
+
+def test_get_station_id_with_invalid_range_returns_422():
+    response = client.get("/stations/0/kpis")
+
+    assert response.status_code == 422
+
+def test_get_station_id_with_invalid_type_returns_422():
+    response = client.get("/stations/abc/kpis")
+
+    assert response.status_code == 422
+
+
 

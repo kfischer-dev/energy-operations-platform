@@ -7,7 +7,8 @@ VALUES
     ('Station E', 'substation', 'Waiblingen'),
     ('Station F', 'solar_park', 'Freiburg'),
     ('Station G', 'wind_park', 'Mannheim'),
-    ('Station H', 'grid_connection', 'Heilbronn');
+    ('Station H', 'grid_connection', 'Heilbronn'),
+    ('Station Z', 'solar_park', 'Berlin');
 
 INSERT INTO measurements (station_id, measurement_time, load_value, unit, source, quality_status)
 VALUES

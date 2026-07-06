@@ -42,3 +42,12 @@ class MeasurementKPIsResponse(BaseModel):
     min_load: float | None
     max_load: float | None
     latest_measurement_time: datetime | None
+
+class StationKPIsResponse(BaseModel):
+    station_id: int = Field(..., ge=1)
+    station_name: str
+    measurement_count: int = Field(..., ge=0)
+    average_load: float | None
+    min_load: float | None
+    max_load: float | None
+    latest_measurement_time: datetime | None

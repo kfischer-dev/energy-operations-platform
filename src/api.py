@@ -2,8 +2,8 @@ import logging
 from src.logging_config import configure_logging
 
 from fastapi import FastAPI, HTTPException, status, Query, Path
-from src.database import get_connection, fetch_stations, fetch_joined_measurements, fetch_measurements_by_station_id, fetch_station_by_id, create_measurement, fetch_measurement_by_id, update_measurement_quality_status, fetch_measurement_kpi_summary
-from src.schemas import StationResponse, MeasurementResponse, MeasurementCreate, MeasurementDetailResponse, MeasurementQualityUpdate, MeasurementKPIsResponse
+from src.database import get_connection, fetch_stations, fetch_joined_measurements, fetch_measurements_by_station_id, fetch_station_by_id, create_measurement, fetch_measurement_by_id, update_measurement_quality_status, fetch_measurement_kpi_summary, fetch_station_kpi_summary
+from src.schemas import StationResponse, MeasurementResponse, MeasurementCreate, MeasurementDetailResponse, MeasurementQualityUpdate, MeasurementKPIsResponse, StationKPIsResponse
 
 configure_logging()
 logger = logging.getLogger(__name__)
@@ -14,7 +14,7 @@ app = FastAPI(
         "REST API for accessing energy station and measurement data. "
         "This API is part of the Energy Operations Platform portfolio project."
     ),
-    version="0.6.3",
+    version="0.7.1",
     openapi_tags=[
         {
             "name": "General",
@@ -385,7 +385,13 @@ def patch_quality_status_by_measurement_id(
 @app.get("/kpis/measurements",
     response_model=MeasurementKPIsResponse,
     status_code=status.HTTP_200_OK, 
-    tags=["KPIs"],             
+    tags=["KPIs"],
+    summary="Get global measurement KPI summary",
+    description=(
+        "Returns aggregated KPI values across all valid measurements. "
+        "The summary includes the number of valid measurements, average load, "
+        "minimum load, maximum load and the latest measurement timestamp. "
+        "Measurements with invalid quality status are excluded from the calculation."),         
 )
 def get_measurement_kpi_summary():
     """Get measurement KPI summary."""
@@ -399,6 +405,61 @@ def get_measurement_kpi_summary():
         kpi_summary = fetch_measurement_kpi_summary(conn)
         logger.info(f"Loaded {kpi_summary['measurement_count']} valid measurements from database.")
         return kpi_summary
+
+    finally:
+        conn.close()
+        logger.info("Database connection closed.")
+        logger.info("=" * 60)
+
+@app.get("/stations/{station_id}/kpis",
+    response_model=StationKPIsResponse,
+    status_code=status.HTTP_200_OK, 
+    tags=["KPIs"],
+    summary="Get KPI summary for a station",
+    description=(
+        "Returns aggregated KPI values for one specific energy station. "
+        "The station is selected by station_id. The response includes station information, "
+        "the number of valid measurements, average load, minimum load, maximum load "
+        "and the latest measurement timestamp. Measurements with invalid quality status "
+        "are excluded from the calculation. If the station exists but has no valid measurements, "
+        "the endpoint returns zero measurements and null KPI values."
+    ),
+)            
+
+def get_station_kpi_summary(
+    station_id: int = Path(
+        ..., 
+        ge=1, 
+        description="Unique ID of the requested energy station.")
+):
+    """Get measurement KPI by station_id summary."""
+
+    logger.info("=" * 60)
+    logger.info(f"GET /station/{station_id}/kpis request received. ")
+
+    conn = get_connection()
+
+    try:
+        station = fetch_station_by_id(conn, station_id)
+
+        if station is None:
+            logger.warning(f"Station with id {station_id} not found.")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Station with id {station_id} not found")
+        
+        kpi_summary = fetch_station_kpi_summary(conn, station_id)
+
+        if kpi_summary is None:
+            kpi_summary = {
+                "measurement_count": 0,
+                "average_load": None,
+                "min_load": None,
+                "max_load": None,
+                "latest_measurement_time": None,
+            }
+
+        logger.info(f"Loaded KPI summary for {station['station_name']} with {kpi_summary['measurement_count']} valid measurements from database.")
+
+        return {'station_id': station['station_id'], 'station_name': station['station_name'], **kpi_summary}
 
     finally:
         conn.close()

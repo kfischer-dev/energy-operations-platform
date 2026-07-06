@@ -297,6 +297,18 @@ def map_kpi_measurement_row(row):
         "latest_measurement_time": row[4],
     }
 
+def map_kpi_measurement_by_station_id_row(row):
+
+    return {        
+        "station_id": row[0],
+        "station_name": row[1],
+        "measurement_count": row[2],
+        "average_load": float(row[3]) if row[3] is not None else None,
+        "min_load": float(row[4]) if row[4] is not None else None,
+        "max_load": float(row[5]) if row[5] is not None else None,
+        "latest_measurement_time": row[6],
+    }
+
 # ============================================================
 # Database Read KPIs
 # ============================================================
@@ -315,8 +327,32 @@ def fetch_measurement_kpi_summary(conn):
         """)
 
         row = cursor.fetchone()
+
+    if row is None:
+        return None  
     
     return map_kpi_measurement_row(row)
 
+def fetch_station_kpi_summary(conn, station_id):
+
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT
+                COUNT(*) AS measurement_count,
+                ROUND(AVG(load_value), 2) AS average_load,
+                MIN(load_value) AS min_load,
+                MAX(load_value) AS max_load,
+                MAX(measurement_time) AS latest_measurement_time
+            FROM measurements
+            WHERE station_id = %s
+            AND quality_status = 'valid';
+        """, (station_id,))
+
+        row = cursor.fetchone()
+
+    if row is None:
+        return None     
+
+    return map_kpi_measurement_row(row)
 
     
