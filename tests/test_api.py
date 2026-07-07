@@ -177,7 +177,7 @@ def test_get_measurements_of_station_id_with_limit_zero_returns_422():
 # Validation test for POST /measurement Endpoint
 # ============================================================
 
-def test_create_measurement_returns_201():
+def test_post_measurement_returns_201():
 
     new_measurement = valid_measurement_payload()
     new_measurement["station_id"] = 8
@@ -197,7 +197,7 @@ def test_create_measurement_returns_201():
     assert data["quality_status"] == "valid"
     
 
-def test_create_measurement_with_unknown_station_returns_404():
+def test_post_measurement_with_unknown_station_returns_404():
     
     new_measurement = valid_measurement_payload()
     new_measurement["station_id"] = 9999
@@ -206,7 +206,7 @@ def test_create_measurement_with_unknown_station_returns_404():
 
     assert response.status_code == 404
 
-def test_create_measurement_with_missing_field_returns_422():
+def test_post_measurement_with_missing_field_returns_422():
     
     new_measurement = valid_measurement_payload()
     del new_measurement["source"]
@@ -215,7 +215,7 @@ def test_create_measurement_with_missing_field_returns_422():
 
     assert response.status_code == 422
 
-def test_create_measurement_negative_load_returns_422():
+def test_post_measurement_negative_load_returns_422():
     
     new_measurement = valid_measurement_payload()
     new_measurement["load_value"] = -123.45
@@ -224,7 +224,7 @@ def test_create_measurement_negative_load_returns_422():
 
     assert response.status_code == 422
 
-def test_create_measurement_invalid_quality_status_returns_422():
+def test_post_measurement_invalid_quality_status_returns_422():
     
     new_measurement = valid_measurement_payload()
     new_measurement["quality_status"] = "invalid_status"
@@ -234,7 +234,7 @@ def test_create_measurement_invalid_quality_status_returns_422():
 
     assert response.status_code == 422
 
-def test_create_measurement_empty_source_returns_422():
+def test_post_measurement_empty_source_returns_422():
     
     new_measurement = valid_measurement_payload()
     new_measurement["source"] = ""
@@ -243,7 +243,7 @@ def test_create_measurement_empty_source_returns_422():
 
     assert response.status_code == 422
 
-def test_create_measurement_invalid_unit_returns_422():
+def test_post_measurement_invalid_unit_returns_422():
     
     new_measurement = valid_measurement_payload()
     new_measurement["unit"] = "kWh"
@@ -256,16 +256,11 @@ def test_create_measurement_invalid_unit_returns_422():
 # Validation test for GET /measurements/{measurement_id} Endpoint
 # ============================================================
 
-def test_get_measurement_by_id_returns_measurement():
-
-    new_measurement = {
-        "station_id": 8,
-        "measurement_time": "2026-07-02T10:15:00",
-        "load_value": 150.00,
-        "unit": "kW",
-        "source": "pytest",
-        "quality_status": "invalid",
-    }
+def test_post_measurement_can_be_read_after_creation():
+    new_measurement = valid_measurement_payload()
+    new_measurement["station_id"] = 8
+    new_measurement["load_value"] = 150.00
+    new_measurement["quality_status"] = "invalid"
 
     response_post = client.post("/measurements", json=new_measurement)
 
@@ -310,7 +305,7 @@ def test_get_measurement_by_id_with_invalid_type_returns_422():
 # Validation test for PATCH /measurements/{measurement_id} Endpoint
 # ============================================================
 
-def test_patch_existing_measurement_quality_status():
+def test_patch_measurement_quality_status_persists_update():
     new_measurement = valid_measurement_payload()
     new_measurement["station_id"] = 7
     new_measurement["quality_status"] = "valid"
@@ -437,19 +432,19 @@ def test_get_station_kpis_without_measurements_returns_empty_kpis(reset_db):
     assert data["max_load"] is None
     assert data["latest_measurement_time"] is None
 
-def test_get_station_not_found_returns_404():
+def test_get_station_kpis_not_found_returns_404():
     response = client.get("/stations/9999/kpis")
 
     assert response.status_code == 404
 
     assert response.json() == {"detail": "Station with id 9999 not found"}
 
-def test_get_station_id_with_invalid_range_returns_422():
+def test_get_station_kpis_with_invalid_range_returns_422():
     response = client.get("/stations/0/kpis")
 
     assert response.status_code == 422
 
-def test_get_station_id_with_invalid_type_returns_422():
+def test_get_station_kpis_with_invalid_type_returns_422():
     response = client.get("/stations/abc/kpis")
 
     assert response.status_code == 422
