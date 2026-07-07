@@ -2,8 +2,28 @@ from fastapi.testclient import TestClient
 
 from src.api import app
 
+from src.database import get_connection
+from pathlib import Path
 
 client = TestClient(app)
+
+# ============================================================
+# Reset Test Database
+# ============================================================
+
+def reset_test_database():
+    seed_file = Path(__file__).resolve().parents[1] / "sql" / "test_seed_data.sql"
+
+    conn = get_connection()
+
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(seed_file.read_text(encoding="utf-8"))
+        conn.commit()
+    finally:
+        conn.close()
+
+
 
 # ============================================================
 # Payload
