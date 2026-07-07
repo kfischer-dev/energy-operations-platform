@@ -1,13 +1,15 @@
 import os
 from pathlib import Path
 
-import pytest
-
 os.environ["DB_NAME"] = "energy_operations_test"
 
 if os.environ["DB_NAME"] != "energy_operations_test":
     raise RuntimeError("Refusing to reset non-test database")
 
+import pytest
+from fastapi.testclient import TestClient
+
+from src.api import app
 from src.database import get_connection
 
 
@@ -28,9 +30,23 @@ def reset_test_database():
 def setup_test_database():
     reset_test_database()
 
-# ============================================================
 # Reset Database for specific tests
-# ============================================================
 @pytest.fixture
 def reset_db():
     reset_test_database()
+
+# Client for test modules
+@pytest.fixture
+def client():
+    return TestClient(app)
+
+@pytest.fixture
+def valid_measurement_payload():
+    return {
+        "station_id": 1,
+        "measurement_time": "2026-07-02T08:15:00",
+        "load_value": 123.45,
+        "unit": "kW",
+        "source": "pytest",
+        "quality_status": "valid",
+    }
