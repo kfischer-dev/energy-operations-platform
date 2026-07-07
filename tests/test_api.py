@@ -2,27 +2,9 @@ from fastapi.testclient import TestClient
 
 from src.api import app
 
-from src.database import get_connection
-from pathlib import Path
+import pytest
 
 client = TestClient(app)
-
-# ============================================================
-# Reset Test Database
-# ============================================================
-
-def reset_test_database():
-    seed_file = Path(__file__).resolve().parents[1] / "sql" / "test_seed_data.sql"
-
-    conn = get_connection()
-
-    try:
-        with conn.cursor() as cursor:
-            cursor.execute(seed_file.read_text(encoding="utf-8"))
-        conn.commit()
-    finally:
-        conn.close()
-
 
 
 # ============================================================
@@ -401,7 +383,7 @@ def test_patch_measurement_quality_status_with_invalid_measurement_id_returns_42
 # ============================================================
 # Validation test for GET /kpis/measurements Endpoint
 # ============================================================
-def test_get_measurement_kpi_summary_returns_kpis():
+def test_get_measurement_kpi_summary_returns_exact_values(reset_db):
     response = client.get("/kpis/measurements")
 
     assert response.status_code == 200
@@ -410,16 +392,16 @@ def test_get_measurement_kpi_summary_returns_kpis():
 
     assert isinstance(data, dict)
     assert len(data) > 0
-    assert data["measurement_count"] >= 0
-    assert "average_load" in data
-    assert "min_load" in data
-    assert "max_load" in data
-    assert "latest_measurement_time" in data
+    assert data["measurement_count"] == 22
+    assert float(data["average_load"]) == pytest.approx(259.17)
+    assert float(data["min_load"]) == pytest.approx(25)
+    assert float(data["max_load"]) == pytest.approx(790.25)
+    assert data["latest_measurement_time"] is not None
 
 # ============================================================
-# Validation test for GET station/{station_id}/kpis Endpoint
+# Validation test for GET stations/{station_id}/kpis Endpoint
 # ============================================================
-def test_get_station_kpi_summary_returns_kpis():
+def test_get_station_kpi_summary_returns_kpis(reset_db):
     response = client.get("/stations/1/kpis")
 
     assert response.status_code == 200
@@ -428,18 +410,18 @@ def test_get_station_kpi_summary_returns_kpis():
 
     assert isinstance(data, dict)
     assert len(data) > 0
-    assert data["measurement_count"] >= 0
-    assert "station_id" in data
-    assert "station_name" in data
-    assert "average_load" in data
-    assert "min_load" in data
-    assert "max_load" in data
-    assert "latest_measurement_time" in data
+    assert data["measurement_count"] == 3
+    assert data["station_id"] == 1
+    assert data["station_name"] == "Station A"
+    assert float(data["average_load"]) == pytest.approx(92.5)
+    assert float(data["min_load"]) == pytest.approx(80.5)
+    assert float(data["max_load"]) == pytest.approx(101.75)
+    assert data["latest_measurement_time"] is not None 
 
 # ============================================================
-# Validation test for GET station/{station_id}/kpis Endpoint
+# Validation test for GET stations/{station_id}/kpis Endpoint
 # ============================================================
-def test_get_station_kpis_without_measurements_returns_empty_kpis():
+def test_get_station_kpis_without_measurements_returns_empty_kpis(reset_db):
     response = client.get("/stations/9/kpis")
 
     assert response.status_code == 200
@@ -472,5 +454,21 @@ def test_get_station_id_with_invalid_type_returns_422():
 
     assert response.status_code == 422
 
+def test_get_station_kpi_summary_excludes_invalid_measurements(reset_db):
+    response = client.get("/stations/4/kpis")
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert isinstance(data, dict)
+    assert len(data) > 0
+    assert data["measurement_count"] == 1
+    assert data["station_id"] == 4
+    assert data["station_name"] == "Station D"
+    assert float(data["average_load"]) == pytest.approx(25)
+    assert float(data["min_load"]) == pytest.approx(25)
+    assert float(data["max_load"]) == pytest.approx(25)
+    assert data["latest_measurement_time"] is not None 
 
 

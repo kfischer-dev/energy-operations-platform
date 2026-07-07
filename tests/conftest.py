@@ -1,13 +1,14 @@
 import os
 from pathlib import Path
-from src.database import get_connection
-import pytest
 
+import pytest
 
 os.environ["DB_NAME"] = "energy_operations_test"
 
 if os.environ["DB_NAME"] != "energy_operations_test":
     raise RuntimeError("Refusing to reset non-test database")
+
+from src.database import get_connection
 
 
 def reset_test_database():
@@ -25,4 +26,11 @@ def reset_test_database():
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_database():
+    reset_test_database()
+
+# ============================================================
+# Reset Database for specific tests
+# ============================================================
+@pytest.fixture
+def reset_db():
     reset_test_database()
