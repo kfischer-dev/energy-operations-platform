@@ -30,7 +30,7 @@ The project is intentionally not a generic tutorial app. It is designed around t
 
 ## Current Version
 
-**Current development focus:** `v0.6.3`
+**Current development focus:** `v0.7.1`
 
 The current version focuses on:
 
@@ -47,6 +47,9 @@ The current version focuses on:
 * retrieving individual measurement records through `GET /measurements/{measurement_id}`,
 * updating measurement quality status through `PATCH /measurements/{measurement_id}`,
 * using targeted `UPDATE ... RETURNING` statements for measurement quality updates,
+* calculating global measurement KPI summaries through `GET /kpis/measurements`,
+* calculating station-specific KPI summaries through `GET /stations/{station_id}/kpis`,
+* excluding measurements with non-valid `quality_status` values from KPI calculations,
 * adding automated API tests with pytest and FastAPI TestClient,
 * checking successful responses, validation errors, not-found cases and write/read flows automatically,
 * improving Swagger/OpenAPI documentation with API metadata, endpoint tags, summaries, descriptions and schemas,
@@ -68,11 +71,15 @@ The project currently supports three workflows:
 * The API exposes station and measurement data as JSON responses.
 * Station data is loaded from PostgreSQL through the existing database access layer.
 * Measurement data is loaded from PostgreSQL through joined SQL queries.
-* The API provides list endpoints, detail endpoints and a first write endpoint.
+* The API provides list endpoints, detail endpoints, write/update endpoints and KPI/analytics endpoints.
 * Path parameters are used to retrieve station- and measurement-specific data.
 * Query parameters can filter stations by type and limit measurement results.
 * New measurement records can be created through `POST /measurements`.
 * Existing measurement quality status values can be updated through `PATCH /measurements/{measurement_id}`.
+* Global measurement KPIs can be retrieved through `GET /kpis/measurements`.
+* Station-specific KPIs can be retrieved through `GET /stations/{station_id}/kpis`.
+* KPI calculations currently include only measurements with `quality_status = "valid"`.
+* Existing stations without valid measurements return KPI summaries with `measurement_count = 0` and nullable KPI values.
 * Missing stations or measurements return proper `404 Not Found` responses.
 * Invalid path parameters, query parameters and request body values are validated automatically by FastAPI and Pydantic.
 * Pydantic request and response models define the expected API input and output structures.
@@ -93,6 +100,7 @@ The project currently supports three workflows:
 * Python reads individual measurement records by `measurement_id`.
 * Python writes new measurement records to PostgreSQL.
 * Python updates measurement quality status values in PostgreSQL.
+* Python calculates KPI summaries from PostgreSQL measurement data.
 * Raw PostgreSQL result rows are mapped into dictionaries with explicit field names.
 * The terminal output shows a basic database report.
 
@@ -160,7 +168,7 @@ energy-operations-platform/
 | -------------------------- | -------------------------------------------------------------------------- |
 | `src/api.py`               | FastAPI application and REST endpoints for station and measurement data.   |
 | `src/main.py`              | Terminal entry point for the PostgreSQL-based workflow.                    |
-| `src/database.py`          | PostgreSQL connection management, read queries, measurement inserts and measurement quality updates. |
+| `src/database.py`          | PostgreSQL connection management, read queries, measurement inserts, measurement quality updates and KPI queries. |
 | `src/logging_config.py`    | Central logging configuration used by the application.                     |
 | `src/output.py`            | Terminal output formatting for database report results.                    |
 | `src/station.py`           | `Station` class and object-oriented station logic from earlier versions.   |
@@ -208,6 +216,8 @@ energy-operations-platform/
 * HTTP `PATCH` and `200 OK`
 * SQL `INSERT ... RETURNING`
 * SQL `UPDATE ... RETURNING`
+* KPI/analytics queries
+* Data-quality filtering with `quality_status`
 * pytest
 * FastAPI `TestClient`
 * Git/GitHub project structure
@@ -309,6 +319,8 @@ http://localhost:8000/measurements
 http://localhost:8000/measurements?limit=5
 http://localhost:8000/measurements/1
 PATCH http://localhost:8000/measurements/1
+http://localhost:8000/kpis/measurements
+http://localhost:8000/stations/1/kpis
 http://localhost:8000/stations/1/measurements
 http://localhost:8000/stations/1/measurements?limit=5
 ```
@@ -327,6 +339,8 @@ http://localhost:8000/stations/1/measurements?limit=5
 | `GET`  | `/measurements/{measurement_id}`      | Returns one detailed measurement by measurement ID.  |
 | `POST` | `/measurements`                       | Creates a new measurement record for an existing station. |
 | `PATCH`| `/measurements/{measurement_id}`      | Updates the quality status of an existing measurement record. |
+| `GET`  | `/kpis/measurements`                 | Returns global KPI summary values across all valid measurements. |
+| `GET`  | `/stations/{station_id}/kpis`        | Returns KPI summary values for one specific station. |
 | `GET`  | `/stations/{station_id}/measurements` | Returns measurements for one specific station.       |
 | `GET`  | `/stations/{station_id}/measurements?limit=5` | Returns a limited number of measurements for one station. |
 
@@ -349,6 +363,8 @@ The API uses Pydantic models to define the expected input and output structures 
 | `MeasurementCreate` | `POST /measurements` | Request body model for creating new measurements | `station_id`, `measurement_time`, `load_value`, `unit`, `source`, `quality_status` |
 | `MeasurementQualityUpdate` | `PATCH /measurements/{measurement_id}` | Request body model for updating measurement quality status | `quality_status` |
 | `MeasurementDetailResponse` | `POST /measurements`, `/measurements/{measurement_id}`, `PATCH /measurements/{measurement_id}` | Detailed measurement response model | `measurement_id`, `station_id`, `measurement_time`, `load_value`, `unit`, `source`, `quality_status` |
+| `MeasurementKPIsResponse` | `GET /kpis/measurements` | Global measurement KPI response model | `measurement_count`, `average_load`, `min_load`, `max_load`, `latest_measurement_time` |
+| `StationKPIsResponse` | `GET /stations/{station_id}/kpis` | Station-specific KPI response model | `station_id`, `station_name`, `measurement_count`, `average_load`, `min_load`, `max_load`, `latest_measurement_time` |
 
 The models are defined in `src/schemas.py` and connected to the FastAPI routes through request body type annotations and `response_model`.
 
@@ -442,6 +458,57 @@ with the updated detailed measurement record.
 
 This endpoint is used to mark a measurement as valid, invalid or estimated without deleting the measurement record. This is intentionally closer to realistic measurement-data workflows than immediately removing technical history from the database.
 
+### KPI Summary Endpoints
+
+Global measurement KPI values can be retrieved with:
+
+```text
+GET /kpis/measurements
+```
+
+Station-specific KPI values can be retrieved with:
+
+```text
+GET /stations/{station_id}/kpis
+```
+
+The KPI responses currently include:
+
+| Field | Meaning |
+| ----- | ------- |
+| `measurement_count` | Number of valid measurement records used for the calculation. |
+| `average_load` | Average load value across valid measurements. |
+| `min_load` | Minimum load value across valid measurements. |
+| `max_load` | Maximum load value across valid measurements. |
+| `latest_measurement_time` | Latest timestamp among valid measurements. |
+
+The station-specific endpoint also includes:
+
+```text
+station_id
+station_name
+```
+
+KPI calculations currently include only measurements with:
+
+```text
+quality_status = "valid"
+```
+
+Measurements marked as `invalid` or `estimated` are excluded from KPI calculations. This makes the analytics layer depend on the data-quality status instead of blindly aggregating all raw measurement records.
+
+If a station exists but has no valid measurements, the station-specific KPI endpoint returns:
+
+```text
+200 OK
+measurement_count = 0
+average_load = null
+min_load = null
+max_load = null
+latest_measurement_time = null
+```
+
+
 ### API Documentation
 
 The FastAPI application includes custom OpenAPI metadata for a clearer portfolio presentation.
@@ -452,13 +519,13 @@ Current API documentation features:
 | ------- | ------- |
 | API title | Shows the project-specific API name in Swagger UI. |
 | API description | Explains the purpose of the Energy Operations Platform API. |
-| API version | Documents the current API version, currently `0.6.3`. |
-| Endpoint tags | Groups routes into `General`, `Stations` and `Measurements`. |
+| API version | Documents the current API version, currently `0.7.1`. |
+| Endpoint tags | Groups routes into `General`, `Stations`, `Measurements` and `KPIs`. |
 | Endpoint summaries | Make the route overview easier to scan. |
 | Endpoint descriptions | Explain what each route returns and how it should be used. |
 | Parameter descriptions | Explain path and query parameters directly in Swagger UI. |
 | Response descriptions | Describe the returned response type in the generated API documentation. |
-| Request and response schemas | Show `StationResponse`, `MeasurementResponse`, `MeasurementCreate`, `MeasurementQualityUpdate` and `MeasurementDetailResponse` as typed API schemas. |
+| Request and response schemas | Show station, measurement and KPI request/response models as typed API schemas. |
 
 ### API Error Behavior
 
@@ -484,6 +551,12 @@ Current API documentation features:
 | `PATCH /measurements/999999` | Returns `404 Not Found` if the measurement does not exist. |
 | `PATCH /measurements/abc` | Returns a validation error because `measurement_id` must be an integer. |
 | `PATCH /measurements/1` with invalid body | Returns a validation error, for example for missing or invalid `quality_status`. |
+| `/kpis/measurements`                    | Returns global KPI values across valid measurements.               |
+| `/stations/1/kpis`                      | Returns KPI values for station `1` based on valid measurements.    |
+| `/stations/9/kpis`                      | Returns `200 OK` with `measurement_count = 0` and nullable KPI values if station `9` exists but has no valid measurements. |
+| `/stations/999999/kpis`                 | Returns `404 Not Found` if the station does not exist.             |
+| `/stations/0/kpis`                      | Returns a validation error because `station_id` must be at least `1`. |
+| `/stations/abc/kpis`                    | Returns a validation error because `station_id` must be an integer. |
 | `/stations/1/measurements`              | Returns all measurements for station `1`.                         |
 | `/stations/1/measurements?limit=5`       | Returns at most five measurements for station `1`.                 |
 | `/stations/1/measurements?limit=0`       | Returns a validation error because `limit` must be at least `1`.   |
@@ -527,6 +600,9 @@ Current test scope:
 | Measurement quality update errors | Missing, invalid or wrong-typed `quality_status` values return `422`; unknown measurement IDs return `404`. |
 | Nested station measurements | `/stations/1/measurements` returns measurements for one station. |
 | Nested endpoint errors | Missing stations return `404`; invalid station IDs or limits return `422`. |
+| Global KPI summary | `/kpis/measurements` returns global KPI fields across valid measurements. |
+| Station KPI summary | `/stations/{station_id}/kpis` returns station-specific KPI fields. |
+| Station KPI edge cases | Existing stations without valid measurements return `200 OK` with empty KPI values; unknown stations return `404`; invalid station IDs return `422`. |
 
 The tests currently use the local PostgreSQL database and the existing seed data. A separate test database or dependency overrides can be introduced later when the project structure becomes more advanced.
 
@@ -628,6 +704,8 @@ The log file `logs/app.log` is generated locally and should not be committed.
 | `v0.6.1`| Measurement creation validation added with Pydantic `Field` constraints and `Literal` values for units and quality status. |
 | `v0.6.2`| Measurement detail endpoint added. `GET /measurements/{measurement_id}` retrieves one full measurement record by ID and is covered by automated tests. |
 | `v0.6.3`| Measurement quality status update endpoint added. `PATCH /measurements/{measurement_id}` updates `quality_status` for existing measurements and is covered by automated tests. |
+| `v0.7.0`| Global KPI endpoint added. `GET /kpis/measurements` returns aggregated KPI values across valid measurement records. |
+| `v0.7.1`| Station-specific KPI endpoint added. `GET /stations/{station_id}/kpis` returns KPI values for one station and handles stations without valid measurements. |
 
 ---
 
@@ -647,6 +725,7 @@ The current project demonstrates practical knowledge in:
 * logging,
 * relational database design,
 * SQL queries and aggregations,
+* KPI calculations with `COUNT`, `AVG`, `MIN`, `MAX` and latest timestamp values,
 * PostgreSQL setup,
 * Python-to-PostgreSQL access,
 * environment-based configuration,
@@ -672,6 +751,8 @@ The current project demonstrates practical knowledge in:
 * PostgreSQL `UPDATE ... RETURNING`,
 * HTTP `PATCH` endpoints,
 * updating existing resources,
+* calculating global and station-specific KPI summaries,
+* filtering analytics by measurement data quality,
 * reading individual resources by ID,
 * pytest basics,
 * FastAPI `TestClient`,
@@ -688,10 +769,11 @@ The current project demonstrates practical knowledge in:
 
 Next planned steps:
 
+* Finalize the v0.7 KPI/analytics documentation and release tag.
 * Improve database error handling.
-* Add more realistic database queries and KPI endpoints.
-* Introduce routers later when the number of endpoints grows.
+* Introduce routers when the number of endpoints grows further.
 * Improve the PostgreSQL access layer step by step.
+* Plan a better test data strategy, for example fixtures or a separate test database.
 * Add Docker setup.
 * Add basic cloud deployment preparation.
 * Add monitoring and security basics.

@@ -13,6 +13,8 @@ The README gives a high-level project overview. This file is intentionally more 
 - database result mapping,
 - measurement creation through parameterized SQL inserts,
 - measurement quality updates through parameterized SQL updates,
+- KPI calculations through SQL aggregate queries,
+- data-quality filtering for analytics based on `quality_status`,
 - FastAPI path and query parameter behavior,
 - FastAPI API documentation metadata,
 - Pydantic request and response models,
@@ -184,6 +186,7 @@ The project currently includes example queries for:
 - `AVG`
 - `MIN`
 - `MAX`
+- `ROUND`
 - `GROUP BY`
 - `HAVING`
 
@@ -249,6 +252,7 @@ Current responsibilities:
 - execute read queries,
 - insert new measurement records,
 - update measurement quality status values,
+- calculate global and station-specific KPI summaries,
 - map database rows into dictionaries,
 - provide reusable database functions for the terminal workflow and FastAPI endpoints.
 
@@ -447,6 +451,77 @@ Non-existing measurement   → returns None, handled by API layer as 404 Not Fou
 Invalid request body       → rejected by Pydantic before database access
 ```
 
+### `fetch_measurement_kpi_summary(conn)`
+
+Calculates global KPI values across all valid measurement records.
+
+Returned fields:
+
+```text
+measurement_count, average_load, min_load, max_load, latest_measurement_time
+```
+
+The SQL query uses aggregate functions:
+
+```text
+COUNT, AVG, MIN, MAX, MAX(measurement_time)
+```
+
+Current analytics rule:
+
+```text
+Only measurements with quality_status = 'valid' are included.
+```
+
+Expected behavior:
+
+```text
+Valid measurements exist     → returns KPI dictionary with calculated values
+No valid measurements exist  → returns measurement_count = 0 and nullable KPI values
+```
+
+Used by:
+
+```text
+GET /kpis/measurements
+```
+
+### `fetch_station_kpi_summary(conn, station_id)`
+
+Calculates KPI values for one specific station.
+
+Returned fields:
+
+```text
+measurement_count, average_load, min_load, max_load, latest_measurement_time
+```
+
+The API layer combines these values with the station information:
+
+```text
+station_id, station_name
+```
+
+Current analytics rule:
+
+```text
+Only measurements with quality_status = 'valid' are included.
+```
+
+Expected behavior:
+
+```text
+Existing station with valid measurements     → returns calculated KPI values
+Existing station without valid measurements  → returns measurement_count = 0 and nullable KPI values
+Non-existing station                         → handled by the API layer before KPI calculation
+```
+
+Used by:
+
+```text
+GET /stations/{station_id}/kpis
+```
+
 ### `fetch_database_report_data()`
 
 Coordinates the terminal database report loading process:
@@ -524,6 +599,32 @@ This structure also works well with FastAPI because dictionaries can be returned
 
 ---
 
+Example of a mapped KPI dictionary:
+
+```python
+{
+    "measurement_count": 12,
+    "average_load": 145.25,
+    "min_load": 80.5,
+    "max_load": 220.0,
+    "latest_measurement_time": "..."
+}
+```
+
+For station-specific KPI responses, the API adds station information:
+
+```python
+{
+    "station_id": 1,
+    "station_name": "Station A",
+    "measurement_count": 5,
+    "average_load": 123.45,
+    "min_load": 80.5,
+    "max_load": 160.0,
+    "latest_measurement_time": "..."
+}
+```
+
 ## Terminal Workflow
 
 The PostgreSQL-based terminal workflow is started with:
@@ -571,6 +672,8 @@ Current FastAPI endpoints using database data:
 | `GET` | `/measurements/{measurement_id}` | `fetch_measurement_by_id(conn, measurement_id)` | Returns one detailed measurement or `404 Not Found`. |
 | `POST` | `/measurements` | `fetch_station_by_id(conn, station_id)` and `create_measurement(conn, measurement_data)` | Checks that the station exists before inserting a new measurement. |
 | `PATCH` | `/measurements/{measurement_id}` | `update_measurement_quality_status(conn, measurement_id, quality_status)` | Updates the quality status of an existing measurement or returns `404 Not Found`. |
+| `GET` | `/kpis/measurements` | `fetch_measurement_kpi_summary(conn)` | Returns global KPI values across all valid measurements. |
+| `GET` | `/stations/{station_id}/kpis` | `fetch_station_by_id(conn, station_id)` and `fetch_station_kpi_summary(conn, station_id)` | Checks the parent station before loading station-specific KPI values. |
 | `GET` | `/stations/{station_id}/measurements` | `fetch_station_by_id(conn, station_id)` and `fetch_measurements_by_station_id(conn, station_id)` | Checks the parent station before loading measurements; can optionally limit the returned list with `limit`. |
 
 Current API flow per database-backed request:
@@ -617,6 +720,23 @@ PATCH /measurements/42
 → update quality_status in PostgreSQL
 → commit transaction
 → return updated detailed measurement as JSON
+```
+
+Example global KPI flow:
+
+```text
+GET /kpis/measurements
+→ aggregate valid measurements in PostgreSQL
+→ return measurement_count, average_load, min_load, max_load and latest_measurement_time
+```
+
+Example station KPI flow:
+
+```text
+GET /stations/1/kpis
+→ check whether station 1 exists
+→ aggregate valid measurements for station 1
+→ return station information and KPI values as JSON
 ```
 
 ---
@@ -676,7 +796,7 @@ Current documentation improvements:
 | Area | Current implementation | Benefit |
 |---|---|---|
 | API metadata | Custom title, description and version | Swagger UI clearly identifies the portfolio API. |
-| Tags | `General`, `Stations`, `Measurements` | Endpoints are grouped by responsibility. |
+| Tags | `General`, `Stations`, `Measurements`, `KPIs` | Endpoints are grouped by responsibility. |
 | Summaries | Short route summaries | The endpoint overview is easier to scan. |
 | Descriptions | Longer route descriptions | API behavior is easier to understand without reading the code. |
 | Response descriptions | Documented response meaning | Swagger UI explains what each route returns. |
@@ -836,6 +956,52 @@ PATCH /measurements/{measurement_id}
 
 This model represents a complete measurement record as returned by the database.
 
+### `MeasurementKPIsResponse`
+
+Used for the global measurement KPI endpoint.
+
+Fields:
+
+```text
+measurement_count: int
+average_load: float | None
+min_load: float | None
+max_load: float | None
+latest_measurement_time: datetime | None
+```
+
+Used by:
+
+```text
+GET /kpis/measurements
+```
+
+The nullable fields are intentional. If no valid measurements exist, SQL aggregate functions such as `AVG`, `MIN` and `MAX` return `NULL`, which is represented as `None` in Python and `null` in JSON.
+
+### `StationKPIsResponse`
+
+Used for station-specific KPI responses.
+
+Fields:
+
+```text
+station_id: int
+station_name: str
+measurement_count: int
+average_load: float | None
+min_load: float | None
+max_load: float | None
+latest_measurement_time: datetime | None
+```
+
+Used by:
+
+```text
+GET /stations/{station_id}/kpis
+```
+
+This model combines station identity fields with the calculated KPI values.
+
 ### Why These Models Matter
 
 Before the API used Pydantic models, dictionaries were returned directly. This worked, but the public API contract was implicit.
@@ -897,6 +1063,9 @@ Current test coverage:
 | Measurement quality update errors | Missing, invalid or wrong-typed `quality_status` values and unknown measurement IDs | Return expected `422` or `404` responses. |
 | Nested station measurements | `/stations/1/measurements` | Returns measurements for one station. |
 | Nested endpoint errors | `/stations/9999/measurements`, `/stations/abc/measurements`, `/stations/1/measurements?limit=0` | Return expected `404` or `422` responses. |
+| Global KPI summary | `/kpis/measurements` | Returns expected KPI fields and `200 OK`. |
+| Station KPI summary | `/stations/{station_id}/kpis` | Returns expected station and KPI fields. |
+| Station KPI edge cases | Existing station without valid measurements, unknown station ID and invalid station ID values | Return expected `200`, `404` or `422` responses. |
 
 The current tests are integration-style API tests. They import the real FastAPI app from `src.api` and call endpoints through `TestClient`.
 
@@ -1161,6 +1330,85 @@ Examples include:
 
 ---
 
+### Global KPI summary
+
+```text
+GET /kpis/measurements
+```
+
+returns global KPI values across valid measurements.
+
+Current rule:
+
+```text
+quality_status = 'valid'
+```
+
+Measurements with `invalid` or `estimated` quality status are not included in the calculation.
+
+### Station-specific KPI summary
+
+```text
+GET /stations/1/kpis
+```
+
+returns station information and KPI values for station `1` if the station exists.
+
+### Existing station without valid measurements
+
+```text
+GET /stations/9/kpis
+```
+
+returns:
+
+```text
+200 OK
+```
+
+with:
+
+```json
+{
+  "measurement_count": 0,
+  "average_load": null,
+  "min_load": null,
+  "max_load": null,
+  "latest_measurement_time": null
+}
+```
+
+This is correct because the station exists. There are simply no valid measurement records for the KPI calculation.
+
+### Non-existing station KPI request
+
+```text
+GET /stations/999999/kpis
+```
+
+returns:
+
+```text
+404 Not Found
+```
+
+because the parent station does not exist.
+
+### Invalid station KPI path parameter
+
+```text
+GET /stations/0/kpis
+GET /stations/abc/kpis
+```
+
+returns:
+
+```text
+422 Unprocessable Content
+```
+
+because `station_id` must be an integer with a minimum value of `1`.
+
 ## Output Separation
 
 Database access, terminal output and API responses are separated.
@@ -1233,7 +1481,7 @@ The current implementation is intentionally simple.
 
 Current limitations:
 
-- Python currently supports reading from PostgreSQL, inserting new measurement records and updating measurement quality status values.
+- Python currently supports reading from PostgreSQL, inserting new measurement records, updating measurement quality status values and calculating KPI summaries.
 - No delete operations from Python yet; measurement quality changes are handled through a targeted update endpoint.
 - Database result mapping still uses dictionaries internally before FastAPI validates the response models.
 - API routes are still kept in `src/api.py`; routers can be introduced later when the API grows.
@@ -1371,13 +1619,37 @@ These limitations are intentional for the current learning stage.
 
 ---
 
+## Completed in v0.7.0
+
+- Added the first KPI/analytics endpoint: `GET /kpis/measurements`.
+- Added `MeasurementKPIsResponse` as response model for global KPI summaries.
+- Added `fetch_measurement_kpi_summary(conn)` in `src/database.py`.
+- Used SQL aggregate functions such as `COUNT`, `AVG`, `MIN`, `MAX` and `MAX(measurement_time)`.
+- Added valid-only KPI filtering with `WHERE quality_status = 'valid'`.
+- Confirmed that measurements marked as `invalid` are excluded from KPI calculations.
+- Added automated tests for the global KPI response structure.
+
+## Completed in v0.7.1
+
+- Added the station-specific KPI endpoint: `GET /stations/{station_id}/kpis`.
+- Added `StationKPIsResponse` as response model for station KPI summaries.
+- Added `fetch_station_kpi_summary(conn, station_id)` in `src/database.py`.
+- Returned station information together with KPI values.
+- Kept the same valid-only analytics rule for station-specific calculations.
+- Returned `200 OK` with `measurement_count = 0` and nullable KPI values for existing stations without valid measurements.
+- Returned `404 Not Found` for non-existing stations.
+- Added automated tests for successful station KPI responses, stations without measurements, missing stations and invalid station IDs.
+
+---
+
 ## Next Steps
 
 Recommended next steps:
 
-1. Add more realistic database queries and KPI endpoints.
+1. Finalize the v0.7 documentation and release tag.
 2. Improve database error handling.
-3. Introduce routers later when the API contains more endpoints.
+3. Introduce routers when the API contains more endpoints.
 4. Improve the PostgreSQL access layer step by step.
-5. Add Docker setup for the application and PostgreSQL.
-6. Prepare a simple cloud deployment scenario.
+5. Plan a better test data strategy, for example fixtures or a separate test database.
+6. Add Docker setup for the application and PostgreSQL.
+7. Prepare a simple cloud deployment scenario.
