@@ -83,11 +83,13 @@ def test_get_station_not_found_returns_404():
 
     assert response.json() == {"detail": "Station with id 9999 not found"}
 
+@pytest.mark.validation
 def test_get_station_id_with_invalid_range_returns_422():
     response = client.get("/stations/0")
 
     assert response.status_code == 422
 
+@pytest.mark.validation
 def test_get_station_id_with_invalid_type_returns_422():
     response = client.get("/stations/abc")
 
@@ -123,22 +125,26 @@ def test_get_measurements_with_limit():
 
     assert len(data) <= 5
 
+@pytest.mark.validation
 def test_get_measurements_with_limit_zero_returns_422():
     response = client.get("/measurements?limit=0")
 
     assert response.status_code == 422
 
+@pytest.mark.validation
 def test_get_measurements_with_limit_above_max_returns_422():
 
     response = client.get("/measurements?limit=101")
 
     assert response.status_code == 422
 
+@pytest.mark.validation
 def test_get_measurements_with_invalid_type_returns_422():
     response = client.get("/measurements?limit=abc")
 
     assert response.status_code == 422
 
+@pytest.mark.validation
 def test_get_measurements_of_station_id():
     response = client.get("/stations/1/measurements")
 
@@ -163,11 +169,13 @@ def test_get_measurement_of_station_id_not_found_returns_404():
 
     assert response.json() == {"detail": "Station with id 9999 not found"}
 
+@pytest.mark.validation
 def test_get_measurements_of_station_id_with_invalid_type_returns_422():
     response = client.get("/stations/1/measurements?limit=abc")
 
     assert response.status_code == 422
 
+@pytest.mark.validation
 def test_get_measurements_of_station_id_with_limit_zero_returns_422():
     response = client.get("/stations/1/measurements?limit=0")
 
@@ -176,7 +184,7 @@ def test_get_measurements_of_station_id_with_limit_zero_returns_422():
 # ============================================================
 # Validation test for POST /measurement Endpoint
 # ============================================================
-
+@pytest.mark.post
 def test_post_measurement_returns_201():
 
     new_measurement = valid_measurement_payload()
@@ -196,7 +204,7 @@ def test_post_measurement_returns_201():
     assert data["source"] == "pytest"
     assert data["quality_status"] == "valid"
     
-
+@pytest.mark.post
 def test_post_measurement_with_unknown_station_returns_404():
     
     new_measurement = valid_measurement_payload()
@@ -206,6 +214,8 @@ def test_post_measurement_with_unknown_station_returns_404():
 
     assert response.status_code == 404
 
+@pytest.mark.post
+@pytest.mark.validation
 def test_post_measurement_with_missing_field_returns_422():
     
     new_measurement = valid_measurement_payload()
@@ -215,6 +225,8 @@ def test_post_measurement_with_missing_field_returns_422():
 
     assert response.status_code == 422
 
+@pytest.mark.post
+@pytest.mark.validation
 def test_post_measurement_negative_load_returns_422():
     
     new_measurement = valid_measurement_payload()
@@ -224,6 +236,8 @@ def test_post_measurement_negative_load_returns_422():
 
     assert response.status_code == 422
 
+@pytest.mark.post
+@pytest.mark.validation
 def test_post_measurement_invalid_quality_status_returns_422():
     
     new_measurement = valid_measurement_payload()
@@ -234,6 +248,8 @@ def test_post_measurement_invalid_quality_status_returns_422():
 
     assert response.status_code == 422
 
+@pytest.mark.post
+@pytest.mark.validation
 def test_post_measurement_empty_source_returns_422():
     
     new_measurement = valid_measurement_payload()
@@ -243,6 +259,8 @@ def test_post_measurement_empty_source_returns_422():
 
     assert response.status_code == 422
 
+@pytest.mark.post
+@pytest.mark.validation
 def test_post_measurement_invalid_unit_returns_422():
     
     new_measurement = valid_measurement_payload()
@@ -255,7 +273,7 @@ def test_post_measurement_invalid_unit_returns_422():
 # ============================================================
 # Validation test for GET /measurements/{measurement_id} Endpoint
 # ============================================================
-
+@pytest.mark.post
 def test_post_measurement_can_be_read_after_creation():
     new_measurement = valid_measurement_payload()
     new_measurement["station_id"] = 8
@@ -290,12 +308,13 @@ def test_get_measurement_by_id_not_found_returns_404():
 
     assert response.json() == {"detail": "Measurement with id 99999999 not found"}
 
+@pytest.mark.validation
 def test_get_measurement_by_id_with_invalid_range_returns_422():
     response = client.get("/measurements/0")
 
     assert response.status_code == 422
 
-
+@pytest.mark.validation
 def test_get_measurement_by_id_with_invalid_type_returns_422():
     response = client.get("/measurements/abc")
 
@@ -304,7 +323,7 @@ def test_get_measurement_by_id_with_invalid_type_returns_422():
 # ============================================================
 # Validation test for PATCH /measurements/{measurement_id} Endpoint
 # ============================================================
-
+@pytest.mark.patch
 def test_patch_measurement_quality_status_persists_update():
     new_measurement = valid_measurement_payload()
     new_measurement["station_id"] = 7
@@ -336,6 +355,7 @@ def test_patch_measurement_quality_status_persists_update():
     assert data_get["source"] == data_post["source"]
     assert data_get["quality_status"] == "invalid"
 
+@pytest.mark.patch
 def test_patch_measurement_quality_status_not_found_returns_404():
     measurement_id = 999999
     new_quality_status = {"quality_status": "invalid"}
@@ -344,6 +364,8 @@ def test_patch_measurement_quality_status_not_found_returns_404():
 
     assert response.status_code == 404
 
+@pytest.mark.patch
+@pytest.mark.validation
 def test_patch_measurement_quality_status_with_missing_status_returns_422():
     measurement_id = 5
     new_quality_status = {}
@@ -352,6 +374,8 @@ def test_patch_measurement_quality_status_with_missing_status_returns_422():
 
     assert response.status_code == 422
 
+@pytest.mark.patch
+@pytest.mark.validation
 def test_patch_measurement_quality_status_with_invalid_type_returns_422():
     measurement_id = 5
     new_quality_status = {"quality_status": 2}
@@ -360,6 +384,8 @@ def test_patch_measurement_quality_status_with_invalid_type_returns_422():
 
     assert response.status_code == 422
 
+@pytest.mark.patch
+@pytest.mark.validation
 def test_patch_measurement_quality_status_with_invalid_status_returns_422():
     measurement_id = 5
     new_quality_status = {"quality_status": "wrong_status"}
@@ -368,6 +394,8 @@ def test_patch_measurement_quality_status_with_invalid_status_returns_422():
 
     assert response.status_code == 422
 
+@pytest.mark.patch
+@pytest.mark.validation
 def test_patch_measurement_quality_status_with_invalid_measurement_id_returns_422():
     new_quality_status = {"quality_status": "invalid"}
 
@@ -378,6 +406,7 @@ def test_patch_measurement_quality_status_with_invalid_measurement_id_returns_42
 # ============================================================
 # Validation test for GET /kpis/measurements Endpoint
 # ============================================================
+@pytest.mark.kpi
 def test_get_measurement_kpi_summary_returns_exact_values(reset_db):
     response = client.get("/kpis/measurements")
 
@@ -396,6 +425,7 @@ def test_get_measurement_kpi_summary_returns_exact_values(reset_db):
 # ============================================================
 # Validation test for GET stations/{station_id}/kpis Endpoint
 # ============================================================
+@pytest.mark.kpi
 def test_get_station_kpi_summary_returns_kpis(reset_db):
     response = client.get("/stations/1/kpis")
 
@@ -413,9 +443,7 @@ def test_get_station_kpi_summary_returns_kpis(reset_db):
     assert float(data["max_load"]) == pytest.approx(101.75)
     assert data["latest_measurement_time"] is not None 
 
-# ============================================================
-# Validation test for GET stations/{station_id}/kpis Endpoint
-# ============================================================
+@pytest.mark.kpi
 def test_get_station_kpis_without_measurements_returns_empty_kpis(reset_db):
     response = client.get("/stations/9/kpis")
 
@@ -432,6 +460,7 @@ def test_get_station_kpis_without_measurements_returns_empty_kpis(reset_db):
     assert data["max_load"] is None
     assert data["latest_measurement_time"] is None
 
+@pytest.mark.kpi
 def test_get_station_kpis_not_found_returns_404():
     response = client.get("/stations/9999/kpis")
 
@@ -439,16 +468,21 @@ def test_get_station_kpis_not_found_returns_404():
 
     assert response.json() == {"detail": "Station with id 9999 not found"}
 
+@pytest.mark.kpi
+@pytest.mark.validation
 def test_get_station_kpis_with_invalid_range_returns_422():
     response = client.get("/stations/0/kpis")
 
     assert response.status_code == 422
 
+@pytest.mark.kpi
+@pytest.mark.validation
 def test_get_station_kpis_with_invalid_type_returns_422():
     response = client.get("/stations/abc/kpis")
 
     assert response.status_code == 422
 
+@pytest.mark.kpi
 def test_get_station_kpi_summary_excludes_invalid_measurements(reset_db):
     response = client.get("/stations/4/kpis")
 
