@@ -42,8 +42,8 @@ def get_station_or_404(conn, station_id):
     station = fetch_station_by_id(conn, station_id)
 
     if station is None:
-        logger.warning(f"Station with id {station_id} not found.")
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Station with id {station_id} not found.")
+        logger.warning(f"Station with id {station_id} not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Station with id {station_id} not found")
 
     return station
 
@@ -51,8 +51,8 @@ def get_measurement_or_404(conn, measurement_id):
     measurement = fetch_measurement_by_id(conn, measurement_id)
 
     if measurement is None:
-        logger.warning(f"Measurement with id {measurement_id} not found.")
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Measurement with id {measurement_id} not found.")
+        logger.warning(f"Measurement with id {measurement_id} not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Measurement with id {measurement_id} not found")
 
     return measurement
 
