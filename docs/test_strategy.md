@@ -3,6 +3,20 @@
 This document describes the current testing approach for the Energy Operations Platform.  
 It focuses on test data handling, database reset rules, and the separation between seed-based tests, self-contained tests, and validation tests.
 
+
+## Related Documentation
+
+This document focuses only on testing. Related topics are documented separately:
+
+| Document | Purpose |
+|---|---|
+| `README.md` | project overview and quick start |
+| `api_reference.md` | endpoint behavior and API contracts |
+| `database_notes.md` | database schema, SQL files and DB access layer |
+| `version_history.md` | version-by-version project history |
+
+This separation keeps the README concise and avoids repeating endpoint or database details in the test strategy.
+
 ## Scope
 
 The current test suite covers:
