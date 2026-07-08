@@ -1,8 +1,10 @@
 import os
 from pathlib import Path
 
+# Always point the application to the dedicated test database before it is imported.
 os.environ["DB_NAME"] = "energy_operations_test"
 
+# Safety guard: never allow the test reset helper to run against another database.
 if os.environ["DB_NAME"] != "energy_operations_test":
     raise RuntimeError("Refusing to reset non-test database")
 
@@ -14,6 +16,8 @@ from src.database import get_connection
 
 
 def reset_test_database():
+    """Reload the test database from the SQL seed file."""
+
     seed_file = Path(__file__).resolve().parents[1] / "sql" / "test_seed_data.sql"
 
     conn = get_connection()
@@ -28,20 +32,29 @@ def reset_test_database():
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_database():
+    """Start every test session from a known database state."""
+
     reset_test_database()
 
-# Reset Database for specific tests
+
 @pytest.fixture
 def reset_db():
+    """Reset the database for tests that need exact seed data."""
+
     reset_test_database()
 
-# Client for test modules
+
 @pytest.fixture
 def client():
+    """Create a FastAPI test client for endpoint tests."""
+
     return TestClient(app)
+
 
 @pytest.fixture
 def valid_measurement_payload():
+    """Base payload for measurement creation tests."""
+
     return {
         "station_id": 1,
         "measurement_time": "2026-07-02T08:15:00",

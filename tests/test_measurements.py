@@ -1,9 +1,15 @@
 import pytest
+
 # ============================================================
-# Tests for GET /measurement Endpoint
+# Measurement read endpoint tests
 # ============================================================
+# These tests check read behavior and response shape. They do not assert exact
+# KPI values, so they can rely on the session-level seed setup.
+
 
 def test_get_measurements(client):
+    """Check that the measurement list returns records with the expected fields."""
+
     response = client.get("/measurements")
 
     assert response.status_code == 200
@@ -20,7 +26,10 @@ def test_get_measurements(client):
     assert "load_value" in first_measurement
     assert "unit" in first_measurement
 
+
 def test_get_measurements_with_limit(client):
+    """Check that the limit query parameter restricts the number of results."""
+
     response = client.get("/measurements?limit=5")
 
     assert response.status_code == 200
@@ -29,26 +38,37 @@ def test_get_measurements_with_limit(client):
 
     assert len(data) <= 5
 
+
 @pytest.mark.validation
 def test_get_measurements_with_limit_zero_returns_422(client):
+    """Check that a limit below the allowed range is rejected."""
+
     response = client.get("/measurements?limit=0")
 
     assert response.status_code == 422
 
+
 @pytest.mark.validation
 def test_get_measurements_with_limit_above_max_returns_422(client):
+    """Check that a limit above the allowed range is rejected."""
 
     response = client.get("/measurements?limit=101")
 
     assert response.status_code == 422
 
+
 @pytest.mark.validation
 def test_get_measurements_with_invalid_type_returns_422(client):
+    """Check that non-integer limit values are rejected."""
+
     response = client.get("/measurements?limit=abc")
 
     assert response.status_code == 422
 
+
 def test_get_measurements_of_station_id(client):
+    """Check that measurements can be listed for a known station."""
+
     response = client.get("/stations/1/measurements")
 
     assert response.status_code == 200
@@ -65,30 +85,45 @@ def test_get_measurements_of_station_id(client):
     assert "load_value" in first_measurement
     assert "unit" in first_measurement
 
+
 def test_get_measurement_of_station_id_not_found_returns_404(client):
+    """Check that measurement requests for unknown stations return 404."""
+
     response = client.get("/stations/9999/measurements")
 
     assert response.status_code == 404
 
     assert response.json() == {"detail": "Station with id 9999 not found"}
 
+
 @pytest.mark.validation
 def test_get_measurements_of_station_id_with_invalid_type_returns_422(client):
+    """Check that non-integer limit values are rejected for station measurements."""
+
     response = client.get("/stations/1/measurements?limit=abc")
 
     assert response.status_code == 422
 
+
 @pytest.mark.validation
 def test_get_measurements_of_station_id_with_limit_zero_returns_422(client):
+    """Check that too small limit values are rejected for station measurements."""
+
     response = client.get("/stations/1/measurements?limit=0")
 
     assert response.status_code == 422
 
+
 # ============================================================
-# Tests for POST /measurement Endpoint
+# Measurement create endpoint tests
 # ============================================================
+# POST tests start from a valid payload and change only the field that matters
+# for the scenario. Successful POST tests create their own measurement records.
+
+
 @pytest.mark.post
 def test_post_measurement_returns_201(client, valid_measurement_payload):
+    """Check that a valid measurement can be created for an existing station."""
 
     new_measurement = valid_measurement_payload.copy()
     new_measurement["station_id"] = 8
@@ -106,10 +141,12 @@ def test_post_measurement_returns_201(client, valid_measurement_payload):
     assert data["unit"] == "kW"
     assert data["source"] == "pytest"
     assert data["quality_status"] == "valid"
-    
+
+
 @pytest.mark.post
 def test_post_measurement_with_unknown_station_returns_404(client, valid_measurement_payload):
-    
+    """Check that measurements cannot be created for unknown stations."""
+
     new_measurement = valid_measurement_payload.copy()
     new_measurement["station_id"] = 9999
 
@@ -117,10 +154,12 @@ def test_post_measurement_with_unknown_station_returns_404(client, valid_measure
 
     assert response.status_code == 404
 
+
 @pytest.mark.post
 @pytest.mark.validation
 def test_post_measurement_with_missing_field_returns_422(client, valid_measurement_payload):
-    
+    """Check that payloads with missing required fields are rejected."""
+
     new_measurement = valid_measurement_payload.copy()
     del new_measurement["source"]
 
@@ -128,10 +167,12 @@ def test_post_measurement_with_missing_field_returns_422(client, valid_measureme
 
     assert response.status_code == 422
 
+
 @pytest.mark.post
 @pytest.mark.validation
 def test_post_measurement_negative_load_returns_422(client, valid_measurement_payload):
-    
+    """Check that negative load values are rejected."""
+
     new_measurement = valid_measurement_payload.copy()
     new_measurement["load_value"] = -123.45
 
@@ -139,22 +180,25 @@ def test_post_measurement_negative_load_returns_422(client, valid_measurement_pa
 
     assert response.status_code == 422
 
+
 @pytest.mark.post
 @pytest.mark.validation
 def test_post_measurement_invalid_quality_status_returns_422(client, valid_measurement_payload):
-    
+    """Check that unsupported quality_status values are rejected."""
+
     new_measurement = valid_measurement_payload.copy()
     new_measurement["quality_status"] = "invalid_status"
-
 
     response = client.post("/measurements", json=new_measurement)
 
     assert response.status_code == 422
 
+
 @pytest.mark.post
 @pytest.mark.validation
 def test_post_measurement_empty_source_returns_422(client, valid_measurement_payload):
-    
+    """Check that empty source values are rejected."""
+
     new_measurement = valid_measurement_payload.copy()
     new_measurement["source"] = ""
 
@@ -162,10 +206,12 @@ def test_post_measurement_empty_source_returns_422(client, valid_measurement_pay
 
     assert response.status_code == 422
 
+
 @pytest.mark.post
 @pytest.mark.validation
 def test_post_measurement_invalid_unit_returns_422(client, valid_measurement_payload):
-    
+    """Check that unsupported measurement units are rejected."""
+
     new_measurement = valid_measurement_payload.copy()
     new_measurement["unit"] = "kWh"
 
@@ -173,11 +219,16 @@ def test_post_measurement_invalid_unit_returns_422(client, valid_measurement_pay
 
     assert response.status_code == 422
 
+
 # ============================================================
-# Tests for GET /measurements/{measurement_id} Endpoint
+# Measurement detail endpoint tests
 # ============================================================
+
+
 @pytest.mark.post
 def test_post_measurement_can_be_read_after_creation(client, valid_measurement_payload):
+    """Check that a newly created measurement can be read back by ID."""
+
     new_measurement = valid_measurement_payload.copy()
     new_measurement["station_id"] = 8
     new_measurement["load_value"] = 150.00
@@ -204,30 +255,46 @@ def test_post_measurement_can_be_read_after_creation(client, valid_measurement_p
     assert data_get["source"] == data_post["source"]
     assert data_get["quality_status"] == data_post["quality_status"]
 
+
 def test_get_measurement_by_id_not_found_returns_404(client):
+    """Check that unknown measurement IDs return 404."""
+
     response = client.get("/measurements/99999999")
 
     assert response.status_code == 404
 
     assert response.json() == {"detail": "Measurement with id 99999999 not found"}
 
+
 @pytest.mark.validation
 def test_get_measurement_by_id_with_invalid_range_returns_422(client):
+    """Check that measurement IDs below the allowed range are rejected."""
+
     response = client.get("/measurements/0")
 
     assert response.status_code == 422
 
+
 @pytest.mark.validation
 def test_get_measurement_by_id_with_invalid_type_returns_422(client):
+    """Check that non-integer measurement IDs are rejected."""
+
     response = client.get("/measurements/abc")
 
     assert response.status_code == 422
 
+
 # ============================================================
-# Tests for PATCH /measurements/{measurement_id} Endpoint
+# Measurement update endpoint tests
 # ============================================================
+# PATCH tests only update quality_status. The persistence test creates its own
+# measurement first, so it does not depend on a measurement ID from the seed file.
+
+
 @pytest.mark.patch
 def test_patch_measurement_quality_status_persists_update(client, valid_measurement_payload):
+    """Check that a quality_status update is saved and can be read back."""
+
     new_measurement = valid_measurement_payload.copy()
     new_measurement["station_id"] = 7
     new_measurement["quality_status"] = "valid"
@@ -258,8 +325,11 @@ def test_patch_measurement_quality_status_persists_update(client, valid_measurem
     assert data_get["source"] == data_post["source"]
     assert data_get["quality_status"] == "invalid"
 
+
 @pytest.mark.patch
 def test_patch_measurement_quality_status_not_found_returns_404(client):
+    """Check that updating an unknown measurement returns 404."""
+
     measurement_id = 999999
     new_quality_status = {"quality_status": "invalid"}
 
@@ -267,9 +337,12 @@ def test_patch_measurement_quality_status_not_found_returns_404(client):
 
     assert response.status_code == 404
 
+
 @pytest.mark.patch
 @pytest.mark.validation
 def test_patch_measurement_quality_status_with_missing_status_returns_422(client):
+    """Check that PATCH requires a quality_status field."""
+
     measurement_id = 5
     new_quality_status = {}
 
@@ -277,9 +350,12 @@ def test_patch_measurement_quality_status_with_missing_status_returns_422(client
 
     assert response.status_code == 422
 
+
 @pytest.mark.patch
 @pytest.mark.validation
 def test_patch_measurement_quality_status_with_invalid_type_returns_422(client):
+    """Check that non-string quality_status values are rejected."""
+
     measurement_id = 5
     new_quality_status = {"quality_status": 2}
 
@@ -287,9 +363,12 @@ def test_patch_measurement_quality_status_with_invalid_type_returns_422(client):
 
     assert response.status_code == 422
 
+
 @pytest.mark.patch
 @pytest.mark.validation
 def test_patch_measurement_quality_status_with_invalid_status_returns_422(client):
+    """Check that unsupported quality_status values are rejected."""
+
     measurement_id = 5
     new_quality_status = {"quality_status": "wrong_status"}
 
@@ -297,9 +376,12 @@ def test_patch_measurement_quality_status_with_invalid_status_returns_422(client
 
     assert response.status_code == 422
 
+
 @pytest.mark.patch
 @pytest.mark.validation
 def test_patch_measurement_quality_status_with_invalid_measurement_id_returns_422(client):
+    """Check that non-integer measurement IDs are rejected."""
+
     new_quality_status = {"quality_status": "invalid"}
 
     response = client.patch("/measurements/abc", json=new_quality_status)
