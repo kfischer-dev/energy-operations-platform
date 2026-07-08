@@ -217,10 +217,39 @@ Expected behavior:
 | `404 Not Found` | Request shape is valid, but resource does not exist | `/stations/9999` |
 | `422 Unprocessable Entity` | Request path, query parameter or body is invalid | `/stations/abc`, `limit=0`, invalid `quality_status` |
 
+## Not-found Handling
+
+Expected resource-not-found cases are handled consistently in the API layer.
+
+Current helper functions in `src/api.py`:
+
+| Helper | Purpose |
+|---|---|
+| `get_station_or_404(conn, station_id)` | Loads one station or raises `404 Not Found` |
+| `get_measurement_or_404(conn, measurement_id)` | Loads one measurement or raises `404 Not Found` |
+
+These helpers centralize repeated station and measurement existence checks. Endpoints can therefore focus on their main API task instead of repeating the same fetch-and-404 logic.
+
+Current 404 response style:
+
+```json
+{
+  "detail": "Station with id 9999 not found"
+}
+```
+
+```json
+{
+  "detail": "Measurement with id 99999999 not found"
+}
+```
+
+Validation errors remain handled by FastAPI and Pydantic as `422 Unprocessable Entity`.
+
 ## Current API Limitations
 
 - Routes are still kept in `src/api.py`; router modules can be introduced later.
-- Error handling currently uses direct `HTTPException` calls for expected 404 cases.
+- Expected station and measurement 404 cases are centralized through small API helper functions.
 - Database connection errors are not yet handled through central exception handlers.
 - Authentication and API keys are not implemented yet.
 - Delete endpoints are not implemented yet.

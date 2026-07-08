@@ -8,7 +8,7 @@ The project uses small, explainable versions so the GitHub history remains easy 
 
 | Version | Status | Summary |
 |---|---|---|
-| `v0.8.5` | current | Documented and refined the test data strategy and documentation structure |
+| `v0.8.6` | current | Centralized API not-found handling with small helper functions |
 
 ## Version Timeline
 
@@ -35,7 +35,8 @@ The project uses small, explainable versions so the GitHub history remains easy 
 | `v0.8.2` | completed | Improved POST/PATCH test structure | Clear create/read/update test flows |
 | `v0.8.3` | completed | pytest markers for API test groups | Targeted test execution by category |
 | `v0.8.4` | completed | Split API tests into focused modules | Better test organization and maintainability |
-| `v0.8.5` | current | Documented test data strategy and reorganized documentation | Clear separation between user docs and developer docs |
+| `v0.8.5` | completed | Documented test data strategy and reorganized documentation | Clear separation between user docs and developer docs |
+| `v0.8.6` | current | Centralized API not-found handling with `get_station_or_404()` and `get_measurement_or_404()` | Reduced duplicated 404 logic and improved API robustness |
 
 ## v0.8.x Focus
 
@@ -51,7 +52,8 @@ Key improvements:
 - modular test files,
 - shared test fixtures,
 - documented test data strategy,
-- clearer documentation structure.
+- clearer documentation structure,
+- centralized station and measurement not-found handling.
 
 ## Current Documentation Split Introduced in v0.8.5
 
@@ -69,7 +71,6 @@ Recommended next versions:
 
 | Version | Planned focus |
 |---|---|
-| `v0.8.6` | API robustness and error-handling review |
 | `v0.8.7` | route/module organization decision, possibly router preparation |
 | `v0.9.0` | Docker / Docker Compose preparation |
 | `v1.0` | portfolio MVP with API, DB, tests, Docker, documentation and architecture overview |

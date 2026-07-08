@@ -14,7 +14,7 @@ app = FastAPI(
         "REST API for accessing energy station and measurement data. "
         "This API is part of the Energy Operations Platform portfolio project."
     ),
-    version="0.8.5",
+    version="0.8.6",
     openapi_tags=[
         {
             "name": "General",
@@ -34,6 +34,27 @@ app = FastAPI(
         },
     ],
 )
+
+# ============================================================
+# API helper functions
+# ============================================================
+def get_station_or_404(conn, station_id):
+    station = fetch_station_by_id(conn, station_id)
+
+    if station is None:
+        logger.warning(f"Station with id {station_id} not found.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Station with id {station_id} not found.")
+
+    return station
+
+def get_measurement_or_404(conn, measurement_id):
+    measurement = fetch_measurement_by_id(conn, measurement_id)
+
+    if measurement is None:
+        logger.warning(f"Measurement with id {measurement_id} not found.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Measurement with id {measurement_id} not found.")
+
+    return measurement
 
 # ============================================================
 # General Endpoints
@@ -144,12 +165,7 @@ def get_station_by_id(station_id: int = Path(
     logger.info("Loading station data from database.")
 
     try:
-        station = fetch_station_by_id(conn, station_id)
-
-        if station is None:
-            logger.warning(f"Station with id {station_id} not found.")
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Station with id {station_id} not found")
-
+        station = get_station_or_404(conn, station_id)
         return station
 
     finally:
@@ -234,11 +250,8 @@ def get_measurements_by_station_id(
     try:
         # Check the parent station first so a missing station returns 404 instead of [].
         logger.info("Loading station data from database.")
-        station = fetch_station_by_id(conn, station_id)
-        if station is None:
-            logger.warning(f"Station with id {station_id} not found.")
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Station with id {station_id} not found")
-        
+        get_station_or_404(conn, station_id)
+
         logger.info("Loading joined measurement data from database.")
         measurement_data = fetch_measurements_by_station_id(conn, station_id)
         logger.info(f"Loaded {len(measurement_data)} joined measurements of station_id {station_id} from database.")
@@ -280,12 +293,7 @@ def get_measurement_by_id(
     logger.info("Loading measurement data from database.")
 
     try:
-        measurement = fetch_measurement_by_id(conn, measurement_id)
-
-        if measurement is None:
-            logger.warning(f"Measurement with id {measurement_id} not found.")
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Measurement with id {measurement_id} not found")
-
+        measurement = get_measurement_or_404(conn, measurement_id)
         return measurement
 
     finally:
@@ -319,12 +327,8 @@ def post_measurement(measurement_data: MeasurementCreate):
     conn = get_connection()
 
     try:
-        station = fetch_station_by_id(conn, measurement_data.station_id)
+        get_station_or_404(conn, measurement_data.station_id)
 
-        if station is None:
-            logger.warning(f"Station with id {measurement_data.station_id} not found.")
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Station with id {measurement_data.station_id} not found")
-        
         measurement = create_measurement(conn, measurement_data)
         logger.info(f"Measurement for station_id {measurement['station_id']} successfully saved to measurement_id {measurement['measurement_id']}.")
 
@@ -363,12 +367,8 @@ def patch_quality_status_by_measurement_id(
 
     try:
 
-        measurement = fetch_measurement_by_id(conn, measurement_id)
+        get_measurement_or_404(conn, measurement_id)
 
-        if measurement is None:
-            logger.warning(f"Measurement with id {measurement_id} not found.")
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Measurement with id {measurement_id} not found")
-        
         new_measurement = update_measurement_quality_status(conn, measurement_id, update_data.quality_status)
 
         return new_measurement
@@ -435,16 +435,12 @@ def get_station_kpi_summary(
     """Get measurement KPI by station_id summary."""
 
     logger.info("=" * 60)
-    logger.info(f"GET /station/{station_id}/kpis request received. ")
+    logger.info(f"GET /stations/{station_id}/kpis request received. ")
 
     conn = get_connection()
 
     try:
-        station = fetch_station_by_id(conn, station_id)
-
-        if station is None:
-            logger.warning(f"Station with id {station_id} not found.")
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Station with id {station_id} not found")
+        station = get_station_or_404(conn, station_id)
         
         kpi_summary = fetch_station_kpi_summary(conn, station_id)
 
