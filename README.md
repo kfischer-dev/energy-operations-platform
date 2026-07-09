@@ -8,7 +8,7 @@ The project simulates a backend/data platform for technical assets such as solar
 
 ## Current Version
 
-**Current project version:** `v0.8.5`
+**Current project version:** `v0.9.0`
 
 Current focus:
 
@@ -20,6 +20,8 @@ Current focus:
 - Dedicated PostgreSQL test database
 - Modular test structure with shared fixtures
 - Documented test data strategy
+- Initial Dockerfile for running the FastAPI app in a container
+- `.dockerignore` for cleaner Docker build context
 
 ## Project Goal
 
@@ -32,7 +34,7 @@ The goal is to build a realistic backend/data project that demonstrates:
 - automated API testing,
 - deterministic test data handling,
 - KPI and analytics logic for technical measurement data,
-- gradual preparation for Docker, cloud deployment and portfolio presentation.
+- gradual preparation for Docker, Docker Compose, cloud deployment and portfolio presentation.
 
 ## Repository Structure
 
@@ -44,7 +46,9 @@ energy-operations-platform/
 ├── sql/                   # schema, seed data and example queries
 ├── src/                   # application source code
 ├── tests/                 # automated API tests
+├── .dockerignore          # excludes local/private files from Docker build context
 ├── .env.example           # example environment configuration
+├── Dockerfile             # initial FastAPI container build definition
 ├── pytest.ini             # pytest marker configuration
 ├── README.md              # project overview and quick start
 ├── requirements.txt       # Python dependencies
@@ -61,6 +65,7 @@ The documentation is intentionally split to avoid an overloaded README.
 | `docs/api_reference.md` | API endpoint overview, request/response models and error behavior |
 | `docs/database_notes.md` | Database schema, SQL files, database access layer and data-quality rules |
 | `docs/test_strategy.md` | Test database, fixtures, markers, reset rules and test data strategy |
+| `docs/deployment_notes.md` | Docker status, build/run commands and deployment-related notes |
 | `docs/version_history.md` | Version-by-version project history and learning milestones |
 
 ## Technologies Used
@@ -73,8 +78,9 @@ The documentation is intentionally split to avoid an overloaded README.
 | Validation | Pydantic, request models, response models, field constraints, literal values |
 | Testing | pytest, FastAPI TestClient, fixtures, test markers, dedicated test database |
 | Configuration | `.env`, environment variables, `.env.example` |
-| Development workflow | Git, GitHub, branches, commits, version tags |
-| Future scope | Docker, Docker Compose, Azure fundamentals, security basics, deployment readiness |
+| Containerization | Dockerfile, Docker image, Docker container, port mapping |
+| Development workflow | Git, GitHub, branches, commits, version tags, GitHub pre-releases |
+| Future scope | Docker Compose, Azure fundamentals, security basics, deployment readiness |
 
 ## Current Features
 
@@ -137,7 +143,7 @@ energy_operations_test
 
 The test database is configured in `tests/conftest.py` before the FastAPI app is imported.
 
-## How to Run
+## How to Run Locally
 
 ### Install dependencies
 
@@ -183,6 +189,28 @@ py -m pytest -v -m "kpi and not validation"
 
 Detailed testing notes are documented in [`docs/test_strategy.md`](docs/test_strategy.md).
 
+## Docker Status
+
+Docker support started in `v0.9.0`.
+
+The current Docker setup can build and run the FastAPI application container:
+
+```bash
+docker build -t energy-operations-api:v0.9.0 .
+docker run --name energy-api-test -p 8000:8000 energy-operations-api:v0.9.0
+```
+
+Then open:
+
+```text
+http://127.0.0.1:8000/health
+http://127.0.0.1:8000/docs
+```
+
+At this stage, PostgreSQL is not yet containerized. Database-backed endpoints may require additional environment configuration when the API runs inside Docker. Docker Compose for API + PostgreSQL is planned as the next deployment-related step.
+
+Detailed Docker notes are documented in [`docs/deployment_notes.md`](docs/deployment_notes.md).
+
 ## Testing Summary
 
 The current test setup uses:
@@ -210,12 +238,12 @@ Current version highlights:
 
 | Version | Status | Main result |
 |---|---|---|
-| `v0.8.5` | current | Documented and refined test data strategy |
+| `v0.9.0` | current | Added initial Dockerfile and Docker build/run workflow for the FastAPI app |
+| `v0.8` | released | Testing, robustness and API consistency pre-release |
+| `v0.8.6` | completed | Centralized API not-found handling |
+| `v0.8.5` | completed | Documented and refined test data strategy |
 | `v0.8.4` | completed | Split API tests into focused modules |
 | `v0.8.3` | completed | Added pytest markers for API test groups |
-| `v0.8.2` | completed | Improved POST/PATCH test structure |
-| `v0.8.1` | completed | Added deterministic KPI assertions |
-| `v0.8.0` | completed | Added isolated test database setup |
 
 Full version details are documented in [`docs/version_history.md`](docs/version_history.md).
 
@@ -223,15 +251,14 @@ Full version details are documented in [`docs/version_history.md`](docs/version_
 
 Next project steps:
 
-1. Finish and tag `v0.8.5` after documentation review.
-2. Continue API robustness work, especially error handling and route organization.
-3. Prepare Docker and Docker Compose for reproducible local startup.
-4. Add setup documentation and architecture diagram for portfolio readiness.
-5. Add security basics such as API key concepts and secret handling.
-6. Prepare an MVP release suitable for applications and interviews.
+1. Extend Docker support with Docker Compose for FastAPI + PostgreSQL.
+2. Clarify environment handling for local Docker runs and future Compose setup.
+3. Add setup documentation and an architecture diagram for portfolio readiness.
+4. Add security basics such as API key concepts and secret handling.
+5. Prepare a portfolio MVP release suitable for applications and interviews.
 
 ## Portfolio Positioning
 
 This project is not a generic tutorial app. It is designed to connect engineering domain knowledge with backend, database, API, testing and later cloud skills.
 
-The project demonstrates a practical learning path from local data processing to a structured backend system with database integration, API contracts, automated tests and analytics-oriented endpoints.
+The project demonstrates a practical learning path from local data processing to a structured backend system with database integration, API contracts, automated tests, analytics-oriented endpoints and first deployment-readiness steps.
