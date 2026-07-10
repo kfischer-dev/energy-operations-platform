@@ -4,11 +4,11 @@
 
 The **Energy Operations Platform** is a Python, PostgreSQL and FastAPI portfolio project for processing, validating and exposing technical energy and station data.
 
-The project simulates a backend/data platform for technical assets such as solar parks, wind parks, battery storage systems, substations and grid connections. It is built as part of a structured transition toward backend, data and cloud-oriented software roles in industry, energy and infrastructure.
+The project is evolving into a small backend platform for the energy sector. In addition to the existing API, database, tests and KPI functions, the next development phases will focus on realistic energy-domain data, simulation, production and consumption profiles, energy balances and actionable recommendations.
 
 ## Current Version
 
-**Current project version:** `v0.9.0`
+**Current project version:** `v0.9.1`
 
 Current focus:
 
@@ -19,9 +19,10 @@ Current focus:
 - Automated API tests with `pytest` and FastAPI `TestClient`
 - Dedicated PostgreSQL test database
 - Modular test structure with shared fixtures
-- Documented test data strategy
-- Initial Dockerfile for running the FastAPI app in a container
-- `.dockerignore` for cleaner Docker build context
+- Docker image for the FastAPI application
+- Docker Compose setup for FastAPI and PostgreSQL
+- Automatic schema and development seed initialization for a new database volume
+- Persistent PostgreSQL data through a named Docker volume
 
 ## Project Goal
 
@@ -34,7 +35,10 @@ The goal is to build a realistic backend/data project that demonstrates:
 - automated API testing,
 - deterministic test data handling,
 - KPI and analytics logic for technical measurement data,
-- gradual preparation for Docker, Docker Compose, cloud deployment and portfolio presentation.
+- reproducible local startup with Docker and Docker Compose,
+- later energy-domain simulation, balances and recommendations.
+
+The project should not add technologies only for demonstration purposes. New features should provide visible domain value and support the later dashboard.
 
 ## Repository Structure
 
@@ -47,8 +51,9 @@ energy-operations-platform/
 ├── src/                   # application source code
 ├── tests/                 # automated API tests
 ├── .dockerignore          # excludes local/private files from Docker build context
-├── .env.example           # example environment configuration
-├── Dockerfile             # initial FastAPI container build definition
+├── .env.example           # local and Compose environment example
+├── compose.yaml           # FastAPI + PostgreSQL development environment
+├── Dockerfile             # FastAPI container image definition
 ├── pytest.ini             # pytest marker configuration
 ├── README.md              # project overview and quick start
 ├── requirements.txt       # Python dependencies
@@ -65,7 +70,7 @@ The documentation is intentionally split to avoid an overloaded README.
 | `docs/api_reference.md` | API endpoint overview, request/response models and error behavior |
 | `docs/database_notes.md` | Database schema, SQL files, database access layer and data-quality rules |
 | `docs/test_strategy.md` | Test database, fixtures, markers, reset rules and test data strategy |
-| `docs/deployment_notes.md` | Docker status, build/run commands and deployment-related notes |
+| `docs/deployment_notes.md` | Dockerfile, Docker Compose, environment handling and startup notes |
 | `docs/version_history.md` | Version-by-version project history and learning milestones |
 
 ## Technologies Used
@@ -78,9 +83,9 @@ The documentation is intentionally split to avoid an overloaded README.
 | Validation | Pydantic, request models, response models, field constraints, literal values |
 | Testing | pytest, FastAPI TestClient, fixtures, test markers, dedicated test database |
 | Configuration | `.env`, environment variables, `.env.example` |
-| Containerization | Dockerfile, Docker image, Docker container, port mapping |
+| Containerization | Dockerfile, Docker Compose, images, containers, service networking, volumes |
 | Development workflow | Git, GitHub, branches, commits, version tags, GitHub pre-releases |
-| Future scope | Docker Compose, Azure fundamentals, security basics, deployment readiness |
+| Planned domain scope | Regions, producers, consumers, simulation, weather, energy balance, recommendations |
 
 ## Current Features
 
@@ -128,20 +133,28 @@ Detailed database notes are documented in [`docs/database_notes.md`](docs/databa
 Create a local `.env` file based on `.env.example`.
 
 ```env
+# FastAPI database connection
 DB_NAME=energy_operations
-DB_USER=your_user
-DB_PASSWORD=your_password
+DB_USER=postgres
+DB_PASSWORD=your_password_here
 DB_HOST=localhost
 DB_PORT=5432
+
+# PostgreSQL container initialization
+POSTGRES_DB=energy_operations
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=your_password_here
 ```
 
-Automated tests use a dedicated test database:
+For Docker Compose, the API service overrides `DB_HOST` with the PostgreSQL service name `db`. The API and database communicate over the internal Compose network on PostgreSQL port `5432`.
+
+The database is exposed on host port `5433` to avoid a conflict with an existing local PostgreSQL installation on `5432`.
+
+Automated tests continue to use the dedicated test database:
 
 ```text
 energy_operations_test
 ```
-
-The test database is configured in `tests/conftest.py` before the FastAPI app is imported.
 
 ## How to Run Locally
 
@@ -151,7 +164,7 @@ The test database is configured in `tests/conftest.py` before the FastAPI app is
 py -m pip install -r requirements.txt
 ```
 
-### Run the FastAPI backend
+### Run the FastAPI backend without Docker
 
 ```bash
 py run_api.py
@@ -162,6 +175,41 @@ Then open:
 ```text
 http://127.0.0.1:8000/docs
 ```
+
+### Run the full system with Docker Compose
+
+```bash
+docker compose up --build
+```
+
+Then open:
+
+```text
+http://127.0.0.1:8000/health
+http://127.0.0.1:8000/docs
+http://127.0.0.1:8000/stations
+```
+
+Run in the background:
+
+```bash
+docker compose up --build -d
+```
+
+Stop the services:
+
+```bash
+docker compose down
+```
+
+Remove the PostgreSQL volume and recreate the database from schema and seed files:
+
+```bash
+docker compose down -v
+docker compose up --build
+```
+
+> `docker compose down -v` deletes the persistent database volume. Use it deliberately.
 
 ### Run automated tests
 
@@ -180,36 +228,22 @@ py -m pytest -v -m kpi
 py -m pytest -v -m validation
 ```
 
-Combined marker examples:
-
-```bash
-py -m pytest -v -m "post and validation"
-py -m pytest -v -m "kpi and not validation"
-```
-
 Detailed testing notes are documented in [`docs/test_strategy.md`](docs/test_strategy.md).
 
 ## Docker Status
 
-Docker support started in `v0.9.0`.
+Docker support is operational for the local development environment as of `v0.9.1`.
 
-The current Docker setup can build and run the FastAPI application container:
+The Compose setup provides:
 
-```bash
-docker build -t energy-operations-api:v0.9.0 .
-docker run --name energy-api-test -p 8000:8000 energy-operations-api:v0.9.0
-```
+- an `api` service built from the project `Dockerfile`,
+- a `db` service based on PostgreSQL 18,
+- internal service-to-service networking through `DB_HOST=db`,
+- host access to the database through port `5433`,
+- automatic schema and seed loading for a newly created database volume,
+- persistent PostgreSQL storage through the `db_data` volume.
 
-Then open:
-
-```text
-http://127.0.0.1:8000/health
-http://127.0.0.1:8000/docs
-```
-
-At this stage, PostgreSQL is not yet containerized. Database-backed endpoints may require additional environment configuration when the API runs inside Docker. Docker Compose for API + PostgreSQL is planned as the next deployment-related step.
-
-Detailed Docker notes are documented in [`docs/deployment_notes.md`](docs/deployment_notes.md).
+Detailed setup and troubleshooting notes are documented in [`docs/deployment_notes.md`](docs/deployment_notes.md).
 
 ## Testing Summary
 
@@ -228,7 +262,7 @@ The current test setup uses:
 | File | Purpose |
 |---|---|
 | `sql/schema.sql` | Creates the core database schema |
-| `sql/seed_data.sql` | Development seed data |
+| `sql/seed_data.sql` | Development seed data and initial Compose data |
 | `sql/test_seed_data.sql` | Deterministic test seed data |
 | `sql/example_queries.sql` | SQL learning and exploration queries |
 
@@ -238,12 +272,11 @@ Current version highlights:
 
 | Version | Status | Main result |
 |---|---|---|
-| `v0.9.0` | current | Added initial Dockerfile and Docker build/run workflow for the FastAPI app |
+| `v0.9.1` | current | Added Docker Compose for FastAPI + PostgreSQL with initialization and persistent data |
+| `v0.9.0` | completed | Added initial Dockerfile and standalone API container workflow |
 | `v0.8` | released | Testing, robustness and API consistency pre-release |
 | `v0.8.6` | completed | Centralized API not-found handling |
 | `v0.8.5` | completed | Documented and refined test data strategy |
-| `v0.8.4` | completed | Split API tests into focused modules |
-| `v0.8.3` | completed | Added pytest markers for API test groups |
 
 Full version details are documented in [`docs/version_history.md`](docs/version_history.md).
 
@@ -251,14 +284,16 @@ Full version details are documented in [`docs/version_history.md`](docs/version_
 
 Next project steps:
 
-1. Extend Docker support with Docker Compose for FastAPI + PostgreSQL.
-2. Clarify environment handling for local Docker runs and future Compose setup.
-3. Add setup documentation and an architecture diagram for portfolio readiness.
-4. Add security basics such as API key concepts and secret handling.
-5. Prepare a portfolio MVP release suitable for applications and interviews.
+1. Complete the Docker foundation with a small readiness improvement such as a PostgreSQL health check if needed.
+2. Extend the energy domain with regions, producers, consumers and capacity data.
+3. Build backfill and accelerated live-simulation modes.
+4. Add simplified weather-driven production and realistic consumption profiles.
+5. Calculate global and regional energy balances and rule-based recommendations.
+6. Add a React dashboard after the backend MVP is stable.
+7. Add Azure deployment later, after the domain-oriented backend provides enough value.
 
 ## Portfolio Positioning
 
-This project is not a generic tutorial app. It is designed to connect engineering domain knowledge with backend, database, API, testing and later cloud skills.
+This project is not intended to remain a generic CRUD or tutorial API. It connects engineering domain knowledge with backend, database, API, testing and deployment skills.
 
-The project demonstrates a practical learning path from local data processing to a structured backend system with database integration, API contracts, automated tests, analytics-oriented endpoints and first deployment-readiness steps.
+The current platform already demonstrates a structured backend foundation. The next phases will turn it into a small, explainable energy operations system with simulated operating data, production and consumption behavior, balances and recommendations that can later be visualized in a dashboard.

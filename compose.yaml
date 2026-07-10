@@ -1,0 +1,31 @@
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      # Inside the Compose network, the database is reachable by its service name.
+      DB_HOST: db
+    depends_on:
+      - db
+  
+  db:
+    image: postgres:18
+    ports:
+      # Use port 5433 on Windows because the local PostgreSQL instance uses 5432.
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - db_data:/var/lib/postgresql
+
+      # Initialize schema and sample data when the volume is created for the first time.
+      - ./sql/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./sql/seed_data.sql:/docker-entrypoint-initdb.d/02-seed.sql
+
+volumes:
+  db_data:

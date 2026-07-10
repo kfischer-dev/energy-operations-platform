@@ -8,170 +8,231 @@ For tests and test data handling, see [`test_strategy.md`](test_strategy.md).
 
 ## Current Deployment Status
 
-Docker support started in `v0.9.0`.
+As of `v0.9.1`, the complete local application stack can be started with Docker Compose.
 
 The current setup provides:
 
-- an initial `Dockerfile` for the FastAPI application,
-- a `.dockerignore` file to keep the Docker build context clean,
-- a Docker image build command,
-- a Docker run command with port mapping,
-- a first container-based check through `/health` and `/docs`.
+- a FastAPI image built from the project `Dockerfile`,
+- a PostgreSQL 18 container,
+- an internal Compose network for API-to-database communication,
+- automatic schema and development seed initialization for a new database volume,
+- persistent PostgreSQL storage through a named volume,
+- host access to FastAPI on port `8000`,
+- host access to the containerized database on port `5433`.
 
-PostgreSQL is not yet containerized. The current Docker step focuses on the API container first.
+## Services
+
+### `api`
+
+The API service:
+
+- is built from the local `Dockerfile`,
+- exposes container port `8000` on host port `8000`,
+- reads the project `.env` file,
+- overrides `DB_HOST` with `db`,
+- depends on the PostgreSQL service.
+
+Within the Compose network, `db` is the hostname of the PostgreSQL service.
+
+### `db`
+
+The database service:
+
+- uses the `postgres:18` image,
+- reads `POSTGRES_USER`, `POSTGRES_PASSWORD` and `POSTGRES_DB`,
+- exposes container port `5432` on host port `5433`,
+- stores database files in the named volume `db_data`,
+- initializes schema and development seed data when the volume is created for the first time.
 
 ## Dockerfile
 
-The current `Dockerfile` builds the FastAPI application image.
+The current `Dockerfile`:
 
-Main steps:
+1. Uses `python:3.14-slim`.
+2. Sets `/app` as the working directory.
+3. Copies and installs `requirements.txt` separately for better Docker layer caching.
+4. Copies the project files.
+5. Exposes port `8000`.
+6. Starts Uvicorn on all container interfaces.
 
-1. Use a Python base image.
-2. Set `/app` as the working directory.
-3. Copy `requirements.txt`.
-4. Install Python dependencies.
-5. Copy the project files.
-6. Expose port `8000`.
-7. Start the API with Uvicorn.
-
-Current application start command:
+Start command:
 
 ```bash
 uvicorn src.api:app --host 0.0.0.0 --port 8000
 ```
 
-The `--host 0.0.0.0` setting is important because the API must listen inside the container in a way that can be reached through Docker port mapping.
-
-## Docker Ignore File
-
-The `.dockerignore` file excludes local and private files from the Docker build context.
-
-Current excluded categories include:
-
-- Git metadata,
-- Python cache files,
-- pytest cache,
-- local virtual environments,
-- `.env`,
-- logs,
-- private learning notes,
-- zip archives.
-
-This keeps the image smaller and avoids copying local/private files into the Docker build context.
-
-## Build the API Image
-
-From the project root:
-
-```bash
-docker build -t energy-operations-api:v0.9.0 .
-```
-
-Expected result:
-
-- Docker builds an image named `energy-operations-api`.
-- The tag `v0.9.0` marks the current Docker milestone.
-
-Check available images:
-
-```bash
-docker images
-```
-
-## Run the API Container
-
-Run the API container locally:
-
-```bash
-docker run --name energy-api-test -p 8000:8000 energy-operations-api:v0.9.0
-```
-
-Open:
-
-```text
-http://127.0.0.1:8000/health
-http://127.0.0.1:8000/docs
-```
-
-Useful container commands:
-
-```bash
-docker ps
-docker ps -a
-docker logs energy-api-test
-docker stop energy-api-test
-docker rm energy-api-test
-```
-
-## Current Database Limitation
-
-At `v0.9.0`, only the FastAPI app is containerized.
-
-The PostgreSQL database still runs outside Docker. This means:
-
-- `/health` and `/docs` can work without database access,
-- database-backed endpoints such as `/stations` need a reachable PostgreSQL connection,
-- `localhost` inside a container refers to the container itself, not necessarily the host machine.
-
-If PostgreSQL runs on the host machine, a Docker-specific host value may be needed, for example:
-
-```env
-DB_HOST=host.docker.internal
-```
-
-This is a local development workaround. The cleaner long-term setup is Docker Compose with separate `api` and `db` services on the same Docker network.
+`--host 0.0.0.0` is required so the API can be reached through Docker port mapping.
 
 ## Environment Variables
 
-The project uses environment variables for database configuration.
-
-Current example:
+Create `.env` from `.env.example`.
 
 ```env
+# FastAPI database connection
 DB_NAME=energy_operations
 DB_USER=postgres
 DB_PASSWORD=your_password_here
 DB_HOST=localhost
 DB_PORT=5432
+
+# PostgreSQL container initialization
+POSTGRES_DB=energy_operations
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=your_password_here
 ```
 
-For local Docker runs, these values may need to be passed through Docker using an environment file or explicit `-e` parameters.
+The FastAPI and PostgreSQL credentials must match while both services use the same database user.
 
-Example pattern:
+For the API service, Compose overrides:
+
+```yaml
+DB_HOST: db
+```
+
+`DB_PORT` remains `5432` inside the Compose network. Host port `5433` is only used when accessing the PostgreSQL container from Windows or another host process.
+
+Real `.env` files must not be committed or copied into the image.
+
+## Start the Full Stack
+
+From the project root:
 
 ```bash
-docker run --env-file .env -p 8000:8000 energy-operations-api:v0.9.0
+docker compose up --build
 ```
 
-Do not copy real `.env` files into the image. `.env` is intentionally excluded by `.dockerignore`.
+Run in detached mode:
 
-## What v0.9.0 Does Not Solve Yet
+```bash
+docker compose up --build -d
+```
 
-The current Docker milestone does not yet include:
+Check service status:
 
-- Docker Compose,
-- PostgreSQL container setup,
-- automatic database initialization,
-- automatic seed data loading,
-- production-ready Docker image hardening,
-- cloud deployment,
-- CI/CD.
+```bash
+docker compose ps
+```
 
-These are intentionally left for later steps.
+Useful endpoints:
+
+```text
+http://127.0.0.1:8000/health
+http://127.0.0.1:8000/docs
+http://127.0.0.1:8000/stations
+http://127.0.0.1:8000/kpis/measurements
+```
+
+## Logs and Troubleshooting
+
+Show all Compose logs:
+
+```bash
+docker compose logs
+```
+
+Show logs for one service:
+
+```bash
+docker compose logs api
+docker compose logs db
+```
+
+Follow logs continuously:
+
+```bash
+docker compose logs -f api
+```
+
+Show the resolved Compose configuration:
+
+```bash
+docker compose config
+```
+
+This is useful for checking resolved environment variables, ports, volumes and service configuration.
+
+## Stop and Restart
+
+Stop and remove the containers while keeping the database volume:
+
+```bash
+docker compose down
+```
+
+Restart the stack:
+
+```bash
+docker compose up --build
+```
+
+## Database Initialization and Volumes
+
+The following files are mounted into PostgreSQL's initialization directory:
+
+```text
+sql/schema.sql    -> /docker-entrypoint-initdb.d/01-schema.sql
+sql/seed_data.sql -> /docker-entrypoint-initdb.d/02-seed.sql
+```
+
+PostgreSQL runs these scripts only when the database data directory is initialized for the first time.
+
+Changing `schema.sql` or `seed_data.sql` does not automatically rerun them for an existing `db_data` volume.
+
+To delete the development database volume and initialize it again:
+
+```bash
+docker compose down -v
+docker compose up --build
+```
+
+> Warning: `docker compose down -v` deletes the persistent database data of this Compose project.
+
+## Port Model
+
+| Component | Container port | Host port | Purpose |
+|---|---:|---:|---|
+| FastAPI | `8000` | `8000` | Browser/API access from the host |
+| PostgreSQL | `5432` | `5433` | Optional database access from the host |
+
+Inside Compose, the API connects to:
+
+```text
+host: db
+port: 5432
+```
+
+The host mapping `5433:5432` does not change the internal database port.
+
+## Current Limitation
+
+The current `depends_on` configuration controls startup order, but it does not prove that PostgreSQL is already ready to accept connections.
+
+The setup works in the current development environment. A PostgreSQL health check with a healthy-service dependency can be added later if startup timing becomes unreliable.
+
+This is a small robustness improvement, not a reason to delay the domain-oriented project work.
+
+## Tests
+
+The existing pytest suite continues to run against the dedicated local test database unless explicitly reconfigured.
+
+```bash
+py -m pytest -v
+```
+
+Running the test suite inside Docker is not part of `v0.9.1`.
 
 ## Next Deployment Steps
 
 Recommended next steps:
 
-1. Add `docker-compose.yml` with separate `api` and `db` services.
-2. Move database host configuration toward service names, for example `DB_HOST=db`.
-3. Add PostgreSQL environment variables to Compose.
-4. Decide how schema and seed data should be loaded in the containerized setup.
-5. Update setup documentation after Compose works reliably.
-6. Later: prepare a simple architecture diagram showing API, DB and local development flow.
+1. Add a PostgreSQL health check only if startup timing causes real failures.
+2. Keep the Compose setup stable while the energy-domain model grows.
+3. Update schema initialization when new domain tables are added.
+4. Add an architecture diagram before the portfolio MVP.
+5. Consider Azure deployment only after the backend domain logic provides visible value.
 
 ## Summary
 
-`v0.9.0` is the first deployment-readiness step.
+`v0.9.1` establishes a reproducible local development environment for the current system.
 
-The project can now define and build a FastAPI Docker image. The next major improvement is to run the API and PostgreSQL together through Docker Compose so the local setup becomes more reproducible.
+FastAPI and PostgreSQL now run as separate services, communicate through the Compose network and can initialize the current schema and demo data from the repository. This completes the main Docker Compose foundation and enables the project to move toward the richer energy-domain and simulation features.
