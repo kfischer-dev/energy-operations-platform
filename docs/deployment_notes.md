@@ -8,7 +8,7 @@ For tests and test data handling, see [`test_strategy.md`](test_strategy.md).
 
 ## Current Deployment Status
 
-As of `v0.9.1`, the complete local application stack can be started with Docker Compose.
+As of `v0.9.2`, the complete local application stack can be started reliably with Docker Compose.
 
 The current setup provides:
 
@@ -30,7 +30,7 @@ The API service:
 - exposes container port `8000` on host port `8000`,
 - reads the project `.env` file,
 - overrides `DB_HOST` with `db`,
-- depends on the PostgreSQL service.
+- waits until the PostgreSQL service reports a healthy state before starting.
 
 Within the Compose network, `db` is the hostname of the PostgreSQL service.
 
@@ -42,7 +42,8 @@ The database service:
 - reads `POSTGRES_USER`, `POSTGRES_PASSWORD` and `POSTGRES_DB`,
 - exposes container port `5432` on host port `5433`,
 - stores database files in the named volume `db_data`,
-- initializes schema and development seed data when the volume is created for the first time.
+- initializes schema and development seed data when the volume is created for the first time,
+- uses `pg_isready` as a health check so Compose can verify database readiness.
 
 ## Dockerfile
 
@@ -203,13 +204,19 @@ port: 5432
 
 The host mapping `5433:5432` does not change the internal database port.
 
-## Current Limitation
+## Database Readiness
 
-The current `depends_on` configuration controls startup order, but it does not prove that PostgreSQL is already ready to accept connections.
+The PostgreSQL service uses a health check based on `pg_isready`.
 
-The setup works in the current development environment. A PostgreSQL health check with a healthy-service dependency can be added later if startup timing becomes unreliable.
+The API service depends on:
 
-This is a small robustness improvement, not a reason to delay the domain-oriented project work.
+```yaml
+depends_on:
+  db:
+    condition: service_healthy
+```
+
+This ensures that the API starts only after PostgreSQL is ready to accept connections, rather than merely after the database container process has started.
 
 ## Tests
 
@@ -219,20 +226,19 @@ The existing pytest suite continues to run against the dedicated local test data
 py -m pytest -v
 ```
 
-Running the test suite inside Docker is not part of `v0.9.1`.
+Running the test suite inside Docker is not part of the current `v0.9.x` scope.
 
 ## Next Deployment Steps
 
 Recommended next steps:
 
-1. Add a PostgreSQL health check only if startup timing causes real failures.
-2. Keep the Compose setup stable while the energy-domain model grows.
-3. Update schema initialization when new domain tables are added.
-4. Add an architecture diagram before the portfolio MVP.
-5. Consider Azure deployment only after the backend domain logic provides visible value.
+1. Keep the Compose setup stable while the energy-domain model grows.
+2. Update schema initialization when new domain tables are added.
+3. Add an architecture diagram before the portfolio MVP.
+4. Consider Azure deployment only after the backend domain logic provides visible value.
 
 ## Summary
 
-`v0.9.1` establishes a reproducible local development environment for the current system.
+`v0.9.2` completes the current Docker foundation with a reproducible and readiness-aware local development environment.
 
-FastAPI and PostgreSQL now run as separate services, communicate through the Compose network and can initialize the current schema and demo data from the repository. This completes the main Docker Compose foundation and enables the project to move toward the richer energy-domain and simulation features.
+FastAPI and PostgreSQL run as separate services, communicate through the Compose network, initialize the current schema and demo data from the repository, and coordinate startup through a database health check. This completes the main Docker Compose foundation and enables the project to move toward the richer energy-domain and simulation features.

@@ -8,7 +8,7 @@ The project is evolving into a small backend platform for the energy sector. In 
 
 ## Current Version
 
-**Current project version:** `v0.9.1`
+**Current project version:** `v0.9.2`
 
 Current focus:
 
@@ -232,7 +232,7 @@ Detailed testing notes are documented in [`docs/test_strategy.md`](docs/test_str
 
 ## Docker Status
 
-Docker support is operational for the local development environment as of `v0.9.1`.
+Docker support is operational for the local development environment as of `v0.9.2`.
 
 The Compose setup provides:
 
@@ -241,7 +241,8 @@ The Compose setup provides:
 - internal service-to-service networking through `DB_HOST=db`,
 - host access to the database through port `5433`,
 - automatic schema and seed loading for a newly created database volume,
-- persistent PostgreSQL storage through the `db_data` volume.
+- persistent PostgreSQL storage through the `db_data` volume,
+- PostgreSQL readiness checking with delayed API startup until the database is healthy.
 
 Detailed setup and troubleshooting notes are documented in [`docs/deployment_notes.md`](docs/deployment_notes.md).
 
@@ -272,7 +273,8 @@ Current version highlights:
 
 | Version | Status | Main result |
 |---|---|---|
-| `v0.9.1` | current | Added Docker Compose for FastAPI + PostgreSQL with initialization and persistent data |
+| `v0.9.2` | current | Added PostgreSQL health checking and delayed API startup until the database is ready |
+| `v0.9.1` | completed | Added Docker Compose for FastAPI + PostgreSQL with initialization and persistent data |
 | `v0.9.0` | completed | Added initial Dockerfile and standalone API container workflow |
 | `v0.8` | released | Testing, robustness and API consistency pre-release |
 | `v0.8.6` | completed | Centralized API not-found handling |
@@ -284,13 +286,12 @@ Full version details are documented in [`docs/version_history.md`](docs/version_
 
 Next project steps:
 
-1. Complete the Docker foundation with a small readiness improvement such as a PostgreSQL health check if needed.
-2. Extend the energy domain with regions, producers, consumers and capacity data.
-3. Build backfill and accelerated live-simulation modes.
-4. Add simplified weather-driven production and realistic consumption profiles.
-5. Calculate global and regional energy balances and rule-based recommendations.
-6. Add a React dashboard after the backend MVP is stable.
-7. Add Azure deployment later, after the domain-oriented backend provides enough value.
+1. Extend the energy domain with regions, producers, consumers and capacity data.
+2. Build backfill and accelerated live-simulation modes.
+3. Add simplified weather-driven production and realistic consumption profiles.
+4. Calculate global and regional energy balances and rule-based recommendations.
+5. Add a React dashboard after the backend MVP is stable.
+6. Add Azure deployment later, after the domain-oriented backend provides enough value.
 
 ## Portfolio Positioning
 

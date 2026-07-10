@@ -8,7 +8,7 @@ The project uses small, explainable versions so the GitHub history remains easy 
 
 | Version | Status | Summary |
 |---|---|---|
-| `v0.9.1` | current | Added Docker Compose for FastAPI and PostgreSQL with persistent storage and automatic database initialization |
+| `v0.9.2` | current | Added PostgreSQL health checking and delayed API startup until the database is ready |
 
 ## Version Timeline
 
@@ -39,7 +39,8 @@ The project uses small, explainable versions so the GitHub history remains easy 
 | `v0.8.6` | completed | Centralized API not-found handling with `get_station_or_404()` and `get_measurement_or_404()` | Reduced duplicated 404 logic and improved API robustness |
 | `v0.8` | released | GitHub pre-release for testing, robustness and API consistency | Portfolio milestone and completed quality block |
 | `v0.9.0` | completed | Added initial `Dockerfile`, `.dockerignore` and standalone Docker workflow for the FastAPI app | Containerization basics, image/container workflow and port mapping |
-| `v0.9.1` | current | Added `compose.yaml` with FastAPI and PostgreSQL services, internal service networking, persistent DB storage and first-run schema/seed initialization | Multi-container development environment, service discovery, volumes and reproducible startup |
+| `v0.9.1` | completed | Added `compose.yaml` with FastAPI and PostgreSQL services, internal service networking, persistent DB storage and first-run schema/seed initialization | Multi-container development environment, service discovery, volumes and reproducible startup |
+| `v0.9.2` | current | Added a PostgreSQL health check and configured the API to wait for a healthy database before starting | Reliable multi-container startup and readiness checks |
 
 ## v0.8.x Focus
 
@@ -71,7 +72,9 @@ Completed so far:
 - host/database port separation,
 - persistent PostgreSQL volume,
 - automatic schema and seed initialization for new volumes,
-- documented environment and startup workflow.
+- documented environment and startup workflow,
+- PostgreSQL health checking,
+- API startup only after the database reports a healthy state.
 
 The main infrastructure goal is now largely complete. Further Docker work should be limited to real robustness needs so development can move toward the energy-domain and simulation features.
 
@@ -92,9 +95,8 @@ Recommended next versions:
 
 | Version | Planned focus |
 |---|---|
-| `v0.9.2` | small Docker readiness improvement only if needed, such as PostgreSQL health checking |
-| next domain release | regions, producers, consumers, capacities and an expanded energy data model |
-| simulation releases | backfill/live data generation, weather-driven production and consumption profiles |
+| `v0.10.0` | regions, producers, consumers, capacities and an expanded energy data model |
+| subsequent simulation releases | backfill/live data generation, weather-driven production and consumption profiles |
 | analytics releases | global/regional energy balances and rule-based recommendations |
 | backend MVP | stable domain backend with API, DB, tests, Docker, documentation and architecture overview |
 | frontend phase | React dashboard with KPIs, charts, map, historical data and live simulation |
