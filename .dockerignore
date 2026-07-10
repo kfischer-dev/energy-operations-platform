@@ -1,0 +1,11 @@
+.git
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+.env
+logs/
+*.log
+private_learning_notes.md
+*.zip
