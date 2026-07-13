@@ -1,17 +1,44 @@
--- =============================================================
--- Database schema for the Energy Operations Platform
+/*
+============================================================
+ Database schema for the Energy Operations Platform
+============================================================
 
--- Table: assets
--- Stores technical assets such as transformer assets, solar parks or wind parks.
+This schema models technical energy assets, their
+classifications, regional assignments, measurements
+and storage specifications.
 
--- Table: measurements
--- Stores measured values that belong to an asset.
+Tables:
+- regions
+  Defines operational regions used for grouping assets.
 
--- Relationship:
--- One asset can have many measurements.
--- Each measurement belongs to exactly one asset.
--- measurements.asset_id references assets.asset_id
--- =============================================================
+- asset_types
+  Defines reusable asset categories such as producers,
+  consumers, storage systems and grid infrastructure.
+
+- assets
+  Stores physical energy assets with their location,
+  rated power and operational status.
+
+- measurements
+  Stores time-series measurement data for each asset,
+  including power, energy and data quality information.
+
+- storage_specs
+  Stores static technical specifications for battery
+  storage assets.
+
+Relationships:
+- One region can contain many assets.
+- One asset type can be assigned to many assets.
+- One asset can have many measurements.
+- One storage asset can have exactly one storage
+  specification.
+- Each measurement belongs to exactly one asset.
+- Each storage specification belongs to exactly one asset.
+
+============================================================
+*/
+
 /*
 DROP TABLE IF EXISTS storage_specs;
 DROP TABLE IF EXISTS measurements;
@@ -20,10 +47,11 @@ DROP TABLE IF EXISTS asset_types;
 DROP TABLE IF EXISTS regions;
 */
 
-CREATE TABLE regions(
+CREATE TABLE regions (
     region_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     region_code VARCHAR(15) NOT NULL UNIQUE,
-    region_name VARCHAR(255) NOT NULL,
+    region_prefix VARCHAR(5) NOT NULL UNIQUE,
+    region_name VARCHAR(255) NOT NULL UNIQUE,
     region_description TEXT,
 
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -32,8 +60,9 @@ CREATE TABLE regions(
 CREATE TABLE asset_types (
     asset_type_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     asset_type_name VARCHAR(100) NOT NULL UNIQUE,
-    asset_type_description TEXT,
-    asset_role VARCHAR(30) CHECK (asset_role IN ('producer', 'consumer', 'storage', 'grid_connection')) NOT NULL,
+    asset_prefix VARCHAR(10) NOT NULL UNIQUE,
+    asset_role VARCHAR(30) NOT NULL
+        CHECK (asset_role IN ('producer','consumer','storage','grid')),
 
     is_renewable BOOLEAN NOT NULL,
     is_weather_dependent BOOLEAN NOT NULL,
@@ -45,13 +74,19 @@ CREATE TABLE asset_types (
 
 CREATE TABLE assets (
     asset_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    asset_code VARCHAR(50) UNIQUE NOT NULL,
+    asset_code VARCHAR(50) NOT NULL UNIQUE,
     asset_name VARCHAR(255) NOT NULL,
     asset_location VARCHAR(255) NOT NULL,
-    rated_power_kw NUMERIC(10, 2) NOT NULL,
-    operating_status VARCHAR(20) CHECK (operating_status IN ('online', 'offline', 'maintenance', 'fault')) NOT NULL,
-    latitude NUMERIC(9, 6) NOT NULL,
-    longitude NUMERIC(9, 6) NOT NULL,
+
+    rated_power_kw NUMERIC(12,2) NOT NULL 
+        CHECK (rated_power_kw > 0),
+    operating_status VARCHAR(20) NOT NULL
+        CHECK (operating_status IN ('online','offline','maintenance','fault')),
+
+    latitude NUMERIC(9,6) NOT NULL 
+        CHECK (latitude BETWEEN -90 AND 90),
+    longitude NUMERIC(9,6) NOT NULL 
+        CHECK (longitude BETWEEN -180 AND 180),
 
     asset_type_id INT NOT NULL REFERENCES asset_types(asset_type_id),
     region_id INT NOT NULL REFERENCES regions(region_id),
@@ -61,30 +96,46 @@ CREATE TABLE assets (
 
 CREATE TABLE measurements (
     measurement_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    asset_id INT NOT NULL REFERENCES assets(asset_id) ON DELETE CASCADE,
     measurement_time TIMESTAMPTZ NOT NULL,
-    interval_minutes INT NOT NULL CHECK (interval_minutes > 0),
-    active_power_kw NUMERIC(20, 2) NOT NULL,
-    energy_kwh NUMERIC(20, 2) NOT NULL,
+    interval_minutes INT NOT NULL 
+        CHECK (interval_minutes > 0),
+
+    active_power_kw NUMERIC(20,2) NOT NULL,
+    energy_kwh NUMERIC(20,2) NOT NULL 
+        CHECK (energy_kwh >= 0),
+
     source VARCHAR(255) NOT NULL,
-    quality_status VARCHAR(20) CHECK (quality_status IN ('valid', 'invalid', 'estimated')) NOT NULL,
+    quality_status VARCHAR(20) NOT NULL
+        CHECK (quality_status IN ('valid','invalid','estimated')),
 
-    asset_id INT NOT NULL REFERENCES assets(asset_id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    CONSTRAINT uq_measurements_asset_time UNIQUE (asset_id,measurement_time)
 );
 
 CREATE TABLE storage_specs (
-    asset_id INT PRIMARY KEY REFERENCES assets(asset_id),
-    energy_capacity_kwh NUMERIC(20, 2) NOT NULL,
+    asset_id INT PRIMARY KEY REFERENCES assets(asset_id) ON DELETE CASCADE,
+    energy_capacity_kwh NUMERIC(20,2) NOT NULL 
+        CHECK (energy_capacity_kwh > 0),
 
-    max_charge_power_kw NUMERIC(20, 2) NOT NULL CHECK (max_charge_power_kw > 0),
-    max_discharge_power_kw NUMERIC(20, 2) NOT NULL CHECK (max_discharge_power_kw > 0),
+    max_charge_power_kw NUMERIC(20,2) NOT NULL 
+        CHECK (max_charge_power_kw > 0),
+    max_discharge_power_kw NUMERIC(20,2) NOT NULL 
+        CHECK (max_discharge_power_kw > 0),
 
-    charge_efficiency_percent NUMERIC(5, 2) NOT NULL CHECK (charge_efficiency_percent >= 0 AND charge_efficiency_percent <= 100),
-    discharge_efficiency_percent NUMERIC(5, 2) NOT NULL CHECK (discharge_efficiency_percent >= 0 AND discharge_efficiency_percent <= 100),
+    charge_efficiency_percent NUMERIC(5,2) NOT NULL
+        CHECK (charge_efficiency_percent > 0 AND charge_efficiency_percent <= 100),
+    discharge_efficiency_percent NUMERIC(5,2) NOT NULL
+        CHECK (discharge_efficiency_percent > 0 AND discharge_efficiency_percent <= 100),
 
-    min_state_of_charge_percent NUMERIC(5, 2) NOT NULL CHECK (min_state_of_charge_percent >= 0 AND min_state_of_charge_percent <= 100),
-    max_state_of_charge_percent NUMERIC(5, 2) NOT NULL CHECK (max_state_of_charge_percent >= 0 AND max_state_of_charge_percent <= 100),
+    min_state_of_charge_percent NUMERIC(5,2) NOT NULL
+        CHECK (min_state_of_charge_percent >= 0 AND min_state_of_charge_percent <= 100),
+    max_state_of_charge_percent NUMERIC(5,2) NOT NULL
+        CHECK (max_state_of_charge_percent >= 0 AND max_state_of_charge_percent <= 100),
 
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT chk_storage_soc_range
+        CHECK (min_state_of_charge_percent < max_state_of_charge_percent)
 );
