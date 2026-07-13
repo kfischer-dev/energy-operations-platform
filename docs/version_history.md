@@ -14,13 +14,13 @@ The project uses small, explainable versions so the GitHub history remains easy 
 
 | Version | Status | Main result | Learning value |
 |---|---|---|---|
-| `v0.1` | completed | Python dictionaries with station data, first statistics and classification logic | Python syntax, functions, data structures |
+| `v0.1` | completed | Python dictionaries with asset data, first statistics and classification logic | Python syntax, functions, data structures |
 | `v0.2` | completed | File handling, TXT/CSV workflows and basic error handling | File processing, robustness, data flow |
-| `v0.3` | completed | `Station` class and CSV-to-object workflow | OOP, encapsulation, module boundaries |
+| `v0.3` | completed | `Asset` class and CSV-to-object workflow | OOP, encapsulation, module boundaries |
 | `v0.3.2` | completed | Logging, README and first GitHub-ready structure | Traceability and project documentation |
 | `v0.4` | completed | PostgreSQL schema, seed data, SQL queries, Python DB access and project reorganization | Relational data modeling and DB integration |
 | `v0.4.1` | completed | DB result mapping from tuples into dictionaries | API/JSON preparation |
-| `v0.5` | completed | First FastAPI app with general, station and measurement read endpoints | Backend, HTTP, JSON and OpenAPI basics |
+| `v0.5` | completed | First FastAPI app with general, asset and measurement read endpoints | Backend, HTTP, JSON and OpenAPI basics |
 | `v0.5.1` | completed | Swagger/OpenAPI metadata, tags and parameter descriptions | API documentation and endpoint clarity |
 | `v0.5.2` | completed | Pydantic response models | Typed API contracts |
 | `v0.5.3` | completed | First pytest/TestClient API tests | Automated API testing |
@@ -29,14 +29,14 @@ The project uses small, explainable versions so the GitHub history remains easy 
 | `v0.6.2` | completed | `GET /measurements/{measurement_id}` and create-then-read flow | Detail resources and readback tests |
 | `v0.6.3` | completed | `PATCH /measurements/{measurement_id}` for `quality_status` | Update flow and data-quality handling |
 | `v0.7.0` | completed | `GET /kpis/measurements` | Global analytics, SQL aggregation, valid-only KPI filtering |
-| `v0.7.1` | completed | `GET /stations/{station_id}/kpis` | Station-specific analytics and empty-KPI behavior |
+| `v0.7.1` | completed | `GET /assets/{asset_id}/kpis` | Asset-specific analytics and empty-KPI behavior |
 | `v0.8.0` | completed | Dedicated isolated test database setup | Safer automated tests and environment separation |
 | `v0.8.1` | completed | Deterministic KPI assertions | Stable exact-value KPI tests |
 | `v0.8.2` | completed | Improved POST/PATCH test structure | Clear create/read/update test flows |
 | `v0.8.3` | completed | pytest markers for API test groups | Targeted test execution by category |
 | `v0.8.4` | completed | Split API tests into focused modules | Better test organization and maintainability |
 | `v0.8.5` | completed | Documented test data strategy and reorganized documentation | Clear separation between user docs and developer docs |
-| `v0.8.6` | completed | Centralized API not-found handling with `get_station_or_404()` and `get_measurement_or_404()` | Reduced duplicated 404 logic and improved API robustness |
+| `v0.8.6` | completed | Centralized API not-found handling with `get_asset_or_404()` and `get_measurement_or_404()` | Reduced duplicated 404 logic and improved API robustness |
 | `v0.8` | released | GitHub pre-release for testing, robustness and API consistency | Portfolio milestone and completed quality block |
 | `v0.9.0` | completed | Added initial `Dockerfile`, `.dockerignore` and standalone Docker workflow for the FastAPI app | Containerization basics, image/container workflow and port mapping |
 | `v0.9.1` | completed | Added `compose.yaml` with FastAPI and PostgreSQL services, internal service networking, persistent DB storage and first-run schema/seed initialization | Multi-container development environment, service discovery, volumes and reproducible startup |
@@ -57,7 +57,7 @@ Key improvements:
 - shared test fixtures,
 - documented test data strategy,
 - clearer documentation structure,
-- centralized station and measurement not-found handling.
+- centralized asset and measurement not-found handling.
 
 ## v0.9.x Focus
 

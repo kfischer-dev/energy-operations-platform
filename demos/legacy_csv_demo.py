@@ -2,49 +2,49 @@ import logging
 logging.basicConfig(filename="app.log", level=logging.DEBUG,
                     format="%(asctime)s - %(levelname)s - %(module)s.%(funcName)s - %(message)s")
 
-from src.read_documents import read_stations_file
-from src.server import new_stations
-from src.station import Station
+from src.read_documents import read_assets_file
+from src.server import new_assets
+from src.asset import Asset
 
 # =============================================================
-# Import Station Data from CSV
+# Import Asset Data from CSV
 # =============================================================
 
-doc_name = "data/stations.csv" # csv document with stations
-logging.info(f'Station import from csv file "{doc_name}" started.')
+doc_name = "data/assets.csv" # csv document with assets
+logging.info(f'Asset import from csv file "{doc_name}" started.')
 
-stations = read_stations_file(doc_name) # Read csv file with stations
-
-# =============================================================
-# Import Additional Stations from Server
-# =============================================================
-
-logging.info('Station import from Server "192.168.178.1" started.')
-server_station_count = 0 # Amount of Stations from server
-
-for name, station_data in new_stations.items(): # Import additional Stations from Server
-    station = Station.from_server(name, station_data)
-    logging.debug(f'{station.name} successfully imported from Server "192.168.178.1"')
-    stations.append(station)
-    server_station_count += 1
-
-logging.info(f'Successfully imported {server_station_count} stations from Server "192.168.178.1"\n')
+assets = read_assets_file(doc_name) # Read csv file with assets
 
 # =============================================================
-# Generate Station Reports
+# Import Additional Assets from Server
 # =============================================================
 
-logging.info("Station report creation started.")
+logging.info('Asset import from Server "192.168.178.1" started.')
+server_asset_count = 0 # Amount of Assets from server
+
+for name, asset_data in new_assets.items(): # Import additional Assets from Server
+    asset = Asset.from_server(name, asset_data)
+    logging.debug(f'{asset.name} successfully imported from Server "192.168.178.1"')
+    assets.append(asset)
+    server_asset_count += 1
+
+logging.info(f'Successfully imported {server_asset_count} assets from Server "192.168.178.1"\n')
+
+# =============================================================
+# Generate Asset Reports
+# =============================================================
+
+logging.info("Asset report creation started.")
 
 report = 0
 no_report = 0
 
-for station in stations: # Create Report for all stations
-    status = station.report()
+for asset in assets: # Create Report for all assets
+    status = asset.report()
     if status is True:
         report +=1
     else:
         no_report += 1
 
-logging.info(f"Successfully created report for {report} stations.")
-logging.info(f"Report creation for {no_report} stations failed.\n")
+logging.info(f"Successfully created report for {report} assets.")
+logging.info(f"Report creation for {no_report} assets failed.\n")

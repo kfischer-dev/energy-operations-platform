@@ -1,15 +1,15 @@
-INSERT INTO stations (station_name, station_type, station_location)
+INSERT INTO assets (asset_name, asset_type, asset_location)
 VALUES
-    ('Station A', 'solar_park', 'Stuttgart'),
-    ('Station B', 'wind_park', 'Ulm'),
-    ('Station C', 'hydro_power', 'Heidelberg'),
-    ('Station D', 'battery_storage', 'Karlsruhe'),
-    ('Station E', 'substation', 'Waiblingen'),
-    ('Station F', 'solar_park', 'Freiburg'),
-    ('Station G', 'wind_park', 'Mannheim'),
-    ('Station H', 'grid_connection', 'Heilbronn');
+    ('Asset A', 'solar_park', 'Stuttgart'),
+    ('Asset B', 'wind_park', 'Ulm'),
+    ('Asset C', 'hydro_power', 'Heidelberg'),
+    ('Asset D', 'battery_storage', 'Karlsruhe'),
+    ('Asset E', 'substation', 'Waiblingen'),
+    ('Asset F', 'solar_park', 'Freiburg'),
+    ('Asset G', 'wind_park', 'Mannheim'),
+    ('Asset H', 'grid_connection', 'Heilbronn');
 
-INSERT INTO measurements (station_id, measurement_time, load_value, unit, source, quality_status)
+INSERT INTO measurements (asset_id, measurement_time, load_value, unit, source, quality_status)
 VALUES
     (1, '2026-06-22 08:15:00', 80.50, 'kW', 'CSV Import', 'valid'),
     (1, '2026-06-22 08:30:00', 95.25, 'kW', 'CSV Import', 'valid'),

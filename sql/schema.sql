@@ -1,33 +1,33 @@
 -- =============================================================
 -- Database schema for the Energy Operations Platform
 
--- Table: stations
--- Stores technical assets such as transformer stations, solar parks or wind parks.
+-- Table: assets
+-- Stores technical assets such as transformer assets, solar parks or wind parks.
 
 -- Table: measurements
--- Stores measured values that belong to a station.
+-- Stores measured values that belong to an asset.
 
 -- Relationship:
--- One station can have many measurements.
--- Each measurement belongs to exactly one station.
--- measurements.station_id references stations.id
+-- One asset can have many measurements.
+-- Each measurement belongs to exactly one asset.
+-- measurements.asset_id references assets.asset_id
 -- =============================================================
 /*
 DROP TABLE IF EXISTS measurements;
-DROP TABLE IF EXISTS stations;
+DROP TABLE IF EXISTS assets;
 */
 
-CREATE TABLE stations (
-    station_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    station_name VARCHAR(255) NOT NULL,
-    station_type VARCHAR(100) NOT NULL,
-    station_location VARCHAR(50) NOT NULL,
+CREATE TABLE assets (
+    asset_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    asset_name VARCHAR(255) NOT NULL,
+    asset_type VARCHAR(100) NOT NULL,
+    asset_location VARCHAR(50) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE measurements (
     measurement_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    station_id INT NOT NULL,
+    asset_id INT NOT NULL,
     measurement_time TIMESTAMP NOT NULL,
     load_value NUMERIC(10, 2) NOT NULL,
     unit VARCHAR(10) NOT NULL,
@@ -35,5 +35,13 @@ CREATE TABLE measurements (
     quality_status VARCHAR(20) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
-    FOREIGN KEY (station_id) REFERENCES stations(station_id)
+    FOREIGN KEY (asset_id) REFERENCES assets(asset_id)
+);
+
+CREATE TABLE regions(
+    region_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    region_code VARCHAR(15) NOT NULL UNIQUE,
+    region_name VARCHAR(255) NOT NULL,
+    region_description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

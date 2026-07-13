@@ -27,19 +27,19 @@ def test_get_measurement_kpi_summary_returns_exact_values(client, reset_db):
 
 
 # ============================================================
-# Station-specific KPI endpoint tests
+# Asset-specific KPI endpoint tests
 # ============================================================
-# The seed file contains specific station scenarios:
-# - Station 1 / Station A has known valid measurements.
-# - Station 4 / Station D includes invalid measurements that should be ignored.
-# - Station 9 / Station Z exists but has no measurements.
+# The seed file contains specific asset scenarios:
+# - Asset 1 / Asset A has known valid measurements.
+# - Asset 4 / Asset D includes invalid measurements that should be ignored.
+# - Asset 9 / Asset Z exists but has no measurements.
 
 
 @pytest.mark.kpi
-def test_get_station_kpi_summary_returns_kpis(client, reset_db):
-    """Check that Station A returns the expected KPI values."""
+def test_get_asset_kpi_summary_returns_kpis(client, reset_db):
+    """Check that Asset A returns the expected KPI values."""
 
-    response = client.get("/stations/1/kpis")
+    response = client.get("/assets/1/kpis")
 
     assert response.status_code == 200
 
@@ -48,8 +48,8 @@ def test_get_station_kpi_summary_returns_kpis(client, reset_db):
     assert isinstance(data, dict)
     assert len(data) > 0
     assert data["measurement_count"] == 3
-    assert data["station_id"] == 1
-    assert data["station_name"] == "Station A"
+    assert data["asset_id"] == 1
+    assert data["asset_name"] == "Asset A"
     assert float(data["average_load"]) == pytest.approx(92.5)
     assert float(data["min_load"]) == pytest.approx(80.5)
     assert float(data["max_load"]) == pytest.approx(101.75)
@@ -57,18 +57,18 @@ def test_get_station_kpi_summary_returns_kpis(client, reset_db):
 
 
 @pytest.mark.kpi
-def test_get_station_kpis_without_measurements_returns_empty_kpis(client, reset_db):
-    """Check that a station without measurements returns empty KPI values."""
+def test_get_asset_kpis_without_measurements_returns_empty_kpis(client, reset_db):
+    """Check that an asset without measurements returns empty KPI values."""
 
-    response = client.get("/stations/9/kpis")
+    response = client.get("/assets/9/kpis")
 
     assert response.status_code == 200
 
     data = response.json()
 
     assert isinstance(data, dict)
-    assert data["station_id"] == 9
-    assert data["station_name"] == "Station Z"
+    assert data["asset_id"] == 9
+    assert data["asset_name"] == "Asset Z"
     assert data["measurement_count"] == 0
     assert data["average_load"] is None
     assert data["min_load"] is None
@@ -77,41 +77,41 @@ def test_get_station_kpis_without_measurements_returns_empty_kpis(client, reset_
 
 
 @pytest.mark.kpi
-def test_get_station_kpis_not_found_returns_404(client):
-    """Check that KPI requests for unknown stations return 404."""
+def test_get_asset_kpis_not_found_returns_404(client):
+    """Check that KPI requests for unknown assets return 404."""
 
-    response = client.get("/stations/9999/kpis")
+    response = client.get("/assets/9999/kpis")
 
     assert response.status_code == 404
 
-    assert response.json() == {"detail": "Station with id 9999 not found"}
+    assert response.json() == {"detail": "Asset with id 9999 not found"}
 
 
 @pytest.mark.kpi
 @pytest.mark.validation
-def test_get_station_kpis_with_invalid_range_returns_422(client):
-    """Check that station IDs below the allowed range are rejected."""
+def test_get_asset_kpis_with_invalid_range_returns_422(client):
+    """Check that asset IDs below the allowed range are rejected."""
 
-    response = client.get("/stations/0/kpis")
+    response = client.get("/assets/0/kpis")
 
     assert response.status_code == 422
 
 
 @pytest.mark.kpi
 @pytest.mark.validation
-def test_get_station_kpis_with_invalid_type_returns_422(client):
-    """Check that non-integer station IDs are rejected."""
+def test_get_asset_kpis_with_invalid_type_returns_422(client):
+    """Check that non-integer asset IDs are rejected."""
 
-    response = client.get("/stations/abc/kpis")
+    response = client.get("/assets/abc/kpis")
 
     assert response.status_code == 422
 
 
 @pytest.mark.kpi
-def test_get_station_kpi_summary_excludes_invalid_measurements(client, reset_db):
-    """Check that Station D KPIs are calculated from valid measurements only."""
+def test_get_asset_kpi_summary_excludes_invalid_measurements(client, reset_db):
+    """Check that Asset D KPIs are calculated from valid measurements only."""
 
-    response = client.get("/stations/4/kpis")
+    response = client.get("/assets/4/kpis")
 
     assert response.status_code == 200
 
@@ -120,8 +120,8 @@ def test_get_station_kpi_summary_excludes_invalid_measurements(client, reset_db)
     assert isinstance(data, dict)
     assert len(data) > 0
     assert data["measurement_count"] == 1
-    assert data["station_id"] == 4
-    assert data["station_name"] == "Station D"
+    assert data["asset_id"] == 4
+    assert data["asset_name"] == "Asset D"
     assert float(data["average_load"]) == pytest.approx(25)
     assert float(data["min_load"]) == pytest.approx(25)
     assert float(data["max_load"]) == pytest.approx(25)

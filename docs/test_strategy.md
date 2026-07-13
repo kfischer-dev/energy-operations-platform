@@ -22,7 +22,7 @@ This separation keeps the README concise and avoids repeating endpoint or databa
 The current test suite covers:
 
 - General API endpoints
-- Station endpoints
+- Asset endpoints
 - Measurement read endpoints
 - Measurement create/update flows
 - KPI and analytics endpoints
@@ -82,9 +82,9 @@ Individual tests should only use the `reset_db` fixture when they require an exa
 ### Use `reset_db` when
 
 - the test expects exact KPI values,
-- the test depends on a specific seed station,
+- the test depends on a specific seed asset,
 - the test depends on a specific number of valid measurements,
-- the test verifies behavior for a seeded station without measurements.
+- the test verifies behavior for a seeded asset without measurements.
 
 ### Do not use `reset_db` when
 
@@ -99,31 +99,31 @@ Individual tests should only use the `reset_db` fixture when they require an exa
 |---|---|---|---|---|---|
 | General health endpoint | `test_health_returns_ok` | Request-only | No | No | Static endpoint without database dependency |
 | General root endpoint | `test_home` | Request-only | No | No | Static endpoint without database dependency |
-| Station list | `test_get_stations` | Seed data | No | No | Only checks that a list with station fields is returned |
-| Station by ID | `test_get_station_by_id_returns_station` | Seed data | Yes, station `1` | No | Checks one known station; currently stable after session setup |
-| Unknown station type | `test_get_station_unknown_type_returns_empty_list` | Request-only | No | No | Checks filter behavior for a non-existing type |
-| Station not found | `test_get_station_not_found_returns_404` | Request-only | Yes, non-existing station `9999` | No | Exact seed state is not relevant |
-| Station validation | `test_get_station_id_with_invalid_range_returns_422`, `test_get_station_id_with_invalid_type_returns_422` | Request-only | No | No | Checks FastAPI/Pydantic validation |
+| Asset list | `test_get_assets` | Seed data | No | No | Only checks that a list with asset fields is returned |
+| Asset by ID | `test_get_asset_by_id_returns_asset` | Seed data | Yes, asset `1` | No | Checks one known asset; currently stable after session setup |
+| Unknown asset type | `test_get_asset_unknown_type_returns_empty_list` | Request-only | No | No | Checks filter behavior for a non-existing type |
+| Asset not found | `test_get_asset_not_found_returns_404` | Request-only | Yes, non-existing asset `9999` | No | Exact seed state is not relevant |
+| Asset validation | `test_get_asset_id_with_invalid_range_returns_422`, `test_get_asset_id_with_invalid_type_returns_422` | Request-only | No | No | Checks FastAPI/Pydantic validation |
 | Measurement list | `test_get_measurements` | Seed data | No | No | Only checks that data and expected fields exist |
 | Measurement list limit | `test_get_measurements_with_limit` | Seed data | No | No | Checks API limit behavior, not exact database content |
 | Measurement limit validation | `test_get_measurements_with_limit_zero_returns_422`, `test_get_measurements_with_limit_above_max_returns_422`, `test_get_measurements_with_invalid_type_returns_422` | Request-only | No | No | Checks request validation |
-| Measurements by station | `test_get_measurements_of_station_id` | Seed data | Yes, station `1` | No | Checks that station measurements can be returned |
-| Measurements by unknown station | `test_get_measurement_of_station_id_not_found_returns_404` | Request-only | Yes, non-existing station `9999` | No | Exact seed state is not relevant |
+| Measurements by asset | `test_get_measurements_of_asset_id` | Seed data | Yes, asset `1` | No | Checks that asset measurements can be returned |
+| Measurements by unknown asset | `test_get_measurement_of_asset_id_not_found_returns_404` | Request-only | Yes, non-existing asset `9999` | No | Exact seed state is not relevant |
 | Measurement by ID not found | `test_get_measurement_by_id_not_found_returns_404` | Request-only | Yes, non-existing measurement `99999999` | No | Exact seed state is not relevant |
 | Measurement ID validation | `test_get_measurement_by_id_with_invalid_range_returns_422`, `test_get_measurement_by_id_with_invalid_type_returns_422` | Request-only | No | No | Checks request validation |
-| POST measurement | `test_post_measurement_returns_201` | Test-created data | Uses existing station `8` | No | Verifies create flow and response content |
-| POST unknown station | `test_post_measurement_with_unknown_station_returns_404` | Request-only + payload fixture | Yes, non-existing station `9999` | No | Checks foreign-key/business validation behavior |
+| POST measurement | `test_post_measurement_returns_201` | Test-created data | Uses existing asset `8` | No | Verifies create flow and response content |
+| POST unknown asset | `test_post_measurement_with_unknown_asset_returns_404` | Request-only + payload fixture | Yes, non-existing asset `9999` | No | Checks foreign-key/business validation behavior |
 | POST validation | Missing field, negative load, invalid status, empty source, invalid unit | Request payload | No | No | Checks request validation |
-| Create then read | `test_post_measurement_can_be_read_after_creation` | Test-created data | Uses existing station `8` | No | Verifies that created data can be retrieved by ID |
-| PATCH measurement | `test_patch_measurement_quality_status_persists_update` | Test-created data | Uses existing station `7` | No | Verifies update flow on a measurement created inside the test |
+| Create then read | `test_post_measurement_can_be_read_after_creation` | Test-created data | Uses existing asset `8` | No | Verifies that created data can be retrieved by ID |
+| PATCH measurement | `test_patch_measurement_quality_status_persists_update` | Test-created data | Uses existing asset `7` | No | Verifies update flow on a measurement created inside the test |
 | PATCH not found | `test_patch_measurement_quality_status_not_found_returns_404` | Request-only | Yes, non-existing measurement `999999` | No | Exact seed state is not relevant |
 | PATCH validation | Missing status, invalid type, invalid status, invalid measurement ID | Request payload | No | No | Checks request validation |
 | Global KPI | `test_get_measurement_kpi_summary_returns_exact_values` | Seed data | No fixed entity ID, but fixed seed state | Yes | Expects exact aggregate values |
-| Station KPI | `test_get_station_kpi_summary_returns_kpis` | Seed data | Yes, station `1` | Yes | Expects exact KPI values for Station A |
-| Station without measurements KPI | `test_get_station_kpis_without_measurements_returns_empty_kpis` | Seed data | Yes, station `9` | Yes | Expects Station Z to have no measurements |
-| Station KPI excludes invalid measurements | `test_get_station_kpi_summary_excludes_invalid_measurements` | Seed data | Yes, station `4` | Yes | Verifies that invalid measurements are excluded from KPI calculations |
-| Station KPI not found | `test_get_station_kpis_not_found_returns_404` | Request-only | Yes, non-existing station `9999` | No | Exact seed state is not relevant |
-| Station KPI validation | Invalid range/type for station KPI endpoint | Request-only | No | No | Checks request validation |
+| Asset KPI | `test_get_asset_kpi_summary_returns_kpis` | Seed data | Yes, asset `1` | Yes | Expects exact KPI values for Asset A |
+| Asset without measurements KPI | `test_get_asset_kpis_without_measurements_returns_empty_kpis` | Seed data | Yes, asset `9` | Yes | Expects Asset Z to have no measurements |
+| Asset KPI excludes invalid measurements | `test_get_asset_kpi_summary_excludes_invalid_measurements` | Seed data | Yes, asset `4` | Yes | Verifies that invalid measurements are excluded from KPI calculations |
+| Asset KPI not found | `test_get_asset_kpis_not_found_returns_404` | Request-only | Yes, non-existing asset `9999` | No | Exact seed state is not relevant |
+| Asset KPI validation | Invalid range/type for asset KPI endpoint | Request-only | No | No | Checks request validation |
 
 ## Current Markers
 
@@ -150,7 +150,7 @@ When adding a new test, decide first which data strategy it needs.
 
 - the test checks a known read-only scenario,
 - the test checks exact KPI values,
-- the test needs a stable station with known measurements.
+- the test needs a stable asset with known measurements.
 
 ### Prefer request-only tests when
 
@@ -176,7 +176,7 @@ If test instability appears later, the next improvement should be a more isolate
 
 - resetting the database per test module,
 - using transaction rollback per test,
-- creating dedicated fixtures for stations and measurements,
+- creating dedicated fixtures for assets and measurements,
 - separating read-only seed tests from write tests more strictly.
 
 ## Summary

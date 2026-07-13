@@ -26,25 +26,25 @@ cursor = conn.cursor() # conn.cursor() creates a cursor object. The cursor is us
 # cursor.execute() sends an SQL command to PostgreSQL. For example, it can execute a SELECT query.
 cursor.execute("""
     SELECT
-        stations.station_name,
+        assets.asset_name,
         measurements.measurement_time,
         measurements.load_value,
         measurements.unit
     FROM measurements
-    JOIN stations
-        ON measurements.station_id = stations.station_id
-    ORDER BY stations.station_name, measurements.measurement_time;
+    JOIN assets
+        ON measurements.asset_id = assets.asset_id
+    ORDER BY assets.asset_name, measurements.measurement_time;
 """)
 
 # fetchall() retrieves all result rows from the last executed SELECT query.
 rows = cursor.fetchall()
 
-print("\nMeasurements by station:")
+print("\nMeasurements by asset:")
 print("-" * 70)
 
 for row in rows:
-    station_name, time, load_value, unit = row
-    print(f"{station_name:10} | {time:%Y-%m-%d %H:%M} | {load_value:>8} {unit}")
+    asset_name, time, load_value, unit = row
+    print(f"{asset_name:10} | {time:%Y-%m-%d %H:%M} | {load_value:>8} {unit}")
 
 print("-" * 70)
 print(f"Total rows: {len(rows)}")

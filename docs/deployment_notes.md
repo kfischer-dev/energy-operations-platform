@@ -119,7 +119,7 @@ Useful endpoints:
 ```text
 http://127.0.0.1:8000/health
 http://127.0.0.1:8000/docs
-http://127.0.0.1:8000/stations
+http://127.0.0.1:8000/assets
 http://127.0.0.1:8000/kpis/measurements
 ```
 

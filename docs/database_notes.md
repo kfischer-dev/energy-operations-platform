@@ -8,21 +8,21 @@ For version milestones, see [`version_history.md`](version_history.md).
 
 ## Purpose
 
-The database layer stores station master data and measurement values for technical energy assets. It supports:
+The database layer stores asset master data and measurement values for technical energy assets. It supports:
 
-- station lookup,
+- asset lookup,
 - measurement lookup,
 - measurement creation,
 - measurement quality updates,
 - global KPI calculations,
-- station-specific KPI calculations.
+- asset-specific KPI calculations.
 
 ## Why PostgreSQL?
 
 The project moved from CSV files to PostgreSQL because the Energy Operations Platform needs:
 
 - persistent structured data,
-- clear relationships between stations and measurements,
+- clear relationships between assets and measurements,
 - SQL joins and aggregations,
 - data-quality fields such as `quality_status`,
 - API endpoints backed by real database queries,
@@ -30,25 +30,25 @@ The project moved from CSV files to PostgreSQL because the Energy Operations Pla
 
 ## Current Data Model
 
-### `stations`
+### `assets`
 
-Stores energy station master data.
+Stores energy asset master data.
 
 | Column | Purpose |
 |---|---|
-| `station_id` | Primary key |
-| `station_name` | Human-readable station name |
-| `station_type` | Asset type, for example `solar_park` or `wind_park` |
-| `station_location` | Location name |
+| `asset_id` | Primary key |
+| `asset_name` | Human-readable asset name |
+| `asset_type` | Asset type, for example `solar_park` or `wind_park` |
+| `asset_location` | Location name |
 
 ### `measurements`
 
-Stores technical measurement values linked to stations.
+Stores technical measurement values linked to assets.
 
 | Column | Purpose |
 |---|---|
 | `measurement_id` | Primary key |
-| `station_id` | Foreign key referencing `stations.station_id` |
+| `asset_id` | Foreign key referencing `assets.asset_id` |
 | `measurement_time` | Timestamp of the measurement |
 | `load_value` | Numeric load value |
 | `unit` | Measurement unit, currently `kW` or `MW` at API level |
@@ -58,16 +58,16 @@ Stores technical measurement values linked to stations.
 ## Key Relationship
 
 ```text
-stations.station_id 1 ──── n measurements.station_id
+assets.asset_id 1 ──── n measurements.asset_id
 ```
 
-A station can have many measurements. A measurement belongs to exactly one station.
+A asset can have many measurements. A measurement belongs to exactly one asset.
 
 ## SQL Files
 
 | File | Purpose |
 |---|---|
-| `sql/schema.sql` | Defines the core schema for stations and measurements |
+| `sql/schema.sql` | Defines the core schema for assets and measurements |
 | `sql/seed_data.sql` | Development/demo seed data |
 | `sql/test_seed_data.sql` | Deterministic seed data for automated tests |
 | `sql/example_queries.sql` | SQL learning queries for joins, filters and aggregations |
@@ -83,10 +83,10 @@ The project intentionally separates development data from deterministic test dat
 
 The test seed data contains specific scenarios:
 
-- Station A has known valid measurements for station KPI checks.
-- Station D contains invalid negative values plus one valid value for valid-only analytics checks.
-- Station Z exists without measurements for empty KPI response checks.
-- Station H contains high SCADA values and is used as an existing station for write-flow tests.
+- Asset A has known valid measurements for asset KPI checks.
+- Asset D contains invalid negative values plus one valid value for valid-only analytics checks.
+- Asset Z exists without measurements for empty KPI response checks.
+- Asset H contains high SCADA values and is used as an existing asset for write-flow tests.
 
 ## Data Quality Rule
 
@@ -111,11 +111,11 @@ Main function groups:
 | Function group | Functions |
 |---|---|
 | Connection | `get_connection()` |
-| Station reads | `fetch_stations()`, `fetch_station_by_id()` |
-| Measurement reads | `fetch_joined_measurements()`, `fetch_measurements_by_station_id()`, `fetch_measurement_by_id()` |
+| Asset reads | `fetch_assets()`, `fetch_asset_by_id()` |
+| Measurement reads | `fetch_joined_measurements()`, `fetch_measurements_by_asset_id()`, `fetch_measurement_by_id()` |
 | Measurement writes | `create_measurement()`, `update_measurement_quality_status()` |
-| KPI reads | `fetch_measurement_kpi_summary()`, `fetch_station_kpi_summary()` |
-| Mapping helpers | `map_station_row()`, `map_measurement_row()`, `map_detailed_measurement_row()`, `map_kpi_measurement_row()` |
+| KPI reads | `fetch_measurement_kpi_summary()`, `fetch_asset_kpi_summary()` |
+| Mapping helpers | `map_asset_row()`, `map_measurement_row()`, `map_detailed_measurement_row()`, `map_kpi_measurement_row()` |
 
 ## Query and Mapping Style
 
@@ -156,10 +156,10 @@ Global KPI endpoint:
 all valid measurements
 ```
 
-Station-specific KPI endpoint:
+Asset-specific KPI endpoint:
 
 ```text
-valid measurements for one station_id
+valid measurements for one asset_id
 ```
 
 ## Test Database

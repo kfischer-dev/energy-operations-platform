@@ -2,7 +2,7 @@
 
 ## Overview
 
-The **Energy Operations Platform** is a Python, PostgreSQL and FastAPI portfolio project for processing, validating and exposing technical energy and station data.
+The **Energy Operations Platform** is a Python, PostgreSQL and FastAPI portfolio project for processing, validating and exposing technical energy and asset data.
 
 The project is evolving into a small backend platform for the energy sector. In addition to the existing API, database, tests and KPI functions, the next development phases will focus on realistic energy-domain data, simulation, production and consumption profiles, energy balances and actionable recommendations.
 
@@ -15,7 +15,7 @@ Current focus:
 - PostgreSQL-backed FastAPI REST API
 - Pydantic request and response models
 - Measurement create/read/update flow
-- Global and station-specific KPI endpoints
+- Global and asset-specific KPI endpoints
 - Automated API tests with `pytest` and FastAPI `TestClient`
 - Dedicated PostgreSQL test database
 - Modular test structure with shared fixtures
@@ -94,26 +94,26 @@ The documentation is intentionally split to avoid an overloaded README.
 - `GET /`
 - `GET /health`
 
-### Station API
+### Asset API
 
-- `GET /stations`
-- `GET /stations?station_type=...`
-- `GET /stations/{station_id}`
+- `GET /assets`
+- `GET /assets?asset_type=...`
+- `GET /assets/{asset_id}`
 
 ### Measurement API
 
 - `GET /measurements`
 - `GET /measurements?limit=...`
 - `GET /measurements/{measurement_id}`
-- `GET /stations/{station_id}/measurements`
-- `GET /stations/{station_id}/measurements?limit=...`
+- `GET /assets/{asset_id}/measurements`
+- `GET /assets/{asset_id}/measurements?limit=...`
 - `POST /measurements`
 - `PATCH /measurements/{measurement_id}`
 
 ### KPI / Analytics API
 
 - `GET /kpis/measurements`
-- `GET /stations/{station_id}/kpis`
+- `GET /assets/{asset_id}/kpis`
 
 Detailed endpoint behavior is documented in [`docs/api_reference.md`](docs/api_reference.md).
 
@@ -121,8 +121,8 @@ Detailed endpoint behavior is documented in [`docs/api_reference.md`](docs/api_r
 
 The current database model contains two main tables:
 
-- `stations` for energy asset master data
-- `measurements` for technical measurement values linked to stations
+- `assets` for energy asset master data
+- `measurements` for technical measurement values linked to assets
 
 The measurement table includes `quality_status`, which is used by KPI endpoints to exclude invalid values from analytics calculations.
 
@@ -187,7 +187,7 @@ Then open:
 ```text
 http://127.0.0.1:8000/health
 http://127.0.0.1:8000/docs
-http://127.0.0.1:8000/stations
+http://127.0.0.1:8000/assets
 ```
 
 Run in the background:
@@ -256,7 +256,7 @@ The current test setup uses:
 - explicit `reset_db` fixture for exact KPI tests,
 - test-created data for POST and PATCH flows,
 - pytest markers for targeted execution,
-- modular test files for general, station, measurement and KPI endpoints.
+- modular test files for general, asset, measurement and KPI endpoints.
 
 ## SQL Files
 

@@ -4,20 +4,20 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 
-class StationResponse(BaseModel):
-    station_id: int
-    station_name: str
-    station_type: str
-    station_location: str
+class AssetResponse(BaseModel):
+    asset_id: int
+    asset_name: str
+    asset_type: str
+    asset_location: str
 
 class MeasurementResponse(BaseModel):
-    station_name: str
+    asset_name: str
     measurement_time: datetime
     load_value: float
     unit: str
 
 class MeasurementCreate(BaseModel):
-    station_id: int = Field(..., ge=1)
+    asset_id: int = Field(..., ge=1)
     measurement_time: datetime
     load_value: float = Field(..., ge=0)
     unit: Literal["kW", "MW"]
@@ -26,7 +26,7 @@ class MeasurementCreate(BaseModel):
 
 class MeasurementDetailResponse(BaseModel):
     measurement_id: int
-    station_id: int
+    asset_id: int
     measurement_time: datetime
     load_value: float
     unit: str
@@ -43,9 +43,9 @@ class MeasurementKPIsResponse(BaseModel):
     max_load: float | None
     latest_measurement_time: datetime | None
 
-class StationKPIsResponse(BaseModel):
-    station_id: int = Field(..., ge=1)
-    station_name: str
+class AssetKPIsResponse(BaseModel):
+    asset_id: int = Field(..., ge=1)
+    asset_name: str
     measurement_count: int = Field(..., ge=0)
     average_load: float | None
     min_load: float | None

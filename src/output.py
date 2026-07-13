@@ -1,27 +1,27 @@
 def print_measurements(measurement_data):
     """Print measurement dictionaries returned by the database layer."""
 
-    print("\nMeasurements by station:")
+    print("\nMeasurements by asset:")
     print("-" * 70)
 
     for measurement in measurement_data:
-        print(f"{measurement['station_name']:10} | {measurement['measurement_time']:%Y-%m-%d %H:%M} | {measurement['load_value']:>8} {measurement['unit']}")
+        print(f"{measurement['asset_name']:10} | {measurement['measurement_time']:%Y-%m-%d %H:%M} | {measurement['load_value']:>8} {measurement['unit']}")
 
     print("-" * 70)
     print(f"Total Measurements: {len(measurement_data)}")
 
-def print_stations(station_data):
-    """Print station dictionaries in a readable terminal format."""
+def print_assets(asset_data):
+    """Print asset dictionaries in a readable terminal format."""
 
-    print("\nStations:\n")
+    print("\nAssets:\n")
 
-    for station in station_data:
-        print(f"{station['station_id']} | {station['station_name']:10} | {station['station_type']:16} | {station['station_location']}")
+    for asset in asset_data:
+        print(f"{asset['asset_id']} | {asset['asset_name']:10} | {asset['asset_type']:16} | {asset['asset_location']}")
 
     print()
-    print(f"Total Stations: {len(station_data)}")
+    print(f"Total Assets: {len(asset_data)}")
 
-def print_database_report(station_data, measurement_data):
+def print_database_report(asset_data, measurement_data):
 
-    print_stations(station_data) 
+    print_assets(asset_data) 
     print_measurements(measurement_data) 

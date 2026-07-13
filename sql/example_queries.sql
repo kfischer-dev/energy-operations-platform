@@ -1,11 +1,11 @@
--- Show stations table
-SELECT * FROM stations;
+-- Show assets table
+SELECT * FROM assets;
 
 -- Show measurements table
 SELECT * FROM measurements;
 
--- Filter measurements for a specific station
-SELECT * FROM measurements WHERE station_id = 1;
+-- Filter measurements for a specific asset
+SELECT * FROM measurements WHERE asset_id = 1;
 
 -- Filter measurements above a load threshold
 SELECT * FROM measurements
@@ -27,66 +27,66 @@ FROM measurements
 WHERE source = 'Sensor API'
    OR source = 'SCADA';
 
--- Filter measurements by station type
+-- Filter measurements by asset type
 SELECT
-    stations.station_name,
+    assets.asset_name,
     measurements.measurement_time,
     measurements.load_value,
     measurements.unit
 FROM measurements -- Start with the measurements table
-JOIN stations -- Join the stations table
-    ON measurements.station_id = stations.station_id
-WHERE station_type = 'wind_park';
+JOIN assets -- Join the assets table
+    ON measurements.asset_id = assets.asset_id
+WHERE asset_type = 'wind_park';
 
--- Filter joined station and measurement data
+-- Filter joined asset and measurement data
 SELECT
-    stations.station_name,
+    assets.asset_name,
     measurements.measurement_time,
     measurements.load_value,
     measurements.unit
 FROM measurements -- Start with the measurements table
-JOIN stations -- Join the stations table
-    ON measurements.station_id = stations.station_id
-ORDER BY stations.station_name, measurements.measurement_time;
+JOIN assets -- Join the assets table
+    ON measurements.asset_id = assets.asset_id
+ORDER BY assets.asset_name, measurements.measurement_time;
 
--- Filter joined station and measurement data above a load threshold
+-- Filter joined asset and measurement data above a load threshold
 SELECT
-    stations.station_name,
-    stations.station_type,
+    assets.asset_name,
+    assets.asset_type,
     measurements.measurement_time,
     measurements.load_value,
     measurements.unit
 FROM measurements
-JOIN stations
-    ON measurements.station_id = stations.station_id
+JOIN assets
+    ON measurements.asset_id = assets.asset_id
 WHERE measurements.load_value > 150
 ORDER BY measurements.load_value DESC;
 
--- Show only stations with an average load above 150
+-- Show only assets with an average load above 150
 SELECT
-    stations.station_name,
+    assets.asset_name,
     COUNT(measurements.measurement_id) AS number_of_measurements,
     ROUND(AVG(measurements.load_value), 2) AS average_load,
     MIN(measurements.load_value) AS min_load,
     MAX(measurements.load_value) AS max_load
-FROM stations
+FROM assets
 JOIN measurements
-    ON stations.station_id = measurements.station_id
-GROUP BY stations.station_name
+    ON assets.asset_id = measurements.asset_id
+GROUP BY assets.asset_name
 HAVING AVG(measurements.load_value) > 150
 ORDER BY average_load DESC;
 
--- Summary statistics per station
--- Shows number of measurements, average load, minimum load and maximum load per station.
+-- Summary statistics per asset
+-- Shows number of measurements, average load, minimum load and maximum load per asset.
 SELECT
-    stations.station_name,
+    assets.asset_name,
     COUNT(measurements.measurement_id) AS number_of_measurements,
     ROUND(AVG(measurements.load_value), 2) AS average_load,
     MIN(measurements.load_value) AS min_load,
     MAX(measurements.load_value) AS max_load
-FROM stations -- Start with the stations table
+FROM assets -- Start with the assets table
 JOIN measurements -- Join the measurements table
-    ON stations.station_id = measurements.station_id
-GROUP BY stations.station_name
+    ON assets.asset_id = measurements.asset_id
+GROUP BY assets.asset_name
 ORDER BY average_load ASC;
 

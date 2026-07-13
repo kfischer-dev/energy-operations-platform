@@ -2,37 +2,37 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-class Station:
+class Asset:
     
-    LOW_LIMIT = 100 # Load Limit for stations
-    HIGH_LIMIT = 150 # Load Limit for stations
-    station_count = 0 # Count of stations
+    LOW_LIMIT = 100 # Load Limit for assets
+    HIGH_LIMIT = 150 # Load Limit for assets
+    asset_count = 0 # Count of assets
 
-    def __init__(self, name, loads): # Station object
+    def __init__(self, name, loads): # Asset object
         self.name = name
         self.loads = loads
 
-        Station.station_count += 1
+        Asset.asset_count += 1
 
-    def __str__(self): # Für die Ausgabe von print(station)
+    def __str__(self): # Für die Ausgabe von print(asset)
         return f"{self.name}: {self.loads}"
     
     def __repr__(self):
-        return (f"Station(name='{self.name}', loads={self.loads})")
+        return (f"Asset(name='{self.name}', loads={self.loads})")
 
-    def average_load(self): # Calculate average load of station
+    def average_load(self): # Calculate average load of asset
         if len(self.loads) < 1:
             return None 
         else:
             return sum(self.loads) / len(self.loads)
     
-    def minimum_load(self): # return min. load of station
+    def minimum_load(self): # return min. load of asset
         if len(self.loads) < 1:
             return None 
         else:
             return min(self.loads)
     
-    def maximum_load(self): # return max. load of station
+    def maximum_load(self): # return max. load of asset
         if len(self.loads) < 1:
             return None 
         else:
@@ -45,21 +45,21 @@ class Station:
         amount_high = 0
 
         for load in self.loads:
-            if load < Station.LOW_LIMIT:
+            if load < Asset.LOW_LIMIT:
                 amount_low += 1
-            elif Station.LOW_LIMIT <= load <= Station.HIGH_LIMIT:
+            elif Asset.LOW_LIMIT <= load <= Asset.HIGH_LIMIT:
                 amount_normal += 1
-            elif load > Station.HIGH_LIMIT:
+            elif load > Asset.HIGH_LIMIT:
                 amount_high += 1
 
         return amount_low, amount_normal, amount_high 
     
-    def report(self): # Create report for defined station with classification of loads and average, min. and max. load - print error if not enough loads are available
+    def report(self): # Create report for defined asset with classification of loads and average, min. and max. load - print error if not enough loads are available
                 
         if len(self.loads) >= 1:
             low, normal, high = self.classification()
 
-            print(f"Station: {self.name}")
+            print(f"Asset: {self.name}")
             print()
             print("Classification:")
             print(f"LOW: {low}")
@@ -80,9 +80,9 @@ class Station:
         return success
 
     @classmethod
-    def from_csv_row(cls, row): # read name and station data from csv file 
+    def from_csv_row(cls, row): # read name and asset data from csv file 
 
-        name = row["Station"]
+        name = row["Asset"]
         loads = []
 
         for key, value in row.items():
@@ -103,9 +103,9 @@ class Station:
         return cls(name, loads)
     
     @classmethod
-    def from_server(cls, name, station_data): # read name and station data from server
+    def from_server(cls, name, asset_data): # read name and asset data from server
 
-        loads = station_data["Loads"]
+        loads = asset_data["Loads"]
 
         return cls(name, loads)
     
