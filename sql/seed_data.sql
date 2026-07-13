@@ -1,11 +1,11 @@
-INSERT INTO regions(region_code,region_prefix,region_name,region_description)
+INSERT INTO regions(region_code, region_prefix, region_name, region_description)
 VALUES
     ('DE-NORTH','N','Northern Germany','Region covering the northern part of Germany'),
     ('DE-SOUTH','S','Southern Germany','Region covering the southern part of Germany'),
     ('DE-EAST','E','Eastern Germany','Region covering the eastern part of Germany'),
     ('DE-WEST','W','Western Germany','Region covering the western part of Germany');
 
-INSERT INTO asset_types(asset_type_name,asset_prefix,asset_role,is_renewable,is_weather_dependent,is_dispatchable,can_store_energy)
+INSERT INTO asset_types(asset_type_name, asset_prefix, asset_role, is_renewable, is_weather_dependent, is_dispatchable, can_store_energy)
 VALUES
     -- Producers
     ('solar_park','SOLAR','producer',TRUE,TRUE,FALSE,FALSE),
@@ -28,7 +28,7 @@ VALUES
     ('ev_charging_park','EV','consumer',FALSE,FALSE,FALSE,FALSE),
     ('data_center','DC','consumer',FALSE,FALSE,FALSE,FALSE);
 
-INSERT INTO assets(asset_code,asset_name,asset_location,rated_power_kw,operating_status,latitude,longitude,asset_type_id,region_id)
+INSERT INTO assets(asset_code, asset_name, asset_location, rated_power_kw, operating_status, latitude, longitude, asset_type_id, region_id)
 VALUES
     -- Northern Germany
     ('N-WIND-001','North Sea Wind Park','North Sea',120000,'online',54.500000,7.500000,2,1),
