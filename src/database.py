@@ -33,21 +33,34 @@ def get_connection():
 # ============================================================
 
 def fetch_joined_measurements(conn):
-    """Return joined station and measurement data as dictionaries."""
+    """Return joined asset and measurement data as dictionaries."""
 
     # The cursor executes SQL statements within the existing database connection.
     with conn.cursor() as cursor: 
         logger.debug("Executing joined measurements query.")
         cursor.execute("""
             SELECT
-                stations.station_name,
-                measurements.measurement_time,
-                measurements.load_value,
-                measurements.unit
-            FROM measurements
-            JOIN stations
-                ON measurements.station_id = stations.station_id
-            ORDER BY stations.station_name, measurements.measurement_time;
+                m.measurement_id,
+                a.asset_id,
+                a.asset_code,
+                a.asset_name,
+                at.asset_type_name,
+                at.asset_role,
+                r.region_code,
+                m.measurement_time,
+                m.interval_minutes,
+                m.active_power_kw,
+                m.energy_kwh,
+                m.source,
+                m.quality_status
+            FROM measurements m
+            JOIN assets a
+                ON m.asset_id = a.asset_id
+            JOIN asset_types at
+                ON at.asset_type_id = a.asset_type_id
+            JOIN regions r
+                ON r.region_id = a.region_id
+            ORDER BY a.asset_name, m.measurement_time;
         """)
         rows = cursor.fetchall()
 
@@ -58,48 +71,107 @@ def fetch_joined_measurements(conn):
 
     return measurements
 
-def fetch_stations(conn):
-    """Return all stations from the database as dictionaries."""
+def fetch_assets(conn):
+    """Return all assets from the database as dictionaries."""
 
     with conn.cursor() as cursor: 
-        logger.debug("Executing station query.")
+        logger.debug("Executing asset query.")
         cursor.execute("""
             SELECT
-                station_id,
-                station_name,
-                station_type,
-                station_location
-            FROM stations
-            ORDER BY station_id;
+                a.asset_id,
+                a.asset_name,
+                a.asset_code,
+                a.asset_location,
+                at.asset_role,
+                at.asset_type_name,
+                r.region_id,
+                r.region_code,
+                r.region_name,
+                a.rated_power_kw,
+                a.latitude,
+                a.longitude,
+                a.operating_status
+            FROM assets AS a
+            JOIN asset_types AS at
+                ON at.asset_type_id = a.asset_type_id
+            JOIN regions AS r
+                ON r.region_id = a.region_id
+            ORDER BY a.asset_id;
         """)
         rows = cursor.fetchall()
     
-    stations = []
+    assets = []
     for row in rows:
-        station = map_station_row(row)
-        stations.append(station)
+        asset = map_asset_row(row)
+        assets.append(asset)
     
-    return stations
+    return assets
 
-def fetch_measurements_by_station_id(conn, station_id):
-    """Return all measurements for a specific station as dictionaries."""
+
+def fetch_asset_summaries(conn):
+    """Return compact asset data as dictionaries."""
+
+    with conn.cursor() as cursor:
+        logger.debug("Executing asset summary query.")
+        cursor.execute("""
+            SELECT
+                a.asset_id,
+                a.asset_name,
+                a.asset_code,
+                a.asset_location,
+                at.asset_role,
+                at.asset_type_name,
+                r.region_code,
+                a.rated_power_kw,
+                a.operating_status
+            FROM assets AS a
+            JOIN asset_types AS at
+                ON at.asset_type_id = a.asset_type_id
+            JOIN regions AS r
+                ON r.region_id = a.region_id
+            ORDER BY a.asset_id;
+        """)
+        rows = cursor.fetchall()
+
+    assets = []
+    for row in rows:
+        asset = map_asset_summary_row(row)
+        assets.append(asset)
+
+    return assets
+
+def fetch_measurements_by_asset_id(conn, asset_id):
+    """Return all measurements for a specific asset as dictionaries."""
 
     with conn.cursor() as cursor: 
-        logger.debug("Executing joined measurements by station_id query.")
+        logger.debug("Executing joined measurements by asset_id query.")
 
         # Use a parameterized query instead of string formatting to keep SQL execution safe.
         cursor.execute("""
             SELECT
-                s.station_name,
+                m.measurement_id,
+                a.asset_id,
+                a.asset_code,
+                a.asset_name,
+                at.asset_type_name,
+                at.asset_role,
+                r.region_code,
                 m.measurement_time,
-                m.load_value,
-                m.unit
+                m.interval_minutes,
+                m.active_power_kw,
+                m.energy_kwh,
+                m.source,
+                m.quality_status
             FROM measurements m
-            JOIN stations s
-                ON m.station_id = s.station_id
-            WHERE s.station_id = %s
-            ORDER BY s.station_name, m.measurement_time;
-        """, (station_id,))
+            JOIN assets a
+                ON m.asset_id = a.asset_id
+            JOIN asset_types at
+                ON a.asset_type_id = at.asset_type_id
+            JOIN regions r
+                ON a.region_id = r.region_id
+            WHERE a.asset_id = %s
+            ORDER BY a.asset_name, m.measurement_time;
+        """, (asset_id,))
         rows = cursor.fetchall()
 
     measurements = []
@@ -109,27 +181,102 @@ def fetch_measurements_by_station_id(conn, station_id):
 
     return measurements
 
-def fetch_station_by_id(conn, station_id):
-    """Return one station by ID, or None if the station does not exist."""
+
+def fetch_measurement_summaries(conn):
+    """Return compact measurement data as dictionaries."""
 
     with conn.cursor() as cursor:
-        logger.debug("Executing station query.")
+        logger.debug("Executing measurement summary query.")
         cursor.execute("""
             SELECT
-                station_id,
-                station_name,
-                station_type,
-                station_location
-            FROM stations
-            WHERE station_id = %s;
-        """, (station_id,))
+                m.measurement_id,
+                a.asset_id,
+                a.asset_code,
+                a.asset_name,
+                m.measurement_time,
+                m.active_power_kw,
+                m.energy_kwh,
+                m.quality_status
+            FROM measurements AS m
+            JOIN assets AS a
+                ON a.asset_id = m.asset_id
+            ORDER BY a.asset_name, m.measurement_time;
+        """)
+        rows = cursor.fetchall()
+
+    measurements = []
+    for row in rows:
+        measurement = map_measurement_summary_row(row)
+        measurements.append(measurement)
+
+    return measurements
+
+def fetch_measurement_summaries_by_asset_id(conn, asset_id):
+    """Return compact measurement data for a specific asset as dictionaries."""
+
+    with conn.cursor() as cursor:
+        logger.debug("Executing measurement summary query by asset_id.")
+
+        # Use a parameterized query instead of string formatting to keep SQL execution safe.
+        cursor.execute("""
+            SELECT
+                m.measurement_id,
+                a.asset_id,
+                a.asset_code,
+                a.asset_name,
+                m.measurement_time,
+                m.active_power_kw,
+                m.energy_kwh,
+                m.quality_status
+            FROM measurements AS m
+            JOIN assets AS a
+                ON a.asset_id = m.asset_id
+            WHERE a.asset_id = %s
+            ORDER BY a.asset_name, m.measurement_time;
+        """, (asset_id,))
+        rows = cursor.fetchall()
+
+    measurements = []
+    for row in rows:
+        measurement = map_measurement_summary_row(row)
+        measurements.append(measurement)
+
+    return measurements
+
+def fetch_asset_by_id(conn, asset_id):
+    """Return one asset by ID, or None if the asset does not exist."""
+
+    with conn.cursor() as cursor:
+        logger.debug("Executing asset query.")
+        cursor.execute("""
+            SELECT
+                a.asset_id,
+                a.asset_name,
+                a.asset_code,
+                a.asset_location,
+                at.asset_role,
+                at.asset_type_name,
+                r.region_id,
+                r.region_code,
+                r.region_name,
+                a.rated_power_kw,
+                a.latitude,
+                a.longitude,
+                a.operating_status
+            FROM assets AS a
+            JOIN asset_types AS at
+                ON at.asset_type_id = a.asset_type_id
+            JOIN regions AS r
+                ON r.region_id = a.region_id
+            WHERE a.asset_id = %s;
+        """, (asset_id,))
 
         row = cursor.fetchone()
 
         if row is None:
             return None
 
-        return map_station_row(row)
+        return map_asset_row(row)
     
 def fetch_measurement_by_id(conn, measurement_id):
     """Return measurements of a specific measurement id as dictionary."""
@@ -138,15 +285,27 @@ def fetch_measurement_by_id(conn, measurement_id):
         logger.debug("Executing measurement query.")
         cursor.execute("""
             SELECT
-                measurement_id,
-                station_id,
-                measurement_time,
-                load_value,
-                unit,
-                source,
-                quality_status
-            FROM measurements
-            WHERE measurement_id = %s;
+                m.measurement_id,
+                a.asset_id,
+                a.asset_code,
+                a.asset_name,
+                at.asset_type_name,
+                at.asset_role,
+                r.region_code,
+                m.measurement_time,
+                m.interval_minutes,
+                m.active_power_kw,
+                m.energy_kwh,
+                m.source,
+                m.quality_status
+            FROM measurements AS m
+            JOIN assets AS a
+                ON a.asset_id = m.asset_id
+            JOIN asset_types AS at
+                ON at.asset_type_id = a.asset_type_id
+            JOIN regions AS r
+                ON r.region_id = a.region_id
+            WHERE m.measurement_id = %s;
         """, (measurement_id,))
 
         row = cursor.fetchone()
@@ -154,44 +313,93 @@ def fetch_measurement_by_id(conn, measurement_id):
         if row is None:
             return None
         
-        return map_detailed_measurement_row(row)
+        return map_measurement_row(row)
 
 # ============================================================
-# Station Mapping
+# Asset Mapping
 # ============================================================
-def map_station_row(row):
+def map_asset_summary_row(row):
 
-    station_id, station_name, station_type, station_location = row
+    asset_id, asset_name, asset_code, asset_location, asset_role, asset_type, region_code, rated_power_kw, operating_status = row
 
-    station = {"station_id": station_id, "station_name": station_name, "station_type": station_type, "station_location": station_location}
+    asset = {
+        "asset_id": asset_id,
+        "asset_name": asset_name,
+        "asset_code": asset_code,
+        "asset_location": asset_location,
+        "asset_role": asset_role,
+        "asset_type": asset_type,
+        "region_code": region_code,
+        "rated_power_kw": rated_power_kw,
+        "operating_status": operating_status
+    }
 
-    return station
+    return asset
+
+def map_asset_row(row):
+
+    asset_id, asset_name, asset_code, asset_location, asset_role, asset_type, region_id, region_code, region_name, rated_power_kw, latitude, longitude, operating_status = row
+
+    asset = {
+        "asset_id": asset_id,
+        "asset_name": asset_name,
+        "asset_code": asset_code,
+        "asset_location": asset_location,
+        "asset_role": asset_role,
+        "asset_type": asset_type,
+        "region_id": region_id,
+        "region_code": region_code,
+        "region_name": region_name,
+        "rated_power_kw": rated_power_kw,
+        "latitude": latitude,
+        "longitude": longitude,
+        "operating_status": operating_status
+    }
+
+    return asset
 
 # ============================================================
 # Measurement Mapping
 # ============================================================
-def map_measurement_row(row):
+def map_measurement_summary_row(row):
 
-    station_name, measurement_time, load_value, unit = row
+    measurement_id, asset_id, asset_code, asset_name, measurement_time, active_power_kw, energy_kwh, quality_status = row
 
-    measurement = {"station_name": station_name, "measurement_time": measurement_time, "load_value": load_value, "unit": unit}
+    measurement = {
+        "measurement_id": measurement_id,
+        "asset_id": asset_id,
+        "asset_code": asset_code,
+        "asset_name": asset_name,
+        "measurement_time": measurement_time,
+        "active_power_kw": active_power_kw,
+        "energy_kwh": energy_kwh,
+        "quality_status": quality_status,
+    }
 
     return measurement
 
-# ============================================================
-# Detailed Measurement Mapping
-# ============================================================
-def map_detailed_measurement_row(row):
+def map_measurement_row(row):
 
-    return {        
-        "measurement_id": row[0],
-        "station_id": row[1],
-        "measurement_time": row[2],
-        "load_value": float(row[3]),
-        "unit": row[4],
-        "source": row[5],
-        "quality_status": row[6],
+    measurement_id, asset_id, asset_code, asset_name, asset_type, asset_role, region_code, measurement_time, interval_minutes, active_power_kw, energy_kwh, source, quality_status = row
+
+    measurement = {
+        "measurement_id": measurement_id,
+        "asset_id": asset_id,
+        "asset_code": asset_code,
+        "asset_name": asset_name,
+        "asset_type": asset_type,
+        "asset_role": asset_role,
+        "region_code": region_code,
+        "measurement_time": measurement_time,
+        "interval_minutes": interval_minutes,
+        "active_power_kw": active_power_kw,
+        "energy_kwh": energy_kwh,
+        "source": source,
+        "quality_status": quality_status,
     }
+
+    return measurement
+
 
 # ============================================================
 # Database Report Data Loader
@@ -203,8 +411,8 @@ def fetch_database_report_data():
     logger.info("Loading database report data started.")
 
     try:
-        station_data = fetch_stations(conn) 
-        logger.info(f"Loaded {len(station_data)} stations from database.")
+        asset_data = fetch_assets(conn) 
+        logger.info(f"Loaded {len(asset_data)} assets from database.")
         measurement_data = fetch_joined_measurements(conn) 
         logger.info(f"Loaded {len(measurement_data)} joined measurements from database.")
 
@@ -212,7 +420,7 @@ def fetch_database_report_data():
         conn.close() 
         logger.info("Database connection closed.")
 
-    return station_data, measurement_data
+    return asset_data, measurement_data
 
 # ============================================================
 # Database Create Measurement
@@ -223,36 +431,32 @@ def create_measurement(conn, measurement_data):
     with conn.cursor() as cursor:
         cursor.execute("""
             INSERT INTO measurements (
-                station_id,
+                asset_id,
                 measurement_time,
-                load_value,
-                unit,
+                interval_minutes,
+                active_power_kw,
+                energy_kwh,
                 source,
                 quality_status
             )
-            VALUES (%s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
             RETURNING
-                measurement_id,
-                station_id,
-                measurement_time,
-                load_value,
-                unit,
-                source,
-                quality_status;
+                measurement_id;
         """, (
-            measurement_data.station_id,
+            measurement_data.asset_id,
             measurement_data.measurement_time,
-            measurement_data.load_value,
-            measurement_data.unit,
+            measurement_data.interval_minutes,
+            measurement_data.active_power_kw,
+            measurement_data.energy_kwh,
             measurement_data.source,
             measurement_data.quality_status,
         ))
     
-        row = cursor.fetchone()
+        measurement_id = cursor.fetchone()[0]
 
     conn.commit()
 
-    return map_detailed_measurement_row(row)
+    return measurement_id
 
 # ============================================================
 # Database Patch Measurement
@@ -266,23 +470,17 @@ def update_measurement_quality_status(conn, measurement_id, quality_status):
             SET quality_status = %s
             WHERE measurement_id = %s
             RETURNING 
-                measurement_id, 
-                station_id, 
-                measurement_time, 
-                load_value, 
-                unit, 
-                source, 
-                quality_status;     
+                measurement_id;   
         """, (
             quality_status,
             measurement_id,
         ))
 
-        row = cursor.fetchone()
+        measurement_id = cursor.fetchone()[0]
     
     conn.commit()
 
-    return map_detailed_measurement_row(row)
+    return measurement_id
 
 # ============================================================
 # KPI Measurement Mapping
@@ -291,22 +489,11 @@ def map_kpi_measurement_row(row):
 
     return {        
         "measurement_count": row[0],
-        "average_load": float(row[1]) if row[1] is not None else None,
-        "min_load": float(row[2]) if row[2] is not None else None,
-        "max_load": float(row[3]) if row[3] is not None else None,
-        "latest_measurement_time": row[4],
-    }
-
-def map_kpi_measurement_by_station_id_row(row):
-
-    return {        
-        "station_id": row[0],
-        "station_name": row[1],
-        "measurement_count": row[2],
-        "average_load": float(row[3]) if row[3] is not None else None,
-        "min_load": float(row[4]) if row[4] is not None else None,
-        "max_load": float(row[5]) if row[5] is not None else None,
-        "latest_measurement_time": row[6],
+        "average_power_kw": float(row[1]) if row[1] is not None else None,
+        "min_power_kw": float(row[2]) if row[2] is not None else None,
+        "max_power_kw": float(row[3]) if row[3] is not None else None,
+        "total_energy_kwh": float(row[4]) if row[4] is not None else None,
+        "latest_measurement_time": row[5] if row[5] is not None else None,
     }
 
 # ============================================================
@@ -318,9 +505,10 @@ def fetch_measurement_kpi_summary(conn):
         cursor.execute("""
             SELECT
                 COUNT(*) AS measurement_count,
-                ROUND(AVG(load_value), 2) AS average_load,
-                MIN(load_value) AS min_load,
-                MAX(load_value) AS max_load,
+                ROUND(AVG(active_power_kw), 2) AS average_power_kw,
+                MIN(active_power_kw) AS min_power_kw,
+                MAX(active_power_kw) AS max_power_kw,
+                SUM(energy_kwh) AS total_energy_kwh,
                 MAX(measurement_time) AS latest_measurement_time
             FROM measurements
             WHERE quality_status = 'valid';
@@ -333,25 +521,23 @@ def fetch_measurement_kpi_summary(conn):
     
     return map_kpi_measurement_row(row)
 
-def fetch_station_kpi_summary(conn, station_id):
+def fetch_asset_kpi_summary(conn, asset_id):
 
     with conn.cursor() as cursor:
         cursor.execute("""
             SELECT
                 COUNT(*) AS measurement_count,
-                ROUND(AVG(load_value), 2) AS average_load,
-                MIN(load_value) AS min_load,
-                MAX(load_value) AS max_load,
+                ROUND(AVG(active_power_kw), 2) AS average_power_kw,
+                MIN(active_power_kw) AS min_power_kw,
+                MAX(active_power_kw) AS max_power_kw,
+                SUM(energy_kwh) AS total_energy_kwh,
                 MAX(measurement_time) AS latest_measurement_time
             FROM measurements
-            WHERE station_id = %s
+            WHERE asset_id = %s
             AND quality_status = 'valid';
-        """, (station_id,))
+        """, (asset_id,))
 
         row = cursor.fetchone()
-
-    if row is None:
-        return None     
 
     return map_kpi_measurement_row(row)
 

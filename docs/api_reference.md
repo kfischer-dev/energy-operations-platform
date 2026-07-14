@@ -1,149 +1,278 @@
 # API Reference
 
-This document describes the current REST API surface of the Energy Operations Platform.
+## Purpose
 
-For database implementation details, see [`database_notes.md`](database_notes.md).  
-For test coverage and test data handling, see [`test_strategy.md`](test_strategy.md).
+This document describes the public REST API contract of the Energy Operations Platform for `v0.10.0`.
 
-## API Base
-
-Local development server:
-
-```text
-http://127.0.0.1:8000
-```
-
-Interactive OpenAPI documentation:
+Interactive OpenAPI documentation is available at:
 
 ```text
 http://127.0.0.1:8000/docs
 ```
 
-## General Endpoints
+## API Base
 
-| Method | Endpoint | Purpose |
-|---|---|---|
-| `GET` | `/` | Returns a public API welcome message |
-| `GET` | `/health` | Returns a lightweight API health status |
-
-## Station Endpoints
-
-### `GET /stations`
-
-Returns all stations.
-
-Optional query parameter:
-
-| Parameter | Type | Rule | Purpose |
-|---|---|---|---|
-| `station_type` | string | optional | Filter stations by type, for example `solar_park` or `wind_park` |
-
-Example:
+Default local URL:
 
 ```text
-GET /stations?station_type=solar_park
+http://127.0.0.1:8000
 ```
 
-### `GET /stations/{station_id}`
+All request and response bodies use JSON. Date-time values are returned as ISO 8601 timestamps.
 
-Returns one station by ID.
+---
 
-| Parameter | Type | Rule |
-|---|---|---|
-| `station_id` | integer | must be `>= 1` |
+# General Endpoints
 
-Expected behavior:
+## `GET /`
 
-- `200 OK` if the station exists
-- `404 Not Found` if the station ID is valid but unknown
-- `422 Unprocessable Entity` if the path parameter is invalid, for example `0` or `abc`
-
-## Measurement Endpoints
-
-### `GET /measurements`
-
-Returns joined measurement data with station names.
-
-Optional query parameter:
-
-| Parameter | Type | Rule | Purpose |
-|---|---|---|---|
-| `limit` | integer | `1 <= limit <= 100` | Restrict number of returned measurements |
-
-Example:
-
-```text
-GET /measurements?limit=5
-```
-
-### `GET /stations/{station_id}/measurements`
-
-Returns all measurements for one station.
-
-| Parameter | Type | Rule |
-|---|---|---|
-| `station_id` | integer | must be `>= 1` |
-| `limit` | integer | optional, `1 <= limit <= 100` |
-
-Expected behavior:
-
-- `200 OK` if the station exists
-- `404 Not Found` if the station ID is valid but unknown
-- `422 Unprocessable Entity` for invalid path or query parameters
-
-### `GET /measurements/{measurement_id}`
-
-Returns one detailed measurement record by ID.
-
-| Parameter | Type | Rule |
-|---|---|---|
-| `measurement_id` | integer | must be `>= 1` |
-
-Expected behavior:
-
-- `200 OK` if the measurement exists
-- `404 Not Found` if the measurement ID is valid but unknown
-- `422 Unprocessable Entity` for invalid path parameters
-
-### `POST /measurements`
-
-Creates a new measurement for an existing station.
-
-Request body:
+Returns a basic welcome message.
 
 ```json
 {
-  "station_id": 8,
-  "measurement_time": "2026-07-02T08:15:00",
-  "load_value": 105.25,
-  "unit": "kW",
-  "source": "pytest",
+  "message": "Energy Operations Platform API"
+}
+```
+
+## `GET /health`
+
+Lightweight application health endpoint.
+
+```json
+{
+  "status": "ok"
+}
+```
+
+The endpoint confirms that FastAPI is running. It does not perform a database query.
+
+---
+
+# Asset Endpoints
+
+## `GET /assets`
+
+Returns compact asset records using `AssetSummaryResponse`.
+
+Optional query parameter:
+
+| Parameter | Type | Rules | Description |
+|---|---|---|---|
+| `asset_type` | string | optional | Exact filter such as `solar_park`, `wind_park` or `battery_storage` |
+
+Example response item:
+
+```json
+{
+  "asset_id": 1,
+  "asset_name": "North Sea Wind Park",
+  "asset_code": "N-WIND-001",
+  "asset_location": "North Sea",
+  "asset_role": "producer",
+  "asset_type": "wind_park",
+  "region_code": "DE-NORTH",
+  "rated_power_kw": 120000.0,
+  "operating_status": "online"
+}
+```
+
+An unknown `asset_type` returns an empty list.
+
+## `GET /assets/{asset_id}`
+
+Returns one complete asset using `AssetResponse`.
+
+Path parameter:
+
+| Parameter | Type | Rules |
+|---|---|---|
+| `asset_id` | integer | `>= 1` |
+
+Example response:
+
+```json
+{
+  "asset_id": 1,
+  "asset_name": "North Sea Wind Park",
+  "asset_code": "N-WIND-001",
+  "asset_location": "North Sea",
+  "asset_role": "producer",
+  "asset_type": "wind_park",
+  "region_id": 1,
+  "region_code": "DE-NORTH",
+  "region_name": "Northern Germany",
+  "rated_power_kw": 120000.0,
+  "latitude": 54.5,
+  "longitude": 7.5,
+  "operating_status": "online"
+}
+```
+
+Unknown assets return `404 Not Found`.
+
+---
+
+# Measurement Endpoints
+
+## Summary versus detail contracts
+
+Measurement list endpoints intentionally return compact records. Detail, POST and PATCH endpoints return the complete measurement contract.
+
+### `MeasurementSummaryResponse`
+
+```text
+measurement_id
+asset_id
+asset_code
+asset_name
+measurement_time
+active_power_kw
+energy_kwh
+quality_status
+```
+
+### `MeasurementResponse`
+
+```text
+measurement_id
+asset_id
+asset_code
+asset_name
+asset_type
+asset_role
+region_code
+measurement_time
+interval_minutes
+active_power_kw
+energy_kwh
+source
+quality_status
+```
+
+## `GET /measurements`
+
+Returns measurement summaries across all assets.
+
+Optional query parameter:
+
+| Parameter | Type | Rules |
+|---|---|---|
+| `limit` | integer | optional, `1` to `100` |
+
+Example response item:
+
+```json
+{
+  "measurement_id": 1,
+  "asset_id": 1,
+  "asset_code": "N-WIND-001",
+  "asset_name": "North Sea Wind Park",
+  "measurement_time": "2026-06-22T08:00:00+02:00",
+  "active_power_kw": 80000.0,
+  "energy_kwh": 20000.0,
   "quality_status": "valid"
 }
 ```
 
-Validation rules:
+## `GET /assets/{asset_id}/measurements`
 
-| Field | Rule |
-|---|---|
-| `station_id` | integer, `>= 1`, must reference an existing station |
-| `measurement_time` | valid datetime |
-| `load_value` | number, `>= 0` |
-| `unit` | `kW` or `MW` |
-| `source` | non-empty string |
-| `quality_status` | `valid`, `invalid` or `estimated` |
+Returns measurement summaries for one asset.
 
-Expected behavior:
+Parameters:
 
-- `201 Created` if the measurement is stored successfully
-- `404 Not Found` if the station ID is valid but unknown
-- `422 Unprocessable Entity` for invalid request bodies
+| Parameter | Location | Type | Rules |
+|---|---|---|---|
+| `asset_id` | path | integer | `>= 1` |
+| `limit` | query | integer | optional, `1` to `100` |
 
-### `PATCH /measurements/{measurement_id}`
+The parent asset is checked first:
 
-Updates the `quality_status` of an existing measurement.
+- known asset without measurements → `200 OK` with `[]`
+- unknown asset → `404 Not Found`
 
-Request body:
+## `GET /measurements/{measurement_id}`
+
+Returns one complete measurement using `MeasurementResponse`.
+
+Path parameter:
+
+| Parameter | Type | Rules |
+|---|---|---|
+| `measurement_id` | integer | `>= 1` |
+
+Example response:
+
+```json
+{
+  "measurement_id": 1,
+  "asset_id": 1,
+  "asset_code": "N-WIND-001",
+  "asset_name": "North Sea Wind Park",
+  "asset_type": "wind_park",
+  "asset_role": "producer",
+  "region_code": "DE-NORTH",
+  "measurement_time": "2026-06-22T08:00:00+02:00",
+  "interval_minutes": 15,
+  "active_power_kw": 80000.0,
+  "energy_kwh": 20000.0,
+  "source": "simulation",
+  "quality_status": "valid"
+}
+```
+
+Unknown measurements return `404 Not Found`.
+
+## `POST /measurements`
+
+Creates a measurement for an existing asset.
+
+Request model: `MeasurementCreate`
+
+```json
+{
+  "asset_id": 1,
+  "measurement_time": "2026-07-14T10:00:00+02:00",
+  "interval_minutes": 15,
+  "active_power_kw": 82000.0,
+  "energy_kwh": 20500.0,
+  "source": "simulation",
+  "quality_status": "valid"
+}
+```
+
+Field rules:
+
+| Field | Type | Validation |
+|---|---|---|
+| `asset_id` | integer | `>= 1` |
+| `measurement_time` | datetime | required |
+| `interval_minutes` | integer | `>= 1` |
+| `active_power_kw` | number | required; database accepts signed values |
+| `energy_kwh` | number | `>= 0` |
+| `source` | string | at least one character |
+| `quality_status` | string | `valid`, `invalid` or `estimated` |
+
+Successful creation returns `201 Created` and the complete `MeasurementResponse`.
+
+Behavior:
+
+1. Validate the request with Pydantic.
+2. Check that the parent asset exists.
+3. Insert the measurement.
+4. Read the created row through the normal detail query.
+5. Return the complete API representation.
+
+Important database constraint:
+
+```text
+UNIQUE (asset_id, measurement_time)
+```
+
+## `PATCH /measurements/{measurement_id}`
+
+Updates only the measurement quality status.
+
+Request model: `MeasurementQualityUpdate`
 
 ```json
 {
@@ -151,105 +280,120 @@ Request body:
 }
 ```
 
-Validation rules:
-
-| Field | Rule |
-|---|---|
-| `quality_status` | `valid`, `invalid` or `estimated` |
-
-Expected behavior:
-
-- `200 OK` if the measurement is updated successfully
-- `404 Not Found` if the measurement ID is valid but unknown
-- `422 Unprocessable Entity` for invalid path parameters or request bodies
-
-## KPI Endpoints
-
-### `GET /kpis/measurements`
-
-Returns a global KPI summary over all valid measurements.
-
-The endpoint calculates:
-
-- `measurement_count`
-- `average_load`
-- `min_load`
-- `max_load`
-- `latest_measurement_time`
-
-Important rule:
+Allowed values:
 
 ```text
-Only measurements with quality_status = 'valid' are included.
+valid
+invalid
+estimated
 ```
 
-### `GET /stations/{station_id}/kpis`
+A successful update returns `200 OK` and the complete updated `MeasurementResponse`.
 
-Returns a KPI summary for one station.
+---
 
-| Parameter | Type | Rule |
-|---|---|---|
-| `station_id` | integer | must be `>= 1` |
+# KPI Endpoints
 
-Expected behavior:
+Only rows with:
 
-- `200 OK` with KPI values if the station exists and has valid measurements
-- `200 OK` with `measurement_count = 0` and nullable KPI values if the station exists but has no valid measurements
-- `404 Not Found` if the station ID is valid but unknown
-- `422 Unprocessable Entity` for invalid path parameters
+```text
+quality_status = valid
+```
 
-## Response Models
+are included. Both `invalid` and `estimated` measurements are excluded.
 
-| Model | Used by |
-|---|---|
-| `StationResponse` | Station endpoints |
-| `MeasurementResponse` | Measurement list endpoints |
-| `MeasurementDetailResponse` | Measurement create/read/update detail endpoints |
-| `MeasurementKPIsResponse` | Global KPI endpoint |
-| `StationKPIsResponse` | Station-specific KPI endpoint |
+## `GET /kpis/measurements`
 
-## Error Behavior Summary
+Returns global measurement KPIs.
 
-| Status | Meaning | Example |
-|---|---|---|
-| `200 OK` | Valid request and successful read/update | Existing station or KPI request |
-| `201 Created` | Valid request and successful creation | `POST /measurements` |
-| `404 Not Found` | Request shape is valid, but resource does not exist | `/stations/9999` |
-| `422 Unprocessable Entity` | Request path, query parameter or body is invalid | `/stations/abc`, `limit=0`, invalid `quality_status` |
-
-## Not-found Handling
-
-Expected resource-not-found cases are handled consistently in the API layer.
-
-Current helper functions in `src/api.py`:
-
-| Helper | Purpose |
-|---|---|
-| `get_station_or_404(conn, station_id)` | Loads one station or raises `404 Not Found` |
-| `get_measurement_or_404(conn, measurement_id)` | Loads one measurement or raises `404 Not Found` |
-
-These helpers centralize repeated station and measurement existence checks. Endpoints can therefore focus on their main API task instead of repeating the same fetch-and-404 logic.
-
-Current 404 response style:
+Response model: `MeasurementKPIsResponse`
 
 ```json
 {
-  "detail": "Station with id 9999 not found"
+  "measurement_count": 64,
+  "average_power_kw": 67481.25,
+  "min_power_kw": 5000.0,
+  "max_power_kw": 153000.0,
+  "total_energy_kwh": 1079700.0,
+  "latest_measurement_time": "2026-06-22T08:45:00+02:00"
 }
 ```
+
+Fields:
+
+- `measurement_count`
+- `average_power_kw`
+- `min_power_kw`
+- `max_power_kw`
+- `total_energy_kwh`
+- `latest_measurement_time`
+
+## `GET /assets/{asset_id}/kpis`
+
+Returns valid-only KPIs for one asset.
+
+Response model: `AssetKPIsResponse`
 
 ```json
 {
-  "detail": "Measurement with id 99999999 not found"
+  "asset_id": 1,
+  "asset_name": "North Sea Wind Park",
+  "measurement_count": 4,
+  "average_power_kw": 82250.0,
+  "min_power_kw": 79000.0,
+  "max_power_kw": 86000.0,
+  "total_energy_kwh": 82250.0,
+  "latest_measurement_time": "2026-06-22T08:45:00+02:00"
 }
 ```
 
-Validation errors remain handled by FastAPI and Pydantic as `422 Unprocessable Entity`.
+If the asset exists but has no valid measurements:
 
-## Current API Limitations
+```json
+{
+  "asset_id": 9,
+  "asset_name": "Example Asset",
+  "measurement_count": 0,
+  "average_power_kw": null,
+  "min_power_kw": null,
+  "max_power_kw": null,
+  "total_energy_kwh": null,
+  "latest_measurement_time": null
+}
+```
 
-- Routes are still kept in `src/api.py`; router modules can be introduced later.
-- Expected station and measurement 404 cases are centralized through small API helper functions.
-- Database connection errors are not yet handled through central exception handlers.
-- Authentication and API keys are not implemented yet.
-- Delete endpoints are not implemented yet.
+Unknown assets return `404 Not Found`.
+
+---
+
+# Error Behavior
+
+| Scenario | Status |
+|---|---:|
+| Valid GET, POST or PATCH | `200` or `201` |
+| Unknown asset or measurement | `404` |
+| Invalid path/query type | `422` |
+| ID or limit outside the allowed range | `422` |
+| Missing required request field | `422` |
+| Unsupported `quality_status` | `422` |
+| Empty `source` | `422` |
+
+Central helper functions provide consistent not-found responses:
+
+```text
+get_asset_or_404()
+get_measurement_or_404()
+```
+
+---
+
+# Current API Limitations
+
+- No asset create/update/delete endpoints yet.
+- No region or asset-type endpoints yet.
+- Asset filtering is currently performed in Python after loading asset summaries.
+- List limiting is applied in Python rather than through SQL `LIMIT`.
+- POST does not yet validate that `energy_kwh` mathematically matches power and interval.
+- Storage state of charge and charge/discharge mode are not yet modeled as time-series fields.
+- No pagination, authentication or authorization yet.
+- No simulation-control endpoints yet.

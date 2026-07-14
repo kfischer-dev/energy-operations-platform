@@ -1,24 +1,40 @@
 # Deployment Notes
 
-This document tracks deployment-related work for the Energy Operations Platform.
+## Purpose
 
-For endpoint behavior, see [`api_reference.md`](api_reference.md).  
-For database details, see [`database_notes.md`](database_notes.md).  
-For tests and test data handling, see [`test_strategy.md`](test_strategy.md).
+This document describes the local containerized environment of the Energy Operations Platform.
 
-## Current Deployment Status
+The Docker foundation was established in `v0.9.x`; `v0.10.0` verifies that the expanded five-table energy-domain schema initializes and runs in the same reproducible environment.
 
-As of `v0.9.2`, the complete local application stack can be started reliably with Docker Compose.
+Related documentation:
 
-The current setup provides:
+- [`database_notes.md`](database_notes.md)
+- [`api_reference.md`](api_reference.md)
+- [`test_strategy.md`](test_strategy.md)
 
-- a FastAPI image built from the project `Dockerfile`,
-- a PostgreSQL 18 container,
-- an internal Compose network for API-to-database communication,
-- automatic schema and development seed initialization for a new database volume,
-- persistent PostgreSQL storage through a named volume,
-- host access to FastAPI on port `8000`,
-- host access to the containerized database on port `5433`.
+## Current Status
+
+The local stack consists of:
+
+```text
+FastAPI container
+        |
+        | DB_HOST=db:5432
+        v
+PostgreSQL 18 container
+```
+
+Current capabilities:
+
+- FastAPI image built from the project `Dockerfile`,
+- PostgreSQL 18 service,
+- internal Compose service networking,
+- PostgreSQL readiness health check,
+- API startup only after the database is healthy,
+- automatic schema and development seed initialization for a new volume,
+- persistent database files through `db_data`,
+- host API access on port `8000`,
+- optional host database access on port `5433`.
 
 ## Services
 
@@ -26,47 +42,66 @@ The current setup provides:
 
 The API service:
 
-- is built from the local `Dockerfile`,
-- exposes container port `8000` on host port `8000`,
-- reads the project `.env` file,
+- builds from the local `Dockerfile`,
+- exposes `8000:8000`,
+- reads `.env`,
 - overrides `DB_HOST` with `db`,
-- waits until the PostgreSQL service reports a healthy state before starting.
-
-Within the Compose network, `db` is the hostname of the PostgreSQL service.
+- depends on a healthy PostgreSQL service,
+- starts Uvicorn on `0.0.0.0:8000`.
 
 ### `db`
 
 The database service:
 
-- uses the `postgres:18` image,
+- uses `postgres:18`,
 - reads `POSTGRES_USER`, `POSTGRES_PASSWORD` and `POSTGRES_DB`,
-- exposes container port `5432` on host port `5433`,
-- stores database files in the named volume `db_data`,
-- initializes schema and development seed data when the volume is created for the first time,
-- uses `pg_isready` as a health check so Compose can verify database readiness.
+- exposes host port `5433` to container port `5432`,
+- stores data in the named volume `db_data`,
+- initializes `schema.sql` and `seed_data.sql` for a new volume,
+- reports readiness through `pg_isready`.
 
 ## Dockerfile
 
-The current `Dockerfile`:
+Current build sequence:
 
-1. Uses `python:3.14-slim`.
-2. Sets `/app` as the working directory.
-3. Copies and installs `requirements.txt` separately for better Docker layer caching.
-4. Copies the project files.
-5. Exposes port `8000`.
-6. Starts Uvicorn on all container interfaces.
+1. Base image: `python:3.14-slim`
+2. Working directory: `/app`
+3. Copy `requirements.txt`
+4. Install Python dependencies
+5. Copy project files
+6. Expose port `8000`
+7. Start Uvicorn
 
-Start command:
+Container command:
 
 ```bash
 uvicorn src.api:app --host 0.0.0.0 --port 8000
 ```
 
-`--host 0.0.0.0` is required so the API can be reached through Docker port mapping.
+`0.0.0.0` is required so the host can reach Uvicorn through Docker port mapping.
+
+## Ignored Files
+
+`.dockerignore` excludes local or private content from the image build context, including:
+
+```text
+.git
+.env
+.venv/
+venv/
+__pycache__/
+.pytest_cache/
+logs/
+*.log
+*.zip
+private_learning_notes.md
+```
+
+The real `.env` file must never be committed or copied into the image.
 
 ## Environment Variables
 
-Create `.env` from `.env.example`.
+Create `.env` from `.env.example`:
 
 ```env
 # FastAPI database connection
@@ -82,133 +117,116 @@ POSTGRES_USER=postgres
 POSTGRES_PASSWORD=your_password_here
 ```
 
-The FastAPI and PostgreSQL credentials must match while both services use the same database user.
-
-For the API service, Compose overrides:
+Compose changes only the API database hostname:
 
 ```yaml
-DB_HOST: db
+environment:
+  DB_HOST: db
 ```
 
-`DB_PORT` remains `5432` inside the Compose network. Host port `5433` is only used when accessing the PostgreSQL container from Windows or another host process.
-
-Real `.env` files must not be committed or copied into the image.
-
-## Start the Full Stack
-
-From the project root:
-
-```bash
-docker compose up --build
-```
-
-Run in detached mode:
-
-```bash
-docker compose up --build -d
-```
-
-Check service status:
-
-```bash
-docker compose ps
-```
-
-Useful endpoints:
-
-```text
-http://127.0.0.1:8000/health
-http://127.0.0.1:8000/docs
-http://127.0.0.1:8000/stations
-http://127.0.0.1:8000/kpis/measurements
-```
-
-## Logs and Troubleshooting
-
-Show all Compose logs:
-
-```bash
-docker compose logs
-```
-
-Show logs for one service:
-
-```bash
-docker compose logs api
-docker compose logs db
-```
-
-Follow logs continuously:
-
-```bash
-docker compose logs -f api
-```
-
-Show the resolved Compose configuration:
-
-```bash
-docker compose config
-```
-
-This is useful for checking resolved environment variables, ports, volumes and service configuration.
-
-## Stop and Restart
-
-Stop and remove the containers while keeping the database volume:
-
-```bash
-docker compose down
-```
-
-Restart the stack:
-
-```bash
-docker compose up --build
-```
-
-## Database Initialization and Volumes
-
-The following files are mounted into PostgreSQL's initialization directory:
-
-```text
-sql/schema.sql    -> /docker-entrypoint-initdb.d/01-schema.sql
-sql/seed_data.sql -> /docker-entrypoint-initdb.d/02-seed.sql
-```
-
-PostgreSQL runs these scripts only when the database data directory is initialized for the first time.
-
-Changing `schema.sql` or `seed_data.sql` does not automatically rerun them for an existing `db_data` volume.
-
-To delete the development database volume and initialize it again:
-
-```bash
-docker compose down -v
-docker compose up --build
-```
-
-> Warning: `docker compose down -v` deletes the persistent database data of this Compose project.
-
-## Port Model
-
-| Component | Container port | Host port | Purpose |
-|---|---:|---:|---|
-| FastAPI | `8000` | `8000` | Browser/API access from the host |
-| PostgreSQL | `5432` | `5433` | Optional database access from the host |
-
-Inside Compose, the API connects to:
+Inside the Compose network:
 
 ```text
 host: db
 port: 5432
 ```
 
-The host mapping `5433:5432` does not change the internal database port.
+From Windows or another host process:
 
-## Database Readiness
+```text
+host: localhost
+port: 5433
+```
 
-The PostgreSQL service uses a health check based on `pg_isready`.
+## Start the Stack
 
-The API service depends on:
+Foreground mode:
+
+```bash
+docker compose up --build
+```
+
+Detached mode:
+
+```bash
+docker compose up --build -d
+```
+
+Check status:
+
+```bash
+docker compose ps
+```
+
+Useful URLs:
+
+```text
+http://127.0.0.1:8000/health
+http://127.0.0.1:8000/docs
+http://127.0.0.1:8000/assets
+http://127.0.0.1:8000/measurements
+http://127.0.0.1:8000/kpis/measurements
+```
+
+## Database Initialization
+
+Compose mounts:
+
+```text
+sql/schema.sql    → /docker-entrypoint-initdb.d/01-schema.sql
+sql/seed_data.sql → /docker-entrypoint-initdb.d/02-seed.sql
+```
+
+For a new volume, PostgreSQL creates:
+
+```text
+regions
+asset_types
+assets
+measurements
+storage_specs
+```
+
+and loads the development dataset.
+
+Initialization scripts run only when the PostgreSQL data directory is empty.
+
+## Rebuild after Schema Changes
+
+Keeping the volume:
+
+```bash
+docker compose down
+docker compose up --build -d
+```
+
+This rebuilds images but does not re-run the SQL initialization scripts.
+
+Recreating the database:
+
+```bash
+docker compose down -v
+docker compose up --build -d
+```
+
+> `docker compose down -v` permanently deletes the Compose development database volume.
+
+Use it deliberately when the schema or initial seed data changes.
+
+## Health Check and Startup Order
+
+PostgreSQL health check:
+
+```yaml
+healthcheck:
+  test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+  interval: 5s
+  timeout: 5s
+  retries: 5
+  start_period: 10s
+```
+
+API dependency:
 
 ```yaml
 depends_on:
@@ -216,29 +234,89 @@ depends_on:
     condition: service_healthy
 ```
 
-This ensures that the API starts only after PostgreSQL is ready to accept connections, rather than merely after the database container process has started.
+This prevents the API from attempting its first database connection while PostgreSQL is still starting.
 
-## Tests
+## Port Model
 
-The existing pytest suite continues to run against the dedicated local test database unless explicitly reconfigured.
+| Component | Container port | Host port | Purpose |
+|---|---:|---:|---|
+| FastAPI | `8000` | `8000` | HTTP and Swagger access |
+| PostgreSQL | `5432` | `5433` | Optional host database access |
+
+## Logs and Troubleshooting
+
+Show all logs:
+
+```bash
+docker compose logs
+```
+
+Service-specific logs:
+
+```bash
+docker compose logs api
+docker compose logs db
+```
+
+Follow API logs:
+
+```bash
+docker compose logs -f api
+```
+
+Resolve and inspect the final Compose configuration:
+
+```bash
+docker compose config
+```
+
+Common checks:
+
+```bash
+docker compose ps
+docker compose exec db psql -U postgres -d energy_operations
+docker compose logs db
+docker compose logs api
+```
+
+## Stop and Restart
+
+Stop containers and keep data:
+
+```bash
+docker compose down
+```
+
+Restart:
+
+```bash
+docker compose up --build -d
+```
+
+## Automated Tests
+
+The current pytest suite runs against the dedicated local test database rather than the development database container by default:
 
 ```bash
 py -m pytest -v
 ```
 
-Running the test suite inside Docker is not part of the current `v0.9.x` scope.
+Running tests in Docker or CI is not yet part of the current setup.
+
+## Current Limitations
+
+- No production image hardening.
+- No non-root container user.
+- No separate development and production Compose files.
+- No API health check inside Compose.
+- No automated database migrations.
+- No Dockerized test runner.
+- No cloud deployment or managed database configuration.
 
 ## Next Deployment Steps
 
-Recommended next steps:
-
-1. Keep the Compose setup stable while the energy-domain model grows.
-2. Update schema initialization when new domain tables are added.
-3. Add an architecture diagram before the portfolio MVP.
-4. Consider Azure deployment only after the backend domain logic provides visible value.
-
-## Summary
-
-`v0.9.2` completes the current Docker foundation with a reproducible and readiness-aware local development environment.
-
-FastAPI and PostgreSQL run as separate services, communicate through the Compose network, initialize the current schema and demo data from the repository, and coordinate startup through a database health check. This completes the main Docker Compose foundation and enables the project to move toward the richer energy-domain and simulation features.
+1. Keep the current local stack stable during simulation development.
+2. Introduce database migrations before Azure deployment.
+3. Add CI tests and image build validation.
+4. Add an architecture diagram for the portfolio MVP.
+5. Add production-oriented configuration only when the backend domain logic is mature.

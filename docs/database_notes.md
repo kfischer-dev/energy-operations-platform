@@ -1,202 +1,305 @@
 # Database Notes
 
-This document focuses on the PostgreSQL data model, SQL files and database access layer of the Energy Operations Platform.
-
-For endpoint behavior, see [`api_reference.md`](api_reference.md).  
-For test setup and test data handling, see [`test_strategy.md`](test_strategy.md).  
-For version milestones, see [`version_history.md`](version_history.md).
-
 ## Purpose
 
-The database layer stores station master data and measurement values for technical energy assets. It supports:
+This document explains the PostgreSQL implementation and Python database access layer of the Energy Operations Platform in `v0.10.0`.
 
-- station lookup,
-- measurement lookup,
-- measurement creation,
-- measurement quality updates,
-- global KPI calculations,
-- station-specific KPI calculations.
+Field-level definitions are maintained in [`data_dictionary.md`](data_dictionary.md). API behavior is documented in [`api_reference.md`](api_reference.md).
 
-## Why PostgreSQL?
+## Current Schema
 
-The project moved from CSV files to PostgreSQL because the Energy Operations Platform needs:
-
-- persistent structured data,
-- clear relationships between stations and measurements,
-- SQL joins and aggregations,
-- data-quality fields such as `quality_status`,
-- API endpoints backed by real database queries,
-- a realistic foundation for Docker and later cloud deployment.
-
-## Current Data Model
-
-### `stations`
-
-Stores energy station master data.
-
-| Column | Purpose |
-|---|---|
-| `station_id` | Primary key |
-| `station_name` | Human-readable station name |
-| `station_type` | Asset type, for example `solar_park` or `wind_park` |
-| `station_location` | Location name |
-
-### `measurements`
-
-Stores technical measurement values linked to stations.
-
-| Column | Purpose |
-|---|---|
-| `measurement_id` | Primary key |
-| `station_id` | Foreign key referencing `stations.station_id` |
-| `measurement_time` | Timestamp of the measurement |
-| `load_value` | Numeric load value |
-| `unit` | Measurement unit, currently `kW` or `MW` at API level |
-| `source` | Origin of the measurement, for example CSV import, Sensor API or SCADA |
-| `quality_status` | Data-quality classification: `valid`, `invalid` or `estimated` |
-
-## Key Relationship
+The current schema contains five related tables:
 
 ```text
-stations.station_id 1 ──── n measurements.station_id
+regions
+   └── assets ── asset_types
+          ├── measurements
+          └── storage_specs
 ```
 
-A station can have many measurements. A measurement belongs to exactly one station.
+| Table | Main responsibility |
+|---|---|
+| `regions` | Stable model-region identifiers and descriptions |
+| `asset_types` | Reusable technical classification and capability flags |
+| `assets` | Physical or modeled energy assets |
+| `measurements` | Interval-based power and energy time series |
+| `storage_specs` | Static one-to-one battery-storage specifications |
+
+## Relationships
+
+| Parent | Child | Cardinality | Foreign key behavior |
+|---|---|---|---|
+| `regions` | `assets` | one-to-many | each asset requires one region |
+| `asset_types` | `assets` | one-to-many | each asset requires one type |
+| `assets` | `measurements` | one-to-many | deleting an asset cascades to measurements |
+| `assets` | `storage_specs` | one-to-zero-or-one | deleting an asset cascades to storage specs |
+
+`storage_specs.asset_id` is both the primary key and foreign key. This enforces at most one specification row per asset.
+
+## Important Constraints
+
+### Stable unique identifiers
+
+```text
+regions.region_code
+regions.region_prefix
+regions.region_name
+asset_types.asset_type_name
+asset_types.asset_prefix
+assets.asset_code
+```
+
+### Measurement uniqueness
+
+```text
+UNIQUE (asset_id, measurement_time)
+```
+
+This prevents duplicate timestamps for the same asset.
+
+### Checked values
+
+The schema validates:
+
+- asset roles,
+- asset operating status,
+- measurement quality status,
+- positive rated power and storage limits,
+- coordinate ranges,
+- interval length,
+- non-negative energy,
+- percentage ranges,
+- minimum SoC below maximum SoC.
+
+`active_power_kw` intentionally has no non-negative database constraint. The test dataset uses negative invalid rows, and a future directional power convention remains possible.
 
 ## SQL Files
 
 | File | Purpose |
 |---|---|
-| `sql/schema.sql` | Defines the core schema for stations and measurements |
-| `sql/seed_data.sql` | Development/demo seed data |
-| `sql/test_seed_data.sql` | Deterministic seed data for automated tests |
-| `sql/example_queries.sql` | SQL learning queries for joins, filters and aggregations |
+| `sql/schema.sql` | Creates all five tables and constraints |
+| `sql/seed_data.sql` | Development data used for local exploration and first Docker initialization |
+| `sql/test_seed_data.sql` | Deterministic data for automated tests |
+| `sql/example_queries.sql` | Learning, inspection and analytics queries |
 
-## Development Seed Data vs Test Seed Data
+## Development Seed Data
 
-The project intentionally separates development data from deterministic test data.
+`seed_data.sql` currently creates:
 
-| File | Used for | Stability expectation |
-|---|---|---|
-| `seed_data.sql` | local development and manual exploration | can evolve over time |
-| `test_seed_data.sql` | automated tests and exact KPI assertions | should remain stable unless tests are updated together |
+- four German model regions,
+- reusable producer, consumer, storage and grid asset types,
+- sixteen assets,
+- sixty-four 15-minute measurement rows,
+- one battery-storage specification.
 
-The test seed data contains specific scenarios:
+The dataset includes wind, solar, hydro, gas and biomass generation, consumer loads, substations and battery storage. It is designed for development and portfolio demonstration, not as a claim of real grid data.
 
-- Station A has known valid measurements for station KPI checks.
-- Station D contains invalid negative values plus one valid value for valid-only analytics checks.
-- Station Z exists without measurements for empty KPI response checks.
-- Station H contains high SCADA values and is used as an existing station for write-flow tests.
+## Test Seed Data
+
+`test_seed_data.sql` starts with:
+
+```sql
+TRUNCATE TABLE
+    storage_specs,
+    measurements,
+    assets,
+    asset_types,
+    regions
+RESTART IDENTITY CASCADE;
+```
+
+Stable IDs then create explicit scenarios:
+
+| Asset ID | Scenario |
+|---:|---|
+| `1` | known wind-production values for exact KPIs |
+| `4` | battery storage with one `storage_specs` row |
+| `5` | two invalid negative values and one valid value |
+| `7` | two valid values and one estimated value |
+| `8` | substation measurement and write-test target |
+| `9` | existing asset without measurements |
+
+The test data intentionally uses stable timestamps and values so KPI assertions remain deterministic.
 
 ## Data Quality Rule
 
-KPI endpoints currently include only valid measurements:
+Current KPI queries include only:
 
 ```sql
 WHERE quality_status = 'valid'
 ```
 
-This means invalid measurements remain stored in the database, but they do not influence KPI calculations.
+Consequences:
 
-## Current Database Access Layer
+- valid rows contribute to count, power aggregates, energy sum and latest timestamp,
+- invalid rows remain stored but are excluded,
+- estimated rows remain stored but are excluded.
 
-The database access functions are located in:
+A later version may expose separate raw, validated and estimated analytics rather than using one valid-only rule everywhere.
+
+## Database Connection
+
+`src/database.py` loads these environment variables:
 
 ```text
-src/database.py
+DB_NAME
+DB_USER
+DB_PASSWORD
+DB_HOST
+DB_PORT
 ```
 
-Main function groups:
+The function:
 
-| Function group | Functions |
+```python
+get_connection()
+```
+
+returns a psycopg connection used by the API endpoints and test reset helpers.
+
+## Read Functions
+
+### Active API reads
+
+| Function | Purpose |
 |---|---|
-| Connection | `get_connection()` |
-| Station reads | `fetch_stations()`, `fetch_station_by_id()` |
-| Measurement reads | `fetch_joined_measurements()`, `fetch_measurements_by_station_id()`, `fetch_measurement_by_id()` |
-| Measurement writes | `create_measurement()`, `update_measurement_quality_status()` |
-| KPI reads | `fetch_measurement_kpi_summary()`, `fetch_station_kpi_summary()` |
-| Mapping helpers | `map_station_row()`, `map_measurement_row()`, `map_detailed_measurement_row()`, `map_kpi_measurement_row()` |
+| `fetch_asset_summaries()` | Compact data for `GET /assets` |
+| `fetch_asset_by_id()` | Complete asset detail |
+| `fetch_measurement_summaries()` | Compact data for `GET /measurements` |
+| `fetch_measurement_summaries_by_asset_id()` | Compact measurements for one asset |
+| `fetch_measurement_by_id()` | Complete measurement detail |
+| `fetch_measurement_kpi_summary()` | Global valid-only KPIs |
+| `fetch_asset_kpi_summary()` | Valid-only KPIs for one asset |
 
-## Query and Mapping Style
+### Remaining broader loaders
 
-The current implementation uses:
+The module also retains broader loaders used by earlier report/demo workflows:
 
-- explicit SQL queries,
-- parameterized SQL execution,
-- dictionary mapping after `fetchone()` or `fetchall()`,
-- plain `psycopg` instead of an ORM.
+```text
+fetch_assets()
+fetch_joined_measurements()
+fetch_measurements_by_asset_id()
+fetch_database_report_data()
+```
 
-This is intentional for the current learning stage. It keeps the SQL visible and makes joins, filters and aggregations easier to understand.
+They are not used by the current FastAPI endpoints. They can be removed later when legacy report workflows are formally retired.
+
+## Summary and Detail Mapping
+
+The API intentionally uses separate mapping functions:
+
+```text
+map_asset_summary_row()
+map_asset_row()
+map_measurement_summary_row()
+map_measurement_row()
+map_kpi_measurement_row()
+```
+
+This avoids oversized list responses while retaining rich detail responses.
+
+### Public type naming
+
+The joined database column is:
+
+```text
+asset_type_name
+```
+
+The mapping layer exposes it to the API as:
+
+```text
+asset_type
+```
 
 ## Write Operations
 
 ### Create measurement
 
-`create_measurement(conn, measurement_data)` inserts a new measurement and uses PostgreSQL `RETURNING` to return the stored record with its generated `measurement_id`.
+`create_measurement()` performs an `INSERT` and returns only the new `measurement_id`:
+
+```text
+INSERT
+→ RETURNING measurement_id
+→ COMMIT
+```
+
+The API then calls `fetch_measurement_by_id()` so POST returns the same complete contract as the detail endpoint.
 
 ### Update quality status
 
-`update_measurement_quality_status(conn, measurement_id, quality_status)` updates one measurement and returns the updated record.
+`update_measurement_quality_status()` updates only `quality_status` and returns the ID. The API reloads the complete row afterward.
 
-Both write operations commit the transaction after successful execution.
+This pattern avoids separate POST and PATCH response mappers.
 
 ## KPI Queries
 
-Current KPI queries calculate:
-
-- number of valid measurements,
-- average load,
-- minimum load,
-- maximum load,
-- latest measurement timestamp.
-
-Global KPI endpoint:
+Both global and asset-specific KPI queries calculate:
 
 ```text
-all valid measurements
+COUNT(*)
+ROUND(AVG(active_power_kw), 2)
+MIN(active_power_kw)
+MAX(active_power_kw)
+SUM(energy_kwh)
+MAX(measurement_time)
 ```
 
-Station-specific KPI endpoint:
+When an existing asset has no valid measurements, PostgreSQL returns:
 
-```text
-valid measurements for one station_id
-```
+- `COUNT(*) = 0`,
+- other aggregates as `NULL`.
+
+This maps directly to the Pydantic response with zero count and nullable KPI values.
 
 ## Test Database
 
-Automated tests use a dedicated PostgreSQL test database:
+Automated tests use:
 
 ```text
 energy_operations_test
 ```
 
-The test database is reset from `sql/test_seed_data.sql` in `tests/conftest.py`.
+`tests/conftest.py` sets `DB_NAME` before importing the application and includes a safety guard that refuses to run the reset helper against a differently named database.
 
-The reset uses deterministic seed data so exact KPI assertions remain stable.
+The reset helper executes only `sql/test_seed_data.sql`; the test database schema must already exist.
+
+## Docker Initialization
+
+Docker Compose mounts:
+
+```text
+sql/schema.sql    → /docker-entrypoint-initdb.d/01-schema.sql
+sql/seed_data.sql → /docker-entrypoint-initdb.d/02-seed.sql
+```
+
+PostgreSQL executes these scripts only when the named volume is initialized for the first time.
+
+After schema changes, recreate the development database deliberately:
+
+```bash
+docker compose down -v
+docker compose up --build
+```
 
 ## Current Limitations
 
-The database layer is intentionally simple.
-
-Current limitations:
-
-- no migrations yet,
-- no SQLAlchemy/Alembic yet,
-- no repository/service layer yet,
-- no central database exception handling yet,
-- no transaction rollback fixture per test yet,
-- no Dockerized PostgreSQL setup yet,
-- no indexes beyond primary/foreign key basics yet,
-- no alert, user or device tables yet.
-
-These limitations are acceptable for the current stage. The next database-related improvements should focus on robustness, clearer structure and Docker readiness before adding larger new features.
+- No migration framework; schema changes currently require manual rebuilds.
+- No repository/service abstraction; SQL remains in `database.py`.
+- Tuple mapping depends on SQL column order.
+- Asset filtering and list limiting currently happen in Python rather than SQL.
+- Measurement energy consistency is not enforced by a database formula.
+- Storage specifications are not exposed through API endpoints yet.
+- No transaction rollback fixture for per-test isolation.
+- No database indexes beyond primary keys and unique constraints.
 
 ## Next Database Improvements
 
-Recommended next steps:
+High-value next steps after the simulation foundation:
 
-1. Review database error handling around connection and query failures.
-2. Decide when route logic should move toward router/service separation.
-3. Prepare Docker or Docker Compose for a reproducible PostgreSQL setup.
-4. Consider migrations later after the current SQL-first learning phase is stable.
-5. Plan future schema extensions such as alerts, devices, grid sections or users only after the MVP core is stable.
+1. Add simulation-run metadata.
+2. Add dynamic storage-state records.
+3. Add weather time series by region.
+4. Move filtering and limiting into parameterized SQL.
+5. Introduce migrations before the first cloud deployment.
+6. Review indexes using real query patterns.

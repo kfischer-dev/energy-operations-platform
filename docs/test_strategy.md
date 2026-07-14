@@ -1,192 +1,278 @@
 # Test Strategy
 
-This document describes the current testing approach for the Energy Operations Platform.  
-It focuses on test data handling, database reset rules, and the separation between seed-based tests, self-contained tests, and validation tests.
+## Purpose
 
+This document describes the automated testing approach of the Energy Operations Platform in `v0.10.0`.
 
-## Related Documentation
+The goal is a test suite that is understandable, deterministic and safe for database-backed API development without hiding the underlying behavior behind excessive test infrastructure.
 
-This document focuses only on testing. Related topics are documented separately:
+Related documentation:
 
-| Document | Purpose |
-|---|---|
-| `README.md` | project overview and quick start |
-| `api_reference.md` | endpoint behavior and API contracts |
-| `database_notes.md` | database schema, SQL files and DB access layer |
-| `version_history.md` | version-by-version project history |
+- [`api_reference.md`](api_reference.md)
+- [`database_notes.md`](database_notes.md)
+- [`data_dictionary.md`](data_dictionary.md)
 
-This separation keeps the README concise and avoids repeating endpoint or database details in the test strategy.
+## Current Scope
 
-## Scope
+The suite contains **40 tests** across four modules:
 
-The current test suite covers:
+| Module | Tests | Main scope |
+|---|---:|---|
+| `tests/test_general.py` | 2 | root and health endpoints |
+| `tests/test_assets.py` | 6 | asset summaries, details, filtering, 404 and validation |
+| `tests/test_measurements.py` | 24 | list/detail reads, limits, POST, PATCH, persistence and validation |
+| `tests/test_kpis.py` | 8 | global and asset KPIs, invalid/estimated filtering and empty scenarios |
 
-- General API endpoints
-- Station endpoints
-- Measurement read endpoints
-- Measurement create/update flows
-- KPI and analytics endpoints
-- Not-found behavior
-- Request validation behavior
+## Test Stack
 
-## Test Database
+- `pytest`
+- FastAPI `TestClient`
+- dedicated PostgreSQL test database
+- shared fixtures in `tests/conftest.py`
+- deterministic SQL seed data
+- marker-based targeted runs
 
-All automated tests must run against the dedicated test database:
+## Dedicated Test Database
+
+Tests use:
 
 ```text
 energy_operations_test
 ```
 
-The test setup explicitly sets the database name before importing the application:
+Before importing the application, `tests/conftest.py` sets:
 
 ```python
 os.environ["DB_NAME"] = "energy_operations_test"
 ```
 
-A safety check prevents accidental reset operations on a non-test database.
+A safety guard rejects database resets when the configured name is not exactly the expected test database.
 
-## Test Client
+The test database must already contain the current schema. The reset helper reloads data but does not execute `schema.sql`.
 
-API tests use FastAPI's `TestClient` through the shared `client` fixture.
+## Shared Fixtures
 
-```python
-@pytest.fixture
-def client():
-    return TestClient(app)
-```
+### `setup_test_database`
 
-This keeps endpoint tests close to real API behavior while avoiding manual server startup.
+Session-scoped and automatic.
+
+Purpose:
+
+- reset the test dataset once before the test session,
+- provide a known starting state.
+
+### `reset_db`
+
+Function-scoped and opt-in.
+
+Purpose:
+
+- restore deterministic seed values before tests that need exact aggregate results,
+- remove changes introduced by earlier write tests.
+
+### `client`
+
+Creates a FastAPI `TestClient` for API requests.
+
+### `valid_measurement_payload`
+
+Provides a valid 15-minute measurement request used as the base for POST and PATCH workflows.
 
 ## Test Data Strategy
 
-The test suite uses three categories of test data.
+The suite uses three data strategies.
 
-| Category | Description | Typical use |
-|---|---|---|
-| Seed-based data | Data loaded from `sql/test_seed_data.sql` | Exact KPI calculations and read-only tests that require a known database state |
-| Test-created data | Data created inside the test itself | POST, PATCH, and create-then-read flows |
-| Request-only data | Invalid or non-existing request values | 404 and 422 tests where the exact database state is not relevant |
+### 1. Deterministic seed scenarios
 
-## Database Reset Rules
+Use for:
 
-The test database is reset once at the start of the test session.
+- exact KPI calculations,
+- known assets with specific quality states,
+- assets without measurements,
+- read-only domain scenarios.
 
-```python
-@pytest.fixture(scope="session", autouse=True)
-def setup_test_database():
-    reset_test_database()
-```
+Important stable scenarios:
 
-Individual tests should only use the `reset_db` fixture when they require an exact seed state.
+| Asset ID | Scenario |
+|---:|---|
+| `1` | three valid wind measurements |
+| `4` | battery storage with storage specifications |
+| `5` | two invalid negatives plus one valid measurement |
+| `7` | two valid plus one estimated measurement |
+| `8` | substation measurements |
+| `9` | asset without measurements |
 
-### Use `reset_db` when
+### 2. Test-created records
 
-- the test expects exact KPI values,
-- the test depends on a specific seed station,
-- the test depends on a specific number of valid measurements,
-- the test verifies behavior for a seeded station without measurements.
+Use for:
 
-### Do not use `reset_db` when
+- successful POST behavior,
+- create-then-read persistence,
+- create-then-PATCH persistence.
 
-- the test creates its own data,
-- the test checks request validation,
-- the test checks not-found behavior with clearly non-existing IDs,
-- the database state does not affect the expected result.
+These tests create the exact record they need and use returned IDs rather than relying on fixed measurement IDs.
+
+### 3. Request-only scenarios
+
+Use for:
+
+- invalid path and query types,
+- invalid ranges,
+- missing fields,
+- unsupported literal values,
+- clearly non-existing IDs.
+
+## Reset Rules
+
+Use `reset_db` when:
+
+- an exact KPI result depends on the original seed state,
+- the test asserts counts, averages, sums or latest timestamps,
+- earlier writes could affect the expected result.
+
+Do not use `reset_db` automatically for every test when:
+
+- only response structure is checked,
+- the test creates its own isolated data,
+- the result is independent of the current row count,
+- the test checks request validation before database work.
+
+The current compromise keeps the suite fast and explicit while protecting exact analytics tests.
 
 ## Current Test Areas
 
-| Test area | Example test | Data source | Fixed IDs? | Requires `reset_db`? | Reason |
-|---|---|---|---|---|---|
-| General health endpoint | `test_health_returns_ok` | Request-only | No | No | Static endpoint without database dependency |
-| General root endpoint | `test_home` | Request-only | No | No | Static endpoint without database dependency |
-| Station list | `test_get_stations` | Seed data | No | No | Only checks that a list with station fields is returned |
-| Station by ID | `test_get_station_by_id_returns_station` | Seed data | Yes, station `1` | No | Checks one known station; currently stable after session setup |
-| Unknown station type | `test_get_station_unknown_type_returns_empty_list` | Request-only | No | No | Checks filter behavior for a non-existing type |
-| Station not found | `test_get_station_not_found_returns_404` | Request-only | Yes, non-existing station `9999` | No | Exact seed state is not relevant |
-| Station validation | `test_get_station_id_with_invalid_range_returns_422`, `test_get_station_id_with_invalid_type_returns_422` | Request-only | No | No | Checks FastAPI/Pydantic validation |
-| Measurement list | `test_get_measurements` | Seed data | No | No | Only checks that data and expected fields exist |
-| Measurement list limit | `test_get_measurements_with_limit` | Seed data | No | No | Checks API limit behavior, not exact database content |
-| Measurement limit validation | `test_get_measurements_with_limit_zero_returns_422`, `test_get_measurements_with_limit_above_max_returns_422`, `test_get_measurements_with_invalid_type_returns_422` | Request-only | No | No | Checks request validation |
-| Measurements by station | `test_get_measurements_of_station_id` | Seed data | Yes, station `1` | No | Checks that station measurements can be returned |
-| Measurements by unknown station | `test_get_measurement_of_station_id_not_found_returns_404` | Request-only | Yes, non-existing station `9999` | No | Exact seed state is not relevant |
-| Measurement by ID not found | `test_get_measurement_by_id_not_found_returns_404` | Request-only | Yes, non-existing measurement `99999999` | No | Exact seed state is not relevant |
-| Measurement ID validation | `test_get_measurement_by_id_with_invalid_range_returns_422`, `test_get_measurement_by_id_with_invalid_type_returns_422` | Request-only | No | No | Checks request validation |
-| POST measurement | `test_post_measurement_returns_201` | Test-created data | Uses existing station `8` | No | Verifies create flow and response content |
-| POST unknown station | `test_post_measurement_with_unknown_station_returns_404` | Request-only + payload fixture | Yes, non-existing station `9999` | No | Checks foreign-key/business validation behavior |
-| POST validation | Missing field, negative load, invalid status, empty source, invalid unit | Request payload | No | No | Checks request validation |
-| Create then read | `test_post_measurement_can_be_read_after_creation` | Test-created data | Uses existing station `8` | No | Verifies that created data can be retrieved by ID |
-| PATCH measurement | `test_patch_measurement_quality_status_persists_update` | Test-created data | Uses existing station `7` | No | Verifies update flow on a measurement created inside the test |
-| PATCH not found | `test_patch_measurement_quality_status_not_found_returns_404` | Request-only | Yes, non-existing measurement `999999` | No | Exact seed state is not relevant |
-| PATCH validation | Missing status, invalid type, invalid status, invalid measurement ID | Request payload | No | No | Checks request validation |
-| Global KPI | `test_get_measurement_kpi_summary_returns_exact_values` | Seed data | No fixed entity ID, but fixed seed state | Yes | Expects exact aggregate values |
-| Station KPI | `test_get_station_kpi_summary_returns_kpis` | Seed data | Yes, station `1` | Yes | Expects exact KPI values for Station A |
-| Station without measurements KPI | `test_get_station_kpis_without_measurements_returns_empty_kpis` | Seed data | Yes, station `9` | Yes | Expects Station Z to have no measurements |
-| Station KPI excludes invalid measurements | `test_get_station_kpi_summary_excludes_invalid_measurements` | Seed data | Yes, station `4` | Yes | Verifies that invalid measurements are excluded from KPI calculations |
-| Station KPI not found | `test_get_station_kpis_not_found_returns_404` | Request-only | Yes, non-existing station `9999` | No | Exact seed state is not relevant |
-| Station KPI validation | Invalid range/type for station KPI endpoint | Request-only | No | No | Checks request validation |
+### General endpoints
 
-## Current Markers
+- root message
+- API health response
 
-The test suite currently uses markers to group selected tests.
+### Asset endpoints
+
+- compact asset-list contract
+- complete asset-detail contract
+- exact asset-type filtering
+- unknown asset returns `404`
+- invalid asset ID range/type returns `422`
+
+### Measurement reads
+
+- compact summary contract
+- global list limit
+- asset-specific measurement list
+- missing parent asset returns `404`
+- measurement detail not-found and validation behavior
+
+### Measurement creation
+
+- valid request returns `201`
+- complete detail response after creation
+- unknown parent asset returns `404`
+- missing required field returns `422`
+- invalid quality status returns `422`
+- empty source returns `422`
+- created measurement can be read back
+
+### Measurement update
+
+- quality status can be patched
+- update persists and can be read back
+- unknown measurement returns `404`
+- missing, invalid or unsupported quality status returns `422`
+- invalid measurement ID type returns `422`
+
+### KPI behavior
+
+- exact global valid-only KPIs
+- exact asset KPIs
+- existing asset without measurements returns zero/null values
+- unknown asset returns `404`
+- invalid and estimated measurements are excluded
+- exact total interval energy is asserted
+
+## Response Contract Tests
+
+List tests verify that summary responses remain compact. For example, measurement summaries must not expose:
+
+```text
+asset_type
+asset_role
+region_code
+interval_minutes
+source
+```
+
+Detail, POST and PATCH responses use the complete `MeasurementResponse`, including `asset_type`. Tests protect the public name from accidentally leaking the internal database field name `asset_type_name`.
+
+## KPI Assertions
+
+Exact KPI tests assert:
+
+- `measurement_count`
+- `average_power_kw`
+- `min_power_kw`
+- `max_power_kw`
+- `total_energy_kwh`
+- non-null or null `latest_measurement_time`
+
+`pytest.approx()` is used for numeric comparisons where appropriate.
+
+## Markers
+
+Configured markers:
 
 | Marker | Purpose |
 |---|---|
-| `kpi` | KPI and analytics related tests |
-| `post` | Measurement creation tests |
-| `patch` | Measurement update tests |
-| `validation` | Request validation tests expecting `422 Unprocessable Entity` |
+| `post` | measurement creation tests |
+| `patch` | measurement update tests |
+| `kpi` | analytics and KPI tests |
+| `validation` | requests expected to return `422` |
 
-## Guidelines for New Tests
+Targeted execution:
 
-When adding a new test, decide first which data strategy it needs.
+```bash
+py -m pytest -v -m post
+py -m pytest -v -m patch
+py -m pytest -v -m kpi
+py -m pytest -v -m validation
+```
 
-### Prefer test-created data when
+## Recommended Execution Order During Development
 
-- the test checks create/update behavior,
-- the test needs a specific measurement,
-- the test should not depend on the global seed state.
+Run the smallest relevant group first:
 
-### Prefer seed data when
+```bash
+py -m pytest tests/test_measurements.py -v
+py -m pytest tests/test_kpis.py -v
+py -m pytest tests/test_assets.py -v
+py -m pytest -v
+```
 
-- the test checks a known read-only scenario,
-- the test checks exact KPI values,
-- the test needs a stable station with known measurements.
+Before a release, always run the complete suite from a freshly seeded test database.
 
-### Prefer request-only tests when
-
-- the test checks validation,
-- the test checks not-found behavior,
-- no real database content is required for the expected result.
-
-## Practical Rules
+## Practical Rules for New Tests
 
 - Tests must not depend on execution order.
-- `reset_db` should be used deliberately, not automatically.
-- KPI tests with exact expected values should use `reset_db`.
-- POST and PATCH tests should create the data they need.
-- Validation tests should remain independent of database content.
-- Tests should use clearly non-existing IDs for 404 cases.
-- Seed data should remain stable and documented when exact KPI assertions depend on it.
+- Successful write tests should use unique asset/timestamp combinations.
+- Use returned resource IDs instead of guessing identity values.
+- Keep 404 IDs clearly outside the seed range.
+- Exact analytics tests must request `reset_db`.
+- Validation tests should change only the field relevant to the scenario.
+- Summary and detail contracts should be tested separately.
+- Add a dedicated test whenever a new quality state affects analytics.
 
-## Known Trade-off
+## Known Trade-offs
 
-Some read-only tests currently rely on the session-level seed setup without calling `reset_db` individually. This is acceptable as long as these tests do not assert exact aggregate values and do not depend on data changed by previous tests.
+- The database is reset through SQL rather than transaction rollback.
+- Some read-only tests rely on the session-level seed state.
+- The test schema must be updated manually after schema changes.
+- Tests currently require a reachable local PostgreSQL instance.
+- Docker-based or CI-based test execution is not implemented yet.
 
-If test instability appears later, the next improvement should be a more isolated test data strategy, for example:
+## Next Test Improvements
 
-- resetting the database per test module,
-- using transaction rollback per test,
-- creating dedicated fixtures for stations and measurements,
-- separating read-only seed tests from write tests more strictly.
-
-## Summary
-
-The current strategy is intentionally simple:
-
-- Use a dedicated test database.
-- Load a known seed state at the beginning of the test session.
-- Reset only when exact seed-dependent assertions require it.
-- Let create/update tests generate their own data.
-- Keep validation and not-found tests independent from database state.
-
-This keeps the test suite understandable, fast enough for local development, and suitable for the current portfolio stage.
+1. Add automated schema initialization for the test database.
+2. Add CI execution through GitHub Actions.
+3. Consider transaction rollback or per-module database isolation.
+4. Add direct tests for region and storage endpoints when those APIs exist.
+5. Add simulation property tests once generated time series are introduced.
+6. Add database constraint tests for duplicate timestamps and invalid storage ranges.

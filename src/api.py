@@ -2,8 +2,8 @@ import logging
 from src.logging_config import configure_logging
 
 from fastapi import FastAPI, HTTPException, status, Query, Path
-from src.database import get_connection, fetch_stations, fetch_joined_measurements, fetch_measurements_by_station_id, fetch_station_by_id, create_measurement, fetch_measurement_by_id, update_measurement_quality_status, fetch_measurement_kpi_summary, fetch_station_kpi_summary
-from src.schemas import StationResponse, MeasurementResponse, MeasurementCreate, MeasurementDetailResponse, MeasurementQualityUpdate, MeasurementKPIsResponse, StationKPIsResponse
+from src.database import get_connection, fetch_asset_summaries, fetch_measurement_summaries, fetch_measurement_summaries_by_asset_id, fetch_asset_by_id, create_measurement, fetch_measurement_by_id, update_measurement_quality_status, fetch_measurement_kpi_summary, fetch_asset_kpi_summary
+from src.schemas import AssetSummaryResponse, AssetResponse, MeasurementSummaryResponse, MeasurementResponse, MeasurementCreate, MeasurementQualityUpdate, MeasurementKPIsResponse, AssetKPIsResponse
 
 configure_logging()
 logger = logging.getLogger(__name__)
@@ -11,22 +11,22 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="Energy Operations Platform API",
     description=(
-        "REST API for accessing energy station and measurement data. "
+        "REST API for accessing energy asset and measurement data. "
         "This API is part of the Energy Operations Platform portfolio project."
     ),
-    version="0.9.2",
+    version="0.10.0",
     openapi_tags=[
         {
             "name": "General",
             "description": "General API information and health checks.",
         },
         {
-            "name": "Stations",
-            "description": "Endpoints for accessing energy station master data.",
+            "name": "Assets",
+            "description": "Endpoints for accessing energy asset master data.",
         },
         {
             "name": "Measurements",
-            "description": "Endpoints for accessing station measurement data.",
+            "description": "Endpoints for accessing asset measurement data.",
         },
         {
             "name": "KPIs",
@@ -38,14 +38,14 @@ app = FastAPI(
 # ============================================================
 # API helper functions
 # ============================================================
-def get_station_or_404(conn, station_id):
-    station = fetch_station_by_id(conn, station_id)
+def get_asset_or_404(conn, asset_id):
+    asset = fetch_asset_by_id(conn, asset_id)
 
-    if station is None:
-        logger.warning(f"Station with id {station_id} not found")
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Station with id {station_id} not found")
+    if asset is None:
+        logger.warning(f"Asset with id {asset_id} not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Asset with id {asset_id} not found")
 
-    return station
+    return asset
 
 def get_measurement_or_404(conn, measurement_id):
     measurement = fetch_measurement_by_id(conn, measurement_id)
@@ -91,48 +91,48 @@ def app_status():
     return {"status": "ok"}
 
 # ============================================================
-# Station Endpoints
+# Asset Endpoints
 # ============================================================
 
-@app.get("/stations",
-    response_model=list[StationResponse],
-    tags=["Stations"],
-    summary="Get all stations",
+@app.get("/assets",
+    response_model=list[AssetSummaryResponse],
+    tags=["Assets"],
+    summary="Get all assets",
     description=(
-        "Returns all energy stations stored in the PostgreSQL database. "
-        "Each station contains master data such as ID, name, location and station type. "
-        "Station types can represent different energy assets, for example solar_park, "
-        "wind_park, hydro_plant, battery_storage or substation."   
+        "Returns all energy assets stored in the PostgreSQL database. "
+        "Each asset contains master data such as ID, name, location and asset type. "
+        "Asset types can represent different energy assets, for example solar_park, "
+        "wind_park, hydro_power_plant, battery_storage or substation."   
     ),
-    response_description="List of station records.",
+    response_description="List of asset records.",
 )
-def get_stations(station_type: str | None = Query(
+def get_assets(asset_type: str | None = Query(
     default=None, 
-    description="Optional filter by station type, for example solar_park or wind_park.")
+    description="Optional filter by asset type, for example solar_park or wind_park.")
 ):
-    """Return all stations, optionally filtered by station type."""
+    """Return all assets, optionally filtered by asset type."""
 
     logger.info("=" * 60)
-    logger.info("GET /stations request received. Opening database connection.")
+    logger.info("GET /assets request received. Opening database connection.")
 
     conn = get_connection()
 
-    logger.info("Loading station data from database.")
+    logger.info("Loading asset data from database.")
 
     try:
-        station_data = fetch_stations(conn)
-        logger.info(f"Loaded {len(station_data)} stations from database.")
+        asset_data = fetch_asset_summaries(conn)
+        logger.info(f"Loaded {len(asset_data)} assets from database.")
 
-        if station_type is not None:
-            logger.info(f"Applying station_type filter: {station_type}")
-            station_by_type = []
-            for station in station_data:
-                if station_type == station["station_type"]:
-                    station_by_type.append(station)
-            logger.info(f"Returned {len(station_by_type)} stations")
-            return station_by_type
+        if asset_type is not None:
+            logger.info(f"Applying asset_type filter: {asset_type}")
+            asset_by_type = []
+            for asset in asset_data:
+                if asset_type == asset["asset_type"]:
+                    asset_by_type.append(asset)
+            logger.info(f"Returned {len(asset_by_type)} assets")
+            return asset_by_type
 
-        return station_data
+        return asset_data
 
     finally:
         conn.close()
@@ -140,33 +140,33 @@ def get_stations(station_type: str | None = Query(
         logger.info("=" * 60)
 
 
-@app.get("/stations/{station_id}", 
-    response_model=StationResponse,
-    tags=["Stations"],
-    summary="Get station by ID",
+@app.get("/assets/{asset_id}", 
+    response_model=AssetResponse,
+    tags=["Assets"],
+    summary="Get asset by ID",
     description=(
-        "Returns one energy station by its station ID. "
-        "If no station exists for the given ID, the API returns a 404 error."
+        "Returns one energy asset by its asset ID. "
+        "If no asset exists for the given ID, the API returns a 404 error."
     ),
-    response_description="Single station record.",
+    response_description="Single asset record.",
 )
-def get_station_by_id(station_id: int = Path(
+def get_asset_by_id(asset_id: int = Path(
     ..., 
     ge=1, 
-    description="Unique ID of the requested energy station.")
+    description="Unique ID of the requested energy asset.")
 ):
-    """Return one station by ID."""
+    """Return one asset by ID."""
 
     logger.info("=" * 60)
-    logger.info(f"GET /stations/{station_id} request received. Opening database connection.")
+    logger.info(f"GET /assets/{asset_id} request received. Opening database connection.")
 
     conn = get_connection()
 
-    logger.info("Loading station data from database.")
+    logger.info("Loading asset data from database.")
 
     try:
-        station = get_station_or_404(conn, station_id)
-        return station
+        asset = get_asset_or_404(conn, asset_id)
+        return asset
 
     finally:
         conn.close()
@@ -178,12 +178,12 @@ def get_station_by_id(station_id: int = Path(
 # ============================================================
 
 @app.get("/measurements", 
-    response_model=list[MeasurementResponse],
+    response_model=list[MeasurementSummaryResponse],
     tags=["Measurements"],
     summary="Get measurements",
     description=(
         "Returns joined measurement data from the PostgreSQL database. "
-        "The response includes measurement values together with related station information. "
+        "The response includes measurement values together with related asset information. "
         "An optional limit query parameter can be used to restrict the number of returned records."
     ),
     response_description="List of measurement records, optionally limited by the query parameter.",
@@ -204,7 +204,7 @@ def get_measurements(limit: int | None = Query(
     logger.info("Loading joined measurement data from database.")
 
     try:
-        measurement_data = fetch_joined_measurements(conn)
+        measurement_data = fetch_measurement_summaries(conn)
         logger.info(f"Loaded {len(measurement_data)} joined measurements from database.")
 
         if limit is not None:
@@ -218,46 +218,46 @@ def get_measurements(limit: int | None = Query(
         logger.info("Database connection closed.")
         logger.info("=" * 60)
 
-@app.get("/stations/{station_id}/measurements", 
-    response_model=list[MeasurementResponse],
-    tags=["Stations", "Measurements"],
-    summary="Get measurements by station ID",
+@app.get("/assets/{asset_id}/measurements", 
+    response_model=list[MeasurementSummaryResponse],
+    tags=["Assets", "Measurements"],
+    summary="Get measurements by asset ID",
     description=(
-        "Returns all measurement records for one specific energy station. "
-        "The endpoint first checks whether the requested station exists. "
-        "If no station exists for the given station ID, the API returns a 404 error."
+        "Returns all measurement records for one specific energy asset. "
+        "The endpoint first checks whether the requested asset exists. "
+        "If no asset exists for the given asset ID, the API returns a 404 error."
     ),
-    response_description="List of measurement records for the requested station.",   
+    response_description="List of measurement records for the requested asset.",   
 )
-def get_measurements_by_station_id(
-    station_id: int = Path(
+def get_measurements_by_asset_id(
+    asset_id: int = Path(
         ..., 
         ge=1, 
-        description="Unique ID of the requested energy station."),
+        description="Unique ID of the requested energy asset."),
     limit: int | None = Query(
         default=None, 
         ge=1, 
         le=100, 
-        description="Optional maximum number of measurement records to return for this station.",),
+        description="Optional maximum number of measurement records to return for this asset.",),
 ):
-    """Return all measurements for one station."""
+    """Return all measurements for one asset."""
 
     logger.info("=" * 60)
-    logger.info(f"GET /stations/{station_id}/measurements request received. Opening database connection.")
+    logger.info(f"GET /assets/{asset_id}/measurements request received. Opening database connection.")
 
     conn = get_connection()
 
     try:
-        # Check the parent station first so a missing station returns 404 instead of [].
-        logger.info("Loading station data from database.")
-        get_station_or_404(conn, station_id)
+        # Check the parent asset first so a missing asset returns 404 instead of [].
+        logger.info("Loading asset data from database.")
+        get_asset_or_404(conn, asset_id)
 
         logger.info("Loading joined measurement data from database.")
-        measurement_data = fetch_measurements_by_station_id(conn, station_id)
-        logger.info(f"Loaded {len(measurement_data)} joined measurements of station_id {station_id} from database.")
+        measurement_data = fetch_measurement_summaries_by_asset_id(conn, asset_id)
+        logger.info(f"Loaded {len(measurement_data)} joined measurements of asset_id {asset_id} from database.")
 
         if limit is not None:
-            logger.info(f"Applying limit={limit} to station measurement response.")
+            logger.info(f"Applying limit={limit} to asset measurement response.")
             return measurement_data[:limit]
 
         return measurement_data
@@ -268,13 +268,13 @@ def get_measurements_by_station_id(
         logger.info("=" * 60)
 
 @app.get("/measurements/{measurement_id}",
-    response_model=MeasurementDetailResponse,
+    response_model=MeasurementResponse,
     tags=["Measurements"],
     summary="Get measurement by ID",
     description=(
         "Returns one specific measurement record by its measurement ID. "
-        "The response includes measurement details such as station ID, timestamp, load value, unit, "
-        "source and quality status. "
+        "The response includes measurement details such as asset ID, measurement time, interval duration, "
+        "active power, energy, source and quality status. "
         "If no measurement exists for the given ID, the API returns a 404 error."
     ),
     response_description="Single measurement record.",
@@ -306,31 +306,33 @@ def get_measurement_by_id(
 # ============================================================
 
 @app.post("/measurements",
-    response_model=MeasurementDetailResponse,
+    response_model=MeasurementResponse,
     status_code=status.HTTP_201_CREATED, 
     tags=["Measurements"],
-    summary="Create a new station measurement",
+    summary="Create a new asset measurement",
     description=(
-        "Creates a new measurement record and assigns it to an existing energy station. "
-        "The endpoint accepts measurement data such as station ID, timestamp, load value and unit. "
+        "Creates a new measurement record and assigns it to an existing energy asset. "
+        "The endpoint accepts measurement data such as asset ID, measurement time, interval duration, "
+        "active power, energy, source and quality status. "
         "After validation, the measurement is stored in the PostgreSQL database and can be retrieved "
         "through the measurement endpoints."
     ),
     response_description="The newly created measurement record.",
 )
 def post_measurement(measurement_data: MeasurementCreate):
-    """Post measurement for specific station."""
+    """Post measurement for specific asset."""
 
     logger.info("=" * 60)
-    logger.info(f"POST /measurements request received for station_id {measurement_data.station_id}. ")
+    logger.info(f"POST /measurements request received for asset_id {measurement_data.asset_id}. ")
 
     conn = get_connection()
 
     try:
-        get_station_or_404(conn, measurement_data.station_id)
+        get_asset_or_404(conn, measurement_data.asset_id)
 
-        measurement = create_measurement(conn, measurement_data)
-        logger.info(f"Measurement for station_id {measurement['station_id']} successfully saved to measurement_id {measurement['measurement_id']}.")
+        measurement_id = create_measurement(conn, measurement_data)
+        logger.info(f"Measurement for asset_id {measurement_data.asset_id} successfully saved to measurement_id {measurement_id}.")
+        measurement = fetch_measurement_by_id(conn, measurement_id)
 
         return measurement
     
@@ -340,7 +342,7 @@ def post_measurement(measurement_data: MeasurementCreate):
         logger.info("=" * 60)
 
 @app.patch("/measurements/{measurement_id}",
-    response_model=MeasurementDetailResponse,
+    response_model=MeasurementResponse,
     status_code=status.HTTP_200_OK, 
     tags=["Measurements"],
     summary="Update measurement quality status",
@@ -369,7 +371,9 @@ def patch_quality_status_by_measurement_id(
 
         get_measurement_or_404(conn, measurement_id)
 
-        new_measurement = update_measurement_quality_status(conn, measurement_id, update_data.quality_status)
+        measurement_id = update_measurement_quality_status(conn, measurement_id, update_data.quality_status)
+        logger.info(f"Measurement quality_status for measurement_id {measurement_id} successfully updated to {update_data.quality_status}.")
+        new_measurement = fetch_measurement_by_id(conn, measurement_id)
 
         return new_measurement
     
@@ -389,9 +393,9 @@ def patch_quality_status_by_measurement_id(
     summary="Get global measurement KPI summary",
     description=(
         "Returns aggregated KPI values across all valid measurements. "
-        "The summary includes the number of valid measurements, average load, "
-        "minimum load, maximum load and the latest measurement timestamp. "
-        "Measurements with invalid quality status are excluded from the calculation."),         
+        "The summary includes the number of valid measurements, average, minimum and maximum active power, "
+        "total interval energy and the latest measurement timestamp. "
+        "Only measurements with quality status valid are included in the calculation."),         
 )
 def get_measurement_kpi_summary():
     """Get measurement KPI summary."""
@@ -411,51 +415,41 @@ def get_measurement_kpi_summary():
         logger.info("Database connection closed.")
         logger.info("=" * 60)
 
-@app.get("/stations/{station_id}/kpis",
-    response_model=StationKPIsResponse,
+@app.get("/assets/{asset_id}/kpis",
+    response_model=AssetKPIsResponse,
     status_code=status.HTTP_200_OK, 
     tags=["KPIs"],
-    summary="Get KPI summary for a station",
+    summary="Get KPI summary for an asset",
     description=(
-        "Returns aggregated KPI values for one specific energy station. "
-        "The station is selected by station_id. The response includes station information, "
-        "the number of valid measurements, average load, minimum load, maximum load "
-        "and the latest measurement timestamp. Measurements with invalid quality status "
-        "are excluded from the calculation. If the station exists but has no valid measurements, "
+        "Returns aggregated KPI values for one specific energy asset. "
+        "The asset is selected by asset_id. The response includes asset information, "
+        "the number of valid measurements, average, minimum and maximum active power, total interval energy "
+        "and the latest measurement timestamp. Only measurements with quality status valid "
+        "are included in the calculation. If the asset exists but has no valid measurements, "
         "the endpoint returns zero measurements and null KPI values."
     ),
 )            
 
-def get_station_kpi_summary(
-    station_id: int = Path(
+def get_asset_kpi_summary(
+    asset_id: int = Path(
         ..., 
         ge=1, 
-        description="Unique ID of the requested energy station.")
+        description="Unique ID of the requested energy asset.")
 ):
-    """Get measurement KPI by station_id summary."""
+    """Get measurement KPI by asset_id summary."""
 
     logger.info("=" * 60)
-    logger.info(f"GET /stations/{station_id}/kpis request received. ")
+    logger.info(f"GET /assets/{asset_id}/kpis request received. ")
 
     conn = get_connection()
 
     try:
-        station = get_station_or_404(conn, station_id)
+        asset = get_asset_or_404(conn, asset_id)
         
-        kpi_summary = fetch_station_kpi_summary(conn, station_id)
+        kpi_summary = fetch_asset_kpi_summary(conn, asset_id)
+        logger.info(f"Loaded KPI summary for {asset['asset_name']} with {kpi_summary['measurement_count']} valid measurements from database.")
 
-        if kpi_summary is None:
-            kpi_summary = {
-                "measurement_count": 0,
-                "average_load": None,
-                "min_load": None,
-                "max_load": None,
-                "latest_measurement_time": None,
-            }
-
-        logger.info(f"Loaded KPI summary for {station['station_name']} with {kpi_summary['measurement_count']} valid measurements from database.")
-
-        return {'station_id': station['station_id'], 'station_name': station['station_name'], **kpi_summary}
+        return {'asset_id': asset['asset_id'], 'asset_name': asset['asset_name'], **kpi_summary}
 
     finally:
         conn.close()

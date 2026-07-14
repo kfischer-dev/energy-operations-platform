@@ -4,50 +4,84 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 
-class StationResponse(BaseModel):
-    station_id: int
-    station_name: str
-    station_type: str
-    station_location: str
+class AssetResponse(BaseModel):
+    asset_id: int = Field(..., ge=1)
+    asset_name: str
+    asset_code: str
+    asset_location: str
+    asset_role: str
+    asset_type: str
+    region_id: int = Field(..., ge=1)
+    region_code: str
+    region_name: str
+    rated_power_kw: float = Field(..., ge=0)
+    latitude: float
+    longitude: float
+    operating_status: Literal["online", "offline", "maintenance", "fault"]
+
+
+class AssetSummaryResponse(BaseModel):
+    asset_id: int = Field(..., ge=1)
+    asset_name: str
+    asset_code: str
+    asset_location: str
+    asset_role: str
+    asset_type: str
+    region_code: str
+    rated_power_kw: float = Field(..., ge=0)
+    operating_status: Literal["online", "offline", "maintenance", "fault"]
 
 class MeasurementResponse(BaseModel):
-    station_name: str
+    measurement_id: int = Field(..., ge=1)
+    asset_id: int = Field(..., ge=1)
+    asset_code: str
+    asset_name: str
+    asset_type: str
+    asset_role: str
+    region_code: str
     measurement_time: datetime
-    load_value: float
-    unit: str
-
-class MeasurementCreate(BaseModel):
-    station_id: int = Field(..., ge=1)
-    measurement_time: datetime
-    load_value: float = Field(..., ge=0)
-    unit: Literal["kW", "MW"]
+    interval_minutes: int = Field(..., ge=1)
+    active_power_kw: float
+    energy_kwh: float = Field(..., ge=0)
     source: str = Field(..., min_length=1)
     quality_status: Literal["valid", "invalid", "estimated"]
 
-class MeasurementDetailResponse(BaseModel):
-    measurement_id: int
-    station_id: int
+class MeasurementSummaryResponse(BaseModel):
+    measurement_id: int = Field(..., ge=1)
+    asset_code: str
+    asset_name: str
+    asset_id: int = Field(..., ge=1)
     measurement_time: datetime
-    load_value: float
-    unit: str
-    source: str
-    quality_status: str
+    active_power_kw: float
+    energy_kwh: float = Field(..., ge=0)
+    quality_status: Literal["valid", "invalid", "estimated"]
+
+class MeasurementCreate(BaseModel):
+    asset_id: int = Field(..., ge=1)
+    measurement_time: datetime
+    interval_minutes: int = Field(..., ge=1)
+    active_power_kw: float
+    energy_kwh: float = Field(..., ge=0)
+    source: str = Field(..., min_length=1)
+    quality_status: Literal["valid", "invalid", "estimated"]
 
 class MeasurementQualityUpdate(BaseModel):
     quality_status: Literal["valid", "invalid", "estimated"]
 
 class MeasurementKPIsResponse(BaseModel):
     measurement_count: int = Field(..., ge=0)
-    average_load: float | None
-    min_load: float | None
-    max_load: float | None
+    average_power_kw: float | None
+    min_power_kw: float | None
+    max_power_kw: float | None
+    total_energy_kwh: float | None
     latest_measurement_time: datetime | None
 
-class StationKPIsResponse(BaseModel):
-    station_id: int = Field(..., ge=1)
-    station_name: str
+class AssetKPIsResponse(BaseModel):
+    asset_id: int = Field(..., ge=1)
+    asset_name: str
     measurement_count: int = Field(..., ge=0)
-    average_load: float | None
-    min_load: float | None
-    max_load: float | None
+    average_power_kw: float | None
+    min_power_kw: float | None
+    max_power_kw: float | None
+    total_energy_kwh: float | None
     latest_measurement_time: datetime | None
