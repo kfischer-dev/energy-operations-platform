@@ -23,6 +23,7 @@ def test_get_measurement_kpi_summary_returns_exact_values(client, reset_db):
     assert float(data["average_power_kw"]) == pytest.approx(65500)
     assert float(data["min_power_kw"]) == pytest.approx(8000)
     assert float(data["max_power_kw"]) == pytest.approx(149000)
+    assert float(data["total_energy_kwh"]) == pytest.approx(343875)
     assert data["latest_measurement_time"] is not None
 
 
@@ -53,6 +54,7 @@ def test_get_asset_kpi_summary_returns_kpis(client, reset_db):
     assert float(data["average_power_kw"]) == pytest.approx(81000)
     assert float(data["min_power_kw"]) == pytest.approx(79000)
     assert float(data["max_power_kw"]) == pytest.approx(84000)
+    assert float(data["total_energy_kwh"]) == pytest.approx(60750)
     assert data["latest_measurement_time"] is not None
 
 
@@ -73,6 +75,7 @@ def test_get_asset_kpis_without_measurements_returns_empty_kpis(client, reset_db
     assert data["average_power_kw"] is None
     assert data["min_power_kw"] is None
     assert data["max_power_kw"] is None
+    assert data["total_energy_kwh"] is None
     assert data["latest_measurement_time"] is None
 
 
@@ -125,4 +128,6 @@ def test_get_asset_kpi_summary_excludes_invalid_measurements(client, reset_db):
     assert float(data["average_power_kw"]) == pytest.approx(102000)
     assert float(data["min_power_kw"]) == pytest.approx(102000)
     assert float(data["max_power_kw"]) == pytest.approx(102000)
+    assert float(data["total_energy_kwh"]) == pytest.approx(25500)
     assert data["latest_measurement_time"] is not None
+

@@ -59,6 +59,7 @@ class MeasurementKPIsResponse(BaseModel):
     average_power_kw: float | None
     min_power_kw: float | None
     max_power_kw: float | None
+    total_energy_kwh: float | None
     latest_measurement_time: datetime | None
 
 class AssetKPIsResponse(BaseModel):
@@ -68,4 +69,5 @@ class AssetKPIsResponse(BaseModel):
     average_power_kw: float | None
     min_power_kw: float | None
     max_power_kw: float | None
+    total_energy_kwh: float | None
     latest_measurement_time: datetime | None

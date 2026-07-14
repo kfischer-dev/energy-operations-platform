@@ -362,19 +362,8 @@ def map_kpi_measurement_row(row):
         "average_power_kw": float(row[1]) if row[1] is not None else None,
         "min_power_kw": float(row[2]) if row[2] is not None else None,
         "max_power_kw": float(row[3]) if row[3] is not None else None,
-        "latest_measurement_time": row[4],
-    }
-
-def map_kpi_measurement_by_asset_id_row(row):
-
-    return {        
-        "asset_id": row[0],
-        "asset_name": row[1],
-        "measurement_count": row[2],
-        "average_power_kw": float(row[3]) if row[3] is not None else None,
-        "min_power_kw": float(row[4]) if row[4] is not None else None,
-        "max_power_kw": float(row[5]) if row[5] is not None else None,
-        "latest_measurement_time": row[6],
+        "total_energy_kwh": float(row[4]) if row[4] is not None else None,
+        "latest_measurement_time": row[5] if row[5] is not None else None,
     }
 
 # ============================================================
@@ -389,6 +378,7 @@ def fetch_measurement_kpi_summary(conn):
                 ROUND(AVG(active_power_kw), 2) AS average_power_kw,
                 MIN(active_power_kw) AS min_power_kw,
                 MAX(active_power_kw) AS max_power_kw,
+                SUM(energy_kwh) AS total_energy_kwh,
                 MAX(measurement_time) AS latest_measurement_time
             FROM measurements
             WHERE quality_status = 'valid';
@@ -410,6 +400,7 @@ def fetch_asset_kpi_summary(conn, asset_id):
                 ROUND(AVG(active_power_kw), 2) AS average_power_kw,
                 MIN(active_power_kw) AS min_power_kw,
                 MAX(active_power_kw) AS max_power_kw,
+                SUM(energy_kwh) AS total_energy_kwh,
                 MAX(measurement_time) AS latest_measurement_time
             FROM measurements
             WHERE asset_id = %s
@@ -417,9 +408,6 @@ def fetch_asset_kpi_summary(conn, asset_id):
         """, (asset_id,))
 
         row = cursor.fetchone()
-
-    if row is None:
-        return None     
 
     return map_kpi_measurement_row(row)
 

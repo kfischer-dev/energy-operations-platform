@@ -447,16 +447,6 @@ def get_asset_kpi_summary(
         asset = get_asset_or_404(conn, asset_id)
         
         kpi_summary = fetch_asset_kpi_summary(conn, asset_id)
-
-        if kpi_summary is None:
-            kpi_summary = {
-                "measurement_count": 0,
-                "average_power_kw": None,
-                "min_power_kw": None,
-                "max_power_kw": None,
-                "latest_measurement_time": None,
-            }
-
         logger.info(f"Loaded KPI summary for {asset['asset_name']} with {kpi_summary['measurement_count']} valid measurements from database.")
 
         return {'asset_id': asset['asset_id'], 'asset_name': asset['asset_name'], **kpi_summary}
