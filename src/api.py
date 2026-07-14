@@ -3,7 +3,7 @@ from src.logging_config import configure_logging
 
 from fastapi import FastAPI, HTTPException, status, Query, Path
 from src.database import get_connection, fetch_assets, fetch_joined_measurements, fetch_measurements_by_asset_id, fetch_asset_by_id, create_measurement, fetch_measurement_by_id, update_measurement_quality_status, fetch_measurement_kpi_summary, fetch_asset_kpi_summary
-from src.schemas import AssetResponse, MeasurementResponse, MeasurementCreate, MeasurementDetailResponse, MeasurementQualityUpdate, MeasurementKPIsResponse, AssetKPIsResponse
+from src.schemas import AssetResponse, MeasurementResponse, MeasurementCreate, MeasurementQualityUpdate, MeasurementKPIsResponse, AssetKPIsResponse
 
 configure_logging()
 logger = logging.getLogger(__name__)
@@ -102,7 +102,7 @@ def app_status():
         "Returns all energy assets stored in the PostgreSQL database. "
         "Each asset contains master data such as ID, name, location and asset type. "
         "Asset types can represent different energy assets, for example solar_park, "
-        "wind_park, hydro_plant, battery_storage or substation."   
+        "wind_park, hydro_power_plant, battery_storage or substation."   
     ),
     response_description="List of asset records.",
 )
@@ -268,13 +268,13 @@ def get_measurements_by_asset_id(
         logger.info("=" * 60)
 
 @app.get("/measurements/{measurement_id}",
-    response_model=MeasurementDetailResponse,
+    response_model=MeasurementResponse,
     tags=["Measurements"],
     summary="Get measurement by ID",
     description=(
         "Returns one specific measurement record by its measurement ID. "
-        "The response includes measurement details such as asset ID, timestamp, load value, unit, "
-        "source and quality status. "
+        "The response includes measurement details such as asset ID, measurement time, interval duration, "
+        "active power, energy, source and quality status. "
         "If no measurement exists for the given ID, the API returns a 404 error."
     ),
     response_description="Single measurement record.",
@@ -306,13 +306,14 @@ def get_measurement_by_id(
 # ============================================================
 
 @app.post("/measurements",
-    response_model=MeasurementDetailResponse,
+    response_model=MeasurementResponse,
     status_code=status.HTTP_201_CREATED, 
     tags=["Measurements"],
     summary="Create a new asset measurement",
     description=(
         "Creates a new measurement record and assigns it to an existing energy asset. "
-        "The endpoint accepts measurement data such as asset ID, timestamp, load value and unit. "
+        "The endpoint accepts measurement data such as asset ID, measurement time, interval duration, "
+        "active power, energy, source and quality status. "
         "After validation, the measurement is stored in the PostgreSQL database and can be retrieved "
         "through the measurement endpoints."
     ),
@@ -329,8 +330,9 @@ def post_measurement(measurement_data: MeasurementCreate):
     try:
         get_asset_or_404(conn, measurement_data.asset_id)
 
-        measurement = create_measurement(conn, measurement_data)
-        logger.info(f"Measurement for asset_id {measurement['asset_id']} successfully saved to measurement_id {measurement['measurement_id']}.")
+        measurement_id = create_measurement(conn, measurement_data)
+        logger.info(f"Measurement for asset_id {measurement_data.asset_id} successfully saved to measurement_id {measurement_id}.")
+        measurement = fetch_measurement_by_id(conn, measurement_id)
 
         return measurement
     
@@ -340,7 +342,7 @@ def post_measurement(measurement_data: MeasurementCreate):
         logger.info("=" * 60)
 
 @app.patch("/measurements/{measurement_id}",
-    response_model=MeasurementDetailResponse,
+    response_model=MeasurementResponse,
     status_code=status.HTTP_200_OK, 
     tags=["Measurements"],
     summary="Update measurement quality status",
@@ -369,7 +371,9 @@ def patch_quality_status_by_measurement_id(
 
         get_measurement_or_404(conn, measurement_id)
 
-        new_measurement = update_measurement_quality_status(conn, measurement_id, update_data.quality_status)
+        measurement_id = update_measurement_quality_status(conn, measurement_id, update_data.quality_status)
+        logger.info(f"Measurement quality_status for measurement_id {measurement_id} successfully updated to {update_data.quality_status}.")
+        new_measurement = fetch_measurement_by_id(conn, measurement_id)
 
         return new_measurement
     
@@ -447,9 +451,9 @@ def get_asset_kpi_summary(
         if kpi_summary is None:
             kpi_summary = {
                 "measurement_count": 0,
-                "average_load": None,
-                "min_load": None,
-                "max_load": None,
+                "average_power_kw": None,
+                "min_power_kw": None,
+                "max_power_kw": None,
                 "latest_measurement_time": None,
             }
 
