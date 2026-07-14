@@ -380,14 +380,14 @@ def map_measurement_summary_row(row):
 
 def map_measurement_row(row):
 
-    measurement_id, asset_id, asset_code, asset_name, asset_type_name, asset_role, region_code, measurement_time, interval_minutes, active_power_kw, energy_kwh, source, quality_status = row
+    measurement_id, asset_id, asset_code, asset_name, asset_type, asset_role, region_code, measurement_time, interval_minutes, active_power_kw, energy_kwh, source, quality_status = row
 
     measurement = {
         "measurement_id": measurement_id,
         "asset_id": asset_id,
         "asset_code": asset_code,
         "asset_name": asset_name,
-        "asset_type_name": asset_type_name,
+        "asset_type": asset_type,
         "asset_role": asset_role,
         "region_code": region_code,
         "measurement_time": measurement_time,

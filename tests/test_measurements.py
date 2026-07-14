@@ -157,6 +157,8 @@ def test_post_measurement_returns_201(client, valid_measurement_payload):
     data = response.json()
 
     assert "measurement_id" in data
+    assert "asset_type" in data
+    assert "asset_type_name" not in data
     assert data["asset_id"] == 8
     assert data["measurement_time"] == "2026-07-02T08:15:00+02:00"
     assert data["interval_minutes"] == 15

@@ -393,9 +393,9 @@ def patch_quality_status_by_measurement_id(
     summary="Get global measurement KPI summary",
     description=(
         "Returns aggregated KPI values across all valid measurements. "
-        "The summary includes the number of valid measurements, average load, "
-        "minimum load, maximum load and the latest measurement timestamp. "
-        "Measurements with invalid quality status are excluded from the calculation."),         
+        "The summary includes the number of valid measurements, average, minimum and maximum active power, "
+        "total interval energy and the latest measurement timestamp. "
+        "Only measurements with quality status valid are included in the calculation."),         
 )
 def get_measurement_kpi_summary():
     """Get measurement KPI summary."""
@@ -423,9 +423,9 @@ def get_measurement_kpi_summary():
     description=(
         "Returns aggregated KPI values for one specific energy asset. "
         "The asset is selected by asset_id. The response includes asset information, "
-        "the number of valid measurements, average load, minimum load, maximum load "
-        "and the latest measurement timestamp. Measurements with invalid quality status "
-        "are excluded from the calculation. If the asset exists but has no valid measurements, "
+        "the number of valid measurements, average, minimum and maximum active power, total interval energy "
+        "and the latest measurement timestamp. Only measurements with quality status valid "
+        "are included in the calculation. If the asset exists but has no valid measurements, "
         "the endpoint returns zero measurements and null KPI values."
     ),
 )            

@@ -36,7 +36,7 @@ class MeasurementResponse(BaseModel):
     asset_id: int = Field(..., ge=1)
     asset_code: str
     asset_name: str
-    asset_type_name: str
+    asset_type: str
     asset_role: str
     region_code: str
     measurement_time: datetime

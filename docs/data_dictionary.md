@@ -2,337 +2,377 @@
 
 ## Purpose
 
-This document defines the planned domain data model for the Energy Operations Platform from `v0.10.0` onward.
+This document is the authoritative domain and field reference for the Energy Operations Platform data model in `v0.10.0`.
 
-The goal is to support a realistic but intentionally simplified energy backend with:
+The model is intentionally realistic enough to support later simulation, weather influence, energy balance and dashboard work without becoming a full electrical-grid model.
 
-- regions,
-- producers, consumers and storage assets,
-- time-series measurements,
-- later simulation, weather, energy balance and recommendations,
-- future visualization in a React dashboard.
+## Core Domain Model
 
-The model should remain small enough for the portfolio MVP while avoiding later structural changes that are already foreseeable.
+```text
+regions
+   └── assets ── asset_types
+          ├── measurements
+          └── storage_specs
+```
 
----
+## General Conventions
 
-## Core Modeling Decisions
-
-- The existing `assets` concept will be replaced by the broader `assets` concept.
-- `asset_type` will become `asset_type`.
-- API routes should move from `/assets` to `/assets` during the `v0.10.x` block.
-- Internal power values will use `kW`.
-- `load_value` will become `active_power_kw`.
-- Measurements will include both power and interval energy.
-- Storage-specific master data will be stored separately in `storage_specs`.
-- Weather will be introduced in a later dedicated version.
-- Grid frequency will not be simulated in the first MVP because a physically meaningful model would require substantially more grid dynamics.
-
----
-
-## Data Categories
-
-### Master Data
-
-Values that change rarely:
-
-- region
-- asset name
-- asset role
-- asset type
-- rated power
-- coordinates
-- operating status
-- storage specifications
-
-### Time-Series Data
-
-Values generated or measured over time:
-
-- measurement timestamp
-- active power
-- interval energy
-- data quality
-- later state of charge and weather values
-
-### Context and Influence Data
-
-Values that later influence generation or consumption:
-
-- cloud cover
-- solar irradiance
-- wind speed
-- temperature
-- weekday
-- time of day
-
-### Derived Data
-
-Values calculated from stored or simulated data:
-
-- regional generation
-- regional consumption
-- surplus
-- deficit
-- energy balance
-- recommendations
-- later simplified system-state indicators
+- Internal active power uses `kW`.
+- Interval energy uses `kWh`.
+- Timestamps use PostgreSQL `TIMESTAMPTZ`.
+- Technical codes are stable identifiers; display names may change.
+- Development regions are schematic model regions, not postal-code areas or official control zones.
+- Valid-only KPI calculations include only `quality_status = 'valid'`.
+- `invalid` and `estimated` rows remain stored but are excluded from current KPI endpoints.
 
 ---
 
 # Entity: Region
 
-Regions are schematic aggregation areas used for filters, analytics, weather simulation, energy balance and later map visualization.
+Regions group assets for later regional analytics, weather generation, energy balance and map visualization.
 
-Initial examples:
+Initial development regions:
 
-- `DE-NORTH`
-- `DE-SOUTH`
-- `DE-EAST`
-- `DE-WEST`
+```text
+DE-NORTH
+DE-SOUTH
+DE-EAST
+DE-WEST
+```
 
-| Field | Type | Required | Description | MVP Priority |
+| Field | PostgreSQL type | Required | Rules | Description |
 |---|---|---:|---|---|
-| `region_id` | integer | yes | Primary key | must |
-| `region_code` | text | yes | Stable technical code, for example `DE-NORTH` | must |
-| `region_name` | text | yes | Human-readable display name | must |
+| `region_id` | `INT IDENTITY` | yes | primary key | Internal database identifier |
+| `region_code` | `VARCHAR(15)` | yes | unique | Stable technical code, for example `DE-SOUTH` |
+| `region_prefix` | `VARCHAR(5)` | yes | unique | Short prefix used in asset codes, for example `S` |
+| `region_name` | `VARCHAR(255)` | yes | unique | Human-readable region name |
+| `region_description` | `TEXT` | no | – | Optional model-region description |
+| `created_at` | `TIMESTAMPTZ` | yes | defaults to current timestamp | Record creation time |
 
-### Notes
+### Meaning of `region_code`
 
-`region_code` is not a postal code. It is a stable technical identifier for APIs, seed data, filters and frontend logic.
+`region_code` is not a postcode. It is a stable internal identifier for APIs, filters, seed data and frontend logic.
 
-Optional future fields:
+---
 
-- `country_code`
-- `description`
+# Entity: Asset Type
+
+`asset_types` stores reusable technical classifications. It prevents classification attributes from being repeated for every asset.
+
+| Field | PostgreSQL type | Required | Rules | Description |
+|---|---|---:|---|---|
+| `asset_type_id` | `INT IDENTITY` | yes | primary key | Internal type identifier |
+| `asset_type_name` | `VARCHAR(100)` | yes | unique | Stable type name such as `wind_park` |
+| `asset_prefix` | `VARCHAR(10)` | yes | unique | Code component such as `WIND` or `BESS` |
+| `asset_role` | `VARCHAR(30)` | yes | checked enum | Main role of the asset type |
+| `is_renewable` | `BOOLEAN` | yes | – | Whether the technology is classified as renewable |
+| `is_weather_dependent` | `BOOLEAN` | yes | – | Whether later output simulation depends strongly on weather |
+| `is_dispatchable` | `BOOLEAN` | yes | – | Whether output or operation can be controlled within the simplified model |
+| `can_store_energy` | `BOOLEAN` | yes | – | Whether the type represents energy storage |
+| `created_at` | `TIMESTAMPTZ` | yes | defaults to current timestamp | Record creation time |
+
+## Allowed Asset Roles
+
+```text
+producer
+consumer
+storage
+grid
+```
+
+### Role meanings
+
+| Role | Meaning |
+|---|---|
+| `producer` | Generates electrical energy |
+| `consumer` | Consumes electrical energy |
+| `storage` | Charges, stores and later discharges energy |
+| `grid` | Represents simplified grid infrastructure or power transfer |
+
+## Current Development Asset Types
+
+### Producers
+
+```text
+solar_park
+wind_park
+hydro_power_plant
+gas_power_plant
+biomass_power_plant
+```
+
+### Storage
+
+```text
+battery_storage
+```
+
+### Grid infrastructure
+
+```text
+substation
+```
+
+### Consumers
+
+```text
+residential_load
+commercial_load
+industrial_load
+city_load
+ev_charging_park
+data_center
+```
+
+### `is_dispatchable`
+
+Within this project, dispatchable means that the asset's output or operation can be intentionally adjusted in the later simplified simulation. It does not claim to reproduce all real operational, market or grid constraints.
 
 ---
 
 # Entity: Asset
 
-The existing `assets` table will be replaced by `assets`.
+An asset is a physical or modeled energy-system object assigned to one region and one reusable asset type.
 
-An asset can represent:
-
-- an energy producer,
-- a consumer,
-- or a storage system.
-
-| Field | Type | Unit | Required | Description | MVP Priority |
+| Field | PostgreSQL type | Unit | Required | Rules | Description |
 |---|---|---:|---:|---|---|
-| `asset_id` | integer | – | yes | Primary key | must |
-| `asset_name` | text | – | yes | Human-readable asset name | must |
-| `asset_role` | text | – | yes | `producer`, `consumer` or `storage` | must |
-| `asset_type` | text | – | yes | Concrete asset type | must |
-| `region_id` | integer | – | yes | Foreign key to `regions` | must |
-| `rated_power_kw` | numeric | kW | yes | Rated or maximum relevant power | must |
-| `latitude` | numeric | degrees | yes | Map position | should |
-| `longitude` | numeric | degrees | yes | Map position | should |
-| `operating_status` | text | – | yes | Current status such as `online`, `offline`, `maintenance`, `fault` | should |
+| `asset_id` | `INT IDENTITY` | – | yes | primary key | Internal identifier |
+| `asset_code` | `VARCHAR(50)` | – | yes | unique | Stable technical code, for example `S-BESS-001` |
+| `asset_name` | `VARCHAR(255)` | – | yes | – | Human-readable name |
+| `asset_location` | `VARCHAR(255)` | – | yes | – | Human-readable location label |
+| `rated_power_kw` | `NUMERIC(12,2)` | kW | yes | `> 0` | Rated or representative maximum power |
+| `operating_status` | `VARCHAR(20)` | – | yes | checked enum | Current operational master-data status |
+| `latitude` | `NUMERIC(9,6)` | degrees | yes | `-90` to `90` | Map latitude |
+| `longitude` | `NUMERIC(9,6)` | degrees | yes | `-180` to `180` | Map longitude |
+| `asset_type_id` | `INT` | – | yes | FK to `asset_types` | Technical classification |
+| `region_id` | `INT` | – | yes | FK to `regions` | Regional assignment |
+| `created_at` | `TIMESTAMPTZ` | – | yes | defaults to current timestamp | Record creation time |
 
-## Allowed Asset Roles and Types
+## Operating Status Values
 
-| Asset Role | Allowed Asset Types |
+```text
+online
+offline
+maintenance
+fault
+```
+
+`operating_status` currently represents the latest master-data state. Historical status changes are not yet stored as events.
+
+## Rated Power Interpretation
+
+The field is intentionally generic across asset roles:
+
+| Role | Interpretation |
 |---|---|
-| `producer` | `solar_park`, `wind_park`, `hydro_plant`, `reserve_plant` |
-| `consumer` | `city`, `industrial_site`, `charging_park` |
-| `storage` | `battery_storage` |
-
-### Rated Power Interpretation
-
-- Producer: installed generation capacity
-- Consumer: maximum or representative demand capacity
-- Storage: simplified rated charge/discharge power
-
-Storage energy capacity is modeled separately in `storage_specs`.
+| Producer | Installed or rated generation power |
+| Consumer | Representative peak or configured demand capacity |
+| Storage | Simplified rated power; detailed charge/discharge limits are stored in `storage_specs` |
+| Grid | Simplified transfer or equipment rating |
 
 ---
 
 # Entity: Measurement
 
-Measurements represent time-series power and interval energy values for an asset.
+Measurements store interval-based time-series values for one asset.
 
-| Field | Type | Unit | Required | Description | MVP Priority |
+| Field | PostgreSQL type | Unit | Required | Rules | Description |
 |---|---|---:|---:|---|---|
-| `measurement_id` | integer | – | yes | Primary key | must |
-| `asset_id` | integer | – | yes | Foreign key to `assets` | must |
-| `measurement_time` | timestamp | – | yes | Start or reference time of the interval | must |
-| `interval_minutes` | integer | minutes | yes | Measurement interval duration | must |
-| `active_power_kw` | numeric | kW | yes | Average active power during the interval | must |
-| `energy_kwh` | numeric | kWh | yes | Energy generated, consumed or transferred during the interval | must |
-| `source` | text | – | yes | Example: `simulation`, `scada`, `manual`, `import` | must |
-| `quality_status` | text | – | yes | `valid`, `invalid` or `estimated` | must |
+| `measurement_id` | `INT IDENTITY` | – | yes | primary key | Internal measurement identifier |
+| `asset_id` | `INT` | – | yes | FK to `assets`, cascade delete | Parent asset |
+| `measurement_time` | `TIMESTAMPTZ` | – | yes | unique together with `asset_id` | Interval reference timestamp |
+| `interval_minutes` | `INT` | minutes | yes | `> 0` | Duration represented by the row |
+| `active_power_kw` | `NUMERIC(20,2)` | kW | yes | signed values allowed | Average active power during the interval |
+| `energy_kwh` | `NUMERIC(20,2)` | kWh | yes | `>= 0` | Interval energy magnitude |
+| `source` | `VARCHAR(255)` | – | yes | – | Data origin such as `simulation`, `pytest`, `import` or `manual` |
+| `quality_status` | `VARCHAR(20)` | – | yes | checked enum | Data-quality classification |
+| `created_at` | `TIMESTAMPTZ` | – | yes | defaults to current timestamp | Record creation time |
+
+## Uniqueness Rule
+
+```text
+UNIQUE (asset_id, measurement_time)
+```
+
+One asset cannot have two measurement records at the same timestamp.
 
 ## Power and Energy
 
-`active_power_kw` describes power.
-
-`energy_kwh` describes energy over the measurement interval.
-
-For regular intervals:
+For a regular interval, the expected relationship is:
 
 ```text
-energy_kwh = active_power_kw × interval_minutes / 60
+energy_kwh = ABS(active_power_kw) × interval_minutes / 60
 ```
 
-Both values will be stored because:
+The database currently does not enforce this formula. The separation is intentional:
 
-- the API can expose them directly,
-- later analytics can aggregate energy efficiently,
-- irregular intervals remain possible,
-- the distinction is important for realistic energy-domain behavior.
+- power describes the interval's rate or level,
+- energy describes the quantity over the interval,
+- future imports may contain calculated or metered energy,
+- analytics can aggregate `energy_kwh` directly.
 
-## Role Interpretation
+## Signed Active Power
 
-- Producer: power and energy generated
-- Consumer: power and energy consumed
-- Storage: power and energy charged or discharged
+The database permits signed `active_power_kw` values.
 
-Storage direction will later be made explicit through a storage operating mode.
+Current use:
+
+- normal development seed values are positive,
+- deterministic test data contains negative rows marked `invalid`,
+- future storage or grid-flow conventions may use direction explicitly.
+
+No final platform-wide sign convention for charging, discharging, import and export has been implemented yet. A later simulation version should add an explicit operating mode or documented direction convention before signed values are used as valid operational data.
+
+## Quality Status Values
+
+```text
+valid
+invalid
+estimated
+```
+
+| Status | Meaning | Included in current KPIs |
+|---|---|---:|
+| `valid` | Accepted operational value | yes |
+| `invalid` | Known bad or rejected value | no |
+| `estimated` | Derived or substituted value | no |
 
 ---
 
 # Entity: Storage Specs
 
-Storage-specific master data belongs in a separate table because it does not apply to producers or consumers.
+`storage_specs` is a one-to-one extension of `assets` for static battery-storage specifications.
 
-| Field | Type | Unit | Required | Description | MVP Priority |
+| Field | PostgreSQL type | Unit | Required | Rules | Description |
 |---|---|---:|---:|---|---|
-| `asset_id` | integer | – | yes | Primary key and foreign key to `assets` | must |
-| `energy_capacity_kwh` | numeric | kWh | yes | Usable storage energy capacity | must |
-| `max_charge_power_kw` | numeric | kW | yes | Maximum charging power | must |
-| `max_discharge_power_kw` | numeric | kW | yes | Maximum discharging power | must |
-| `charge_efficiency_percent` | numeric | % | yes | Charging efficiency | should |
-| `discharge_efficiency_percent` | numeric | % | yes | Discharging efficiency | should |
-| `min_state_of_charge_percent` | numeric | % | yes | Lower operating limit | should |
-| `max_state_of_charge_percent` | numeric | % | yes | Upper operating limit | should |
+| `asset_id` | `INT` | – | yes | PK and FK to `assets`, cascade delete | Storage asset identifier |
+| `energy_capacity_kwh` | `NUMERIC(20,2)` | kWh | yes | `> 0` | Usable or modeled energy capacity |
+| `max_charge_power_kw` | `NUMERIC(20,2)` | kW | yes | `> 0` | Maximum charging power |
+| `max_discharge_power_kw` | `NUMERIC(20,2)` | kW | yes | `> 0` | Maximum discharging power |
+| `charge_efficiency_percent` | `NUMERIC(5,2)` | % | yes | `> 0` and `<= 100` | Charging efficiency |
+| `discharge_efficiency_percent` | `NUMERIC(5,2)` | % | yes | `> 0` and `<= 100` | Discharging efficiency |
+| `min_state_of_charge_percent` | `NUMERIC(5,2)` | % | yes | `0` to `100` | Lower operating limit |
+| `max_state_of_charge_percent` | `NUMERIC(5,2)` | % | yes | `0` to `100` and greater than minimum | Upper operating limit |
+| `created_at` | `TIMESTAMPTZ` | – | yes | defaults to current timestamp | Record creation time |
 
-Dynamic values such as `state_of_charge_percent` and `operating_mode` will be introduced later as time-dependent data.
+Dynamic state of charge is not part of this static table. It will later be modeled as time-dependent simulation or measurement data.
 
 ---
 
-# Planned Later Entities
+# API Naming versus Database Naming
 
-## Weather Measurements
+The database uses:
 
-Planned for a dedicated weather version.
+```text
+asset_types.asset_type_name
+```
 
-Likely fields:
+The public API exposes the joined value as:
 
-- `region_id`
-- `weather_time`
-- `cloud_cover_percent`
-- `solar_irradiance_w_m2`
-- `wind_speed_m_s`
-- `temperature_c`
-- `source`
+```text
+asset_type
+```
+
+This keeps the external contract concise while preserving a descriptive internal database column name.
+
+---
+
+# Derived KPI Fields
+
+The following API fields are calculated from valid measurements and are not stored as columns:
+
+| Field | Calculation |
+|---|---|
+| `measurement_count` | `COUNT(*)` |
+| `average_power_kw` | rounded `AVG(active_power_kw)` |
+| `min_power_kw` | `MIN(active_power_kw)` |
+| `max_power_kw` | `MAX(active_power_kw)` |
+| `total_energy_kwh` | `SUM(energy_kwh)` |
+| `latest_measurement_time` | `MAX(measurement_time)` |
+
+---
+
+# Planned Later Entities and Fields
 
 ## Simulation Runs
 
-Planned for the simulation foundation.
+Likely fields:
+
+```text
+simulation_run_id
+simulation_mode
+start_time
+end_time
+interval_minutes
+simulation_speed
+run_status
+created_at
+```
+
+## Weather Measurements
 
 Likely fields:
 
-- simulation mode
-- start time
-- end time
-- interval length
-- simulation speed
-- run status
+```text
+region_id
+weather_time
+cloud_cover_percent
+solar_irradiance_w_m2
+wind_speed_m_s
+temperature_c
+source
+```
+
+## Dynamic Storage State
+
+Likely fields:
+
+```text
+asset_id
+measurement_time
+state_of_charge_percent
+storage_mode
+charge_or_discharge_power_kw
+```
 
 ## Energy Balance
 
-Initially may be calculated dynamically rather than stored.
+Likely calculated outputs:
 
-Likely outputs:
-
-- total generation
-- total consumption
-- storage contribution
-- regional balance
-- surplus
-- deficit
+```text
+total_generation_kw
+total_consumption_kw
+storage_contribution_kw
+grid_flow_kw
+surplus_kw
+deficit_kw
+balance_status
+```
 
 ## Recommendations
 
-Planned after the balance logic exists.
-
 Likely actions:
 
-- `charge_storage`
-- `discharge_storage`
-- `activate_reserve`
-- `reduce_consumption`
-- `no_action`
+```text
+charge_storage
+discharge_storage
+activate_dispatchable_generation
+reduce_consumption
+no_action
+```
 
 ---
 
-# Explicitly Out of Scope for the First MVP
+# Explicitly Out of Scope for the Current MVP
 
-The following fields are realistic in operational energy systems but are intentionally excluded for now:
+- voltage and current time series,
+- reactive power and power factor,
+- physically accurate grid-frequency simulation,
+- transmission lines and full grid topology,
+- AC power-flow calculations,
+- detailed equipment condition monitoring,
+- predictive maintenance,
+- market bidding and pricing,
+- authentication and authorization.
 
-- voltage
-- current
-- reactive power
-- power factor
-- detailed frequency simulation
-- grid topology
-- transformers and transmission lines
-- condition-monitoring data such as vibration and bearing temperature
-- turbine-specific or charger-specific detail tables
-- predictive-maintenance data
-- physically accurate power-flow calculations
-
-## Frequency Decision
-
-Grid frequency is operationally important, but a meaningful frequency simulation requires grid dynamics, inertia and control behavior.
-
-For the first MVP, the platform will use energy-balance states such as:
-
-- `balanced`
-- `surplus`
-- `deficit`
-- `critical_deficit`
-
-A later simplified field such as `estimated_frequency_hz` may be added only if it is clearly documented as an educational approximation.
-
----
-
-# v0.10.0 Implementation Scope
-
-The first implementation step should include:
-
-## New Table
-
-- `regions`
-
-## Renamed and Extended Table
-
-- `assets` → `assets`
-- `asset_id` → `asset_id`
-- `asset_name` → `asset_name`
-- `asset_type` → `asset_type`
-- `asset_location` may be removed or replaced by region and coordinates
-
-New fields:
-
-- `asset_role`
-- `region_id`
-- `rated_power_kw`
-- `latitude`
-- `longitude`
-- `operating_status`
-
-## Updated Measurements
-
-- `asset_id` → `asset_id`
-- `load_value` → `active_power_kw`
-- remove variable-unit handling and use `kW` internally
-- add `interval_minutes`
-- add `energy_kwh`
-
-## New Storage Table
-
-- `storage_specs`
-
-Weather, simulation runs, balance and recommendations remain planned but are not implemented in `v0.10.0`.
+The current model is a backend and analytics foundation, not a certified power-system simulator.

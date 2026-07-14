@@ -31,9 +31,10 @@ def test_get_measurement_kpi_summary_returns_exact_values(client, reset_db):
 # Asset-specific KPI endpoint tests
 # ============================================================
 # The seed file contains specific asset scenarios:
-# - Asset 1 / Asset A has known valid measurements.
-# - Asset 5 / Asset F includes invalid measurements that should be ignored.
-# - Asset 9 / Asset Z exists but has no measurements.
+# - Asset 1 has known valid measurements.
+# - Asset 5 includes invalid measurements that should be ignored.
+# - Asset 7 includes one estimated measurement that should be ignored.
+# - Asset 9 exists but has no measurements.
 
 
 @pytest.mark.kpi
@@ -129,5 +130,24 @@ def test_get_asset_kpi_summary_excludes_invalid_measurements(client, reset_db):
     assert float(data["min_power_kw"]) == pytest.approx(102000)
     assert float(data["max_power_kw"]) == pytest.approx(102000)
     assert float(data["total_energy_kwh"]) == pytest.approx(25500)
+    assert data["latest_measurement_time"] is not None
+
+@pytest.mark.kpi
+def test_get_asset_kpi_summary_excludes_estimated_measurements(client, reset_db):
+    """Check that Asset 7 KPIs include valid measurements but exclude estimated values."""
+
+    response = client.get("/assets/7/kpis")
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["asset_id"] == 7
+    assert data["asset_name"] == "Test Data Center Rhine-Ruhr"
+    assert data["measurement_count"] == 2
+    assert float(data["average_power_kw"]) == pytest.approx(62500)
+    assert float(data["min_power_kw"]) == pytest.approx(62000)
+    assert float(data["max_power_kw"]) == pytest.approx(63000)
+    assert float(data["total_energy_kwh"]) == pytest.approx(31250)
     assert data["latest_measurement_time"] is not None
 

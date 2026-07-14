@@ -2,299 +2,196 @@
 
 ## Overview
 
-The **Energy Operations Platform** is a Python, PostgreSQL and FastAPI portfolio project for processing, validating and exposing technical energy and asset data.
+The **Energy Operations Platform** is a backend and data portfolio project for modeling, validating, analyzing and exposing operational energy data.
 
-The project is evolving into a small backend platform for the energy sector. In addition to the existing API, database, tests and KPI functions, the next development phases will focus on realistic energy-domain data, simulation, production and consumption profiles, energy balances and actionable recommendations.
+It combines PostgreSQL, FastAPI, Pydantic, pytest and Docker Compose with a growing energy-domain model. The current backend supports regional assets, reusable technical classifications, interval power and energy measurements, storage specifications and valid-only KPI calculations.
 
 ## Current Version
 
-**Current project version:** `v0.9.2`
+**`v0.10.0 – Energy Domain Foundation`**
 
-Current focus:
+Main additions:
 
-- PostgreSQL-backed FastAPI REST API
-- Pydantic request and response models
-- Measurement create/read/update flow
-- Global and asset-specific KPI endpoints
-- Automated API tests with `pytest` and FastAPI `TestClient`
-- Dedicated PostgreSQL test database
-- Modular test structure with shared fixtures
-- Docker image for the FastAPI application
-- Docker Compose setup for FastAPI and PostgreSQL
-- Automatic schema and development seed initialization for a new database volume
-- Persistent PostgreSQL data through a named Docker volume
+- regions and stable region codes,
+- reusable asset types and capability flags,
+- producer, consumer, storage and grid roles,
+- enriched asset master data,
+- power, energy and interval-based measurements,
+- one-to-one storage specifications,
+- compact list responses and detailed resource responses,
+- migrated POST, PATCH, KPI and automated test flows.
 
 ## Project Goal
 
-The goal is to build a realistic backend/data project that demonstrates:
+The project demonstrates practical backend and data engineering with visible energy-domain value:
 
-- relational data modeling with PostgreSQL,
-- API development with FastAPI,
-- request and response validation with Pydantic,
-- database-backed REST endpoints,
-- automated API testing,
-- deterministic test data handling,
-- KPI and analytics logic for technical measurement data,
-- reproducible local startup with Docker and Docker Compose,
-- later energy-domain simulation, balances and recommendations.
+- relational PostgreSQL modeling,
+- typed REST APIs with FastAPI and Pydantic,
+- database-backed read and write operations,
+- deterministic API and KPI testing,
+- reproducible local startup with Docker Compose,
+- later simulation, weather influence, energy balance and recommendations.
 
-The project should not add technologies only for demonstration purposes. New features should provide visible domain value and support the later dashboard.
-
-## Repository Structure
+## Architecture
 
 ```text
-energy-operations-platform/
-├── data/                  # legacy CSV input data
-├── demos/                 # legacy demo workflows
-├── docs/                  # developer documentation
-├── sql/                   # schema, seed data and example queries
-├── src/                   # application source code
-├── tests/                 # automated API tests
-├── .dockerignore          # excludes local/private files from Docker build context
-├── .env.example           # local and Compose environment example
-├── compose.yaml           # FastAPI + PostgreSQL development environment
-├── Dockerfile             # FastAPI container image definition
-├── pytest.ini             # pytest marker configuration
-├── README.md              # project overview and quick start
-├── requirements.txt       # Python dependencies
-└── run_api.py             # local API startup helper
+Client / Swagger UI
+        |
+        v
+FastAPI + Pydantic
+        |
+        v
+Python database access layer
+        |
+        v
+PostgreSQL
+  ├── regions
+  ├── asset_types
+  ├── assets
+  ├── measurements
+  └── storage_specs
 ```
 
-## Documentation Map
+## Current API
 
-The documentation is intentionally split to avoid an overloaded README.
-
-| Document | Purpose |
-|---|---|
-| `README.md` | Portfolio-oriented project overview, quick start, feature summary and links |
-| `docs/api_reference.md` | API endpoint overview, request/response models and error behavior |
-| `docs/database_notes.md` | Database schema, SQL files, database access layer and data-quality rules |
-| `docs/test_strategy.md` | Test database, fixtures, markers, reset rules and test data strategy |
-| `docs/deployment_notes.md` | Dockerfile, Docker Compose, environment handling and startup notes |
-| `docs/version_history.md` | Version-by-version project history and learning milestones |
-
-## Technologies Used
-
-| Area | Tools / Concepts |
-|---|---|
-| Language | Python |
-| Backend | FastAPI, REST, JSON, OpenAPI/Swagger |
-| Database | PostgreSQL, SQL, primary keys, foreign keys, joins, aggregations |
-| Validation | Pydantic, request models, response models, field constraints, literal values |
-| Testing | pytest, FastAPI TestClient, fixtures, test markers, dedicated test database |
-| Configuration | `.env`, environment variables, `.env.example` |
-| Containerization | Dockerfile, Docker Compose, images, containers, service networking, volumes |
-| Development workflow | Git, GitHub, branches, commits, version tags, GitHub pre-releases |
-| Planned domain scope | Regions, producers, consumers, simulation, weather, energy balance, recommendations |
-
-## Current Features
-
-### General API
+### General
 
 - `GET /`
 - `GET /health`
 
-### Asset API
+### Assets
 
 - `GET /assets`
 - `GET /assets?asset_type=...`
 - `GET /assets/{asset_id}`
 
-### Measurement API
+### Measurements
 
 - `GET /measurements`
 - `GET /measurements?limit=...`
-- `GET /measurements/{measurement_id}`
 - `GET /assets/{asset_id}/measurements`
-- `GET /assets/{asset_id}/measurements?limit=...`
+- `GET /measurements/{measurement_id}`
 - `POST /measurements`
 - `PATCH /measurements/{measurement_id}`
 
-### KPI / Analytics API
+List endpoints use compact summary contracts. Detail, POST and PATCH endpoints return complete resource contracts.
+
+### KPIs
 
 - `GET /kpis/measurements`
 - `GET /assets/{asset_id}/kpis`
 
-Detailed endpoint behavior is documented in [`docs/api_reference.md`](docs/api_reference.md).
+KPIs include valid measurement count, average/minimum/maximum active power, total interval energy and the latest valid timestamp.
 
-## Database Model
+## Technology Stack
 
-The current database model contains two main tables:
+| Area | Technologies |
+|---|---|
+| Backend | Python 3.14, FastAPI, Pydantic, OpenAPI |
+| Database | PostgreSQL 18, psycopg 3 |
+| Testing | pytest, FastAPI TestClient, dedicated test database |
+| Deployment | Docker, Docker Compose, health checks, volumes |
+| Workflow | Git, GitHub, feature branches and semantic version tags |
 
-- `assets` for energy asset master data
-- `measurements` for technical measurement values linked to assets
+## Quick Start
 
-The measurement table includes `quality_status`, which is used by KPI endpoints to exclude invalid values from analytics calculations.
-
-Detailed database notes are documented in [`docs/database_notes.md`](docs/database_notes.md).
-
-## Environment Configuration
-
-Create a local `.env` file based on `.env.example`.
-
-```env
-# FastAPI database connection
-DB_NAME=energy_operations
-DB_USER=postgres
-DB_PASSWORD=your_password_here
-DB_HOST=localhost
-DB_PORT=5432
-
-# PostgreSQL container initialization
-POSTGRES_DB=energy_operations
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=your_password_here
-```
-
-For Docker Compose, the API service overrides `DB_HOST` with the PostgreSQL service name `db`. The API and database communicate over the internal Compose network on PostgreSQL port `5432`.
-
-The database is exposed on host port `5433` to avoid a conflict with an existing local PostgreSQL installation on `5432`.
-
-Automated tests continue to use the dedicated test database:
-
-```text
-energy_operations_test
-```
-
-## How to Run Locally
-
-### Install dependencies
-
-```bash
-py -m pip install -r requirements.txt
-```
-
-### Run the FastAPI backend without Docker
-
-```bash
-py run_api.py
-```
-
-Then open:
-
-```text
-http://127.0.0.1:8000/docs
-```
-
-### Run the full system with Docker Compose
+Create `.env` from `.env.example`, then start the full local stack:
 
 ```bash
 docker compose up --build
 ```
 
-Then open:
+Open:
 
 ```text
-http://127.0.0.1:8000/health
 http://127.0.0.1:8000/docs
-http://127.0.0.1:8000/assets
+http://127.0.0.1:8000/health
 ```
 
-Run in the background:
+Run without Docker:
 
 ```bash
-docker compose up --build -d
+py -m pip install -r requirements.txt
+py run_api.py
 ```
 
-Stop the services:
+Run the automated test suite:
 
 ```bash
-docker compose down
+py -m pytest -v
 ```
 
-Remove the PostgreSQL volume and recreate the database from schema and seed files:
+Recreate the Docker development database after schema changes:
 
 ```bash
 docker compose down -v
 docker compose up --build
 ```
 
-> `docker compose down -v` deletes the persistent database volume. Use it deliberately.
+> This deletes the persistent development database volume.
 
-### Run automated tests
+## Database Model
 
-Run the full test suite:
-
-```bash
-py -m pytest -v
-```
-
-Run selected marker groups:
-
-```bash
-py -m pytest -v -m post
-py -m pytest -v -m patch
-py -m pytest -v -m kpi
-py -m pytest -v -m validation
-```
-
-Detailed testing notes are documented in [`docs/test_strategy.md`](docs/test_strategy.md).
-
-## Docker Status
-
-Docker support is operational for the local development environment as of `v0.9.2`.
-
-The Compose setup provides:
-
-- an `api` service built from the project `Dockerfile`,
-- a `db` service based on PostgreSQL 18,
-- internal service-to-service networking through `DB_HOST=db`,
-- host access to the database through port `5433`,
-- automatic schema and seed loading for a newly created database volume,
-- persistent PostgreSQL storage through the `db_data` volume,
-- PostgreSQL readiness checking with delayed API startup until the database is healthy.
-
-Detailed setup and troubleshooting notes are documented in [`docs/deployment_notes.md`](docs/deployment_notes.md).
-
-## Testing Summary
-
-The current test setup uses:
-
-- a dedicated PostgreSQL test database,
-- deterministic seed data from `sql/test_seed_data.sql`,
-- session-level database reset before test execution,
-- explicit `reset_db` fixture for exact KPI tests,
-- test-created data for POST and PATCH flows,
-- pytest markers for targeted execution,
-- modular test files for general, asset, measurement and KPI endpoints.
-
-## SQL Files
-
-| File | Purpose |
+| Table | Purpose |
 |---|---|
-| `sql/schema.sql` | Creates the core database schema |
-| `sql/seed_data.sql` | Development seed data and initial Compose data |
-| `sql/test_seed_data.sql` | Deterministic test seed data |
-| `sql/example_queries.sql` | SQL learning and exploration queries |
+| `regions` | Schematic model regions such as `DE-NORTH` |
+| `asset_types` | Reusable roles and technical capability flags |
+| `assets` | Producer, consumer, storage and grid master data |
+| `measurements` | Interval active power and energy time series |
+| `storage_specs` | Static battery-storage specifications |
 
-## Version History
+Development seeds represent four German model regions. Deterministic test seeds provide known valid, invalid, estimated and empty-data scenarios.
 
-Current version highlights:
+## Testing
 
-| Version | Status | Main result |
-|---|---|---|
-| `v0.9.2` | current | Added PostgreSQL health checking and delayed API startup until the database is ready |
-| `v0.9.1` | completed | Added Docker Compose for FastAPI + PostgreSQL with initialization and persistent data |
-| `v0.9.0` | completed | Added initial Dockerfile and standalone API container workflow |
-| `v0.8` | released | Testing, robustness and API consistency pre-release |
-| `v0.8.6` | completed | Centralized API not-found handling |
-| `v0.8.5` | completed | Documented and refined test data strategy |
+The current suite contains **40 automated tests** across:
 
-Full version details are documented in [`docs/version_history.md`](docs/version_history.md).
+- general endpoints,
+- asset summary/detail behavior,
+- measurement reads, POST and PATCH,
+- validation and not-found behavior,
+- exact global and asset-specific KPIs,
+- exclusion of invalid and estimated measurements.
+
+## Documentation
+
+| Document | Purpose |
+|---|---|
+| [`docs/api_reference.md`](docs/api_reference.md) | Endpoint and API contracts |
+| [`docs/data_dictionary.md`](docs/data_dictionary.md) | Domain and field definitions |
+| [`docs/database_notes.md`](docs/database_notes.md) | Schema and database layer |
+| [`docs/test_strategy.md`](docs/test_strategy.md) | Fixtures, seeds and test rules |
+| [`docs/deployment_notes.md`](docs/deployment_notes.md) | Docker and local environment |
+| [`docs/version_history.md`](docs/version_history.md) | Project milestones |
+
+## Repository Structure
+
+```text
+energy-operations-platform/
+├── docs/
+├── sql/
+├── src/
+├── tests/
+├── compose.yaml
+├── Dockerfile
+├── pytest.ini
+├── requirements.txt
+├── run_api.py
+└── README.md
+```
+
+Private notes, logs, environments, `.env` files and archives are excluded from Git and the Docker build context.
 
 ## Roadmap
 
-Next project steps:
-
-1. Extend the energy domain with regions, producers, consumers and capacity data.
-2. Build backfill and accelerated live-simulation modes.
-3. Add simplified weather-driven production and realistic consumption profiles.
-4. Calculate global and regional energy balances and rule-based recommendations.
-5. Add a React dashboard after the backend MVP is stable.
-6. Add Azure deployment later, after the domain-oriented backend provides enough value.
+1. Simulation foundation with configurable periods and intervals.
+2. Producer, consumer, storage and grid profiles.
+3. Regional weather simulation and weather-driven generation.
+4. Global and regional energy balance.
+5. Rule-based operational recommendations.
+6. React dashboard with map, charts and live/history views.
+7. Azure deployment after the backend MVP is stable.
 
 ## Portfolio Positioning
 
-This project is not intended to remain a generic CRUD or tutorial API. It connects engineering domain knowledge with backend, database, API, testing and deployment skills.
-
-The current platform already demonstrates a structured backend foundation. The next phases will turn it into a small, explainable energy operations system with simulated operating data, production and consumption behavior, balances and recommendations that can later be visualized in a dashboard.
+The project is designed as more than a generic CRUD API. It combines backend engineering, relational modeling, automated quality controls, reproducible infrastructure and a domain model that can support realistic energy simulation and operational analytics.
