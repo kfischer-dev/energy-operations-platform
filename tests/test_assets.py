@@ -23,8 +23,17 @@ def test_get_assets(client):
 
     assert "asset_id" in first_asset
     assert "asset_name" in first_asset
-    assert "asset_type" in first_asset
+    assert "asset_code" in first_asset
     assert "asset_location" in first_asset
+    assert "asset_role" in first_asset
+    assert "asset_type" in first_asset
+    assert "region_id" in first_asset
+    assert "region_code" in first_asset
+    assert "region_name" in first_asset
+    assert "rated_power_kw" in first_asset
+    assert "latitude" in first_asset
+    assert "longitude" in first_asset
+    assert "operating_status" in first_asset
 
 
 def test_get_asset_unknown_type_returns_empty_list(client):
@@ -49,8 +58,17 @@ def test_get_asset_by_id_returns_asset(client):
     assert len(data) > 0
     assert data["asset_id"] == 1
     assert "asset_name" in data
-    assert "asset_type" in data
+    assert "asset_code" in data
     assert "asset_location" in data
+    assert "asset_role" in data
+    assert "asset_type" in data
+    assert "region_id" in data
+    assert "region_code" in data
+    assert "region_name" in data
+    assert "rated_power_kw" in data
+    assert "latitude" in data
+    assert "longitude" in data
+    assert "operating_status" in data
 
 
 def test_get_asset_not_found_returns_404(client):

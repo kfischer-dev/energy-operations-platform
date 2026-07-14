@@ -57,9 +57,10 @@ def valid_measurement_payload():
 
     return {
         "asset_id": 1,
-        "measurement_time": "2026-07-02T08:15:00",
-        "load_value": 123.45,
-        "unit": "kW",
+        "measurement_time": "2026-07-02T08:15:00+02:00",
+        "interval_minutes": 15,
+        "active_power_kw": 82000.0,
+        "energy_kwh": 20500.0,
         "source": "pytest",
         "quality_status": "valid",
     }

@@ -21,10 +21,19 @@ def test_get_measurements(client):
 
     first_measurement = data[0]
 
+    assert "measurement_id" in first_measurement
+    assert "asset_id" in first_measurement
+    assert "asset_code" in first_measurement
     assert "asset_name" in first_measurement
+    assert "asset_type_name" in first_measurement
+    assert "asset_role" in first_measurement
+    assert "region_code" in first_measurement
     assert "measurement_time" in first_measurement
-    assert "load_value" in first_measurement
-    assert "unit" in first_measurement
+    assert "interval_minutes" in first_measurement
+    assert "active_power_kw" in first_measurement
+    assert "energy_kwh" in first_measurement
+    assert "source" in first_measurement
+    assert "quality_status" in first_measurement
 
 
 def test_get_measurements_with_limit(client):
@@ -80,10 +89,19 @@ def test_get_measurements_of_asset_id(client):
 
     first_measurement = data[0]
 
+    assert "measurement_id" in first_measurement
+    assert "asset_id" in first_measurement
+    assert "asset_code" in first_measurement
     assert "asset_name" in first_measurement
+    assert "asset_type_name" in first_measurement
+    assert "asset_role" in first_measurement
+    assert "region_code" in first_measurement
     assert "measurement_time" in first_measurement
-    assert "load_value" in first_measurement
-    assert "unit" in first_measurement
+    assert "interval_minutes" in first_measurement
+    assert "active_power_kw" in first_measurement
+    assert "energy_kwh" in first_measurement
+    assert "source" in first_measurement
+    assert "quality_status" in first_measurement
 
 
 def test_get_measurement_of_asset_id_not_found_returns_404(client):
@@ -127,7 +145,8 @@ def test_post_measurement_returns_201(client, valid_measurement_payload):
 
     new_measurement = valid_measurement_payload.copy()
     new_measurement["asset_id"] = 8
-    new_measurement["load_value"] = 105.25
+    new_measurement["active_power_kw"] = 125000
+    new_measurement["energy_kwh"] = 31250.0
 
     response = client.post("/measurements", json=new_measurement)
 
@@ -137,8 +156,10 @@ def test_post_measurement_returns_201(client, valid_measurement_payload):
 
     assert "measurement_id" in data
     assert data["asset_id"] == 8
-    assert data["load_value"] == 105.25
-    assert data["unit"] == "kW"
+    assert data["measurement_time"] == "2026-07-02T08:15:00+02:00"
+    assert data["interval_minutes"] == 15
+    assert data["active_power_kw"] == 125000
+    assert data["energy_kwh"] == 31250.0
     assert data["source"] == "pytest"
     assert data["quality_status"] == "valid"
 
@@ -170,19 +191,6 @@ def test_post_measurement_with_missing_field_returns_422(client, valid_measureme
 
 @pytest.mark.post
 @pytest.mark.validation
-def test_post_measurement_negative_load_returns_422(client, valid_measurement_payload):
-    """Check that negative load values are rejected."""
-
-    new_measurement = valid_measurement_payload.copy()
-    new_measurement["load_value"] = -123.45
-
-    response = client.post("/measurements", json=new_measurement)
-
-    assert response.status_code == 422
-
-
-@pytest.mark.post
-@pytest.mark.validation
 def test_post_measurement_invalid_quality_status_returns_422(client, valid_measurement_payload):
     """Check that unsupported quality_status values are rejected."""
 
@@ -206,24 +214,9 @@ def test_post_measurement_empty_source_returns_422(client, valid_measurement_pay
 
     assert response.status_code == 422
 
-
-@pytest.mark.post
-@pytest.mark.validation
-def test_post_measurement_invalid_unit_returns_422(client, valid_measurement_payload):
-    """Check that unsupported measurement units are rejected."""
-
-    new_measurement = valid_measurement_payload.copy()
-    new_measurement["unit"] = "kWh"
-
-    response = client.post("/measurements", json=new_measurement)
-
-    assert response.status_code == 422
-
-
 # ============================================================
 # Measurement detail endpoint tests
 # ============================================================
-
 
 @pytest.mark.post
 def test_post_measurement_can_be_read_after_creation(client, valid_measurement_payload):
@@ -231,7 +224,9 @@ def test_post_measurement_can_be_read_after_creation(client, valid_measurement_p
 
     new_measurement = valid_measurement_payload.copy()
     new_measurement["asset_id"] = 8
-    new_measurement["load_value"] = 150.00
+    new_measurement["measurement_time"] = "2026-07-03T12:15:00+02:00"
+    new_measurement["active_power_kw"] = 150000.00
+    new_measurement["energy_kwh"] = 37500.0
     new_measurement["quality_status"] = "invalid"
 
     response_post = client.post("/measurements", json=new_measurement)
@@ -250,8 +245,8 @@ def test_post_measurement_can_be_read_after_creation(client, valid_measurement_p
     assert data_get["measurement_id"] == measurement_id
     assert data_get["asset_id"] == data_post["asset_id"]
     assert data_get["measurement_time"] == data_post["measurement_time"]
-    assert data_get["load_value"] == data_post["load_value"]
-    assert data_get["unit"] == data_post["unit"]
+    assert data_get["active_power_kw"] == data_post["active_power_kw"]
+    assert data_get["energy_kwh"] == data_post["energy_kwh"]
     assert data_get["source"] == data_post["source"]
     assert data_get["quality_status"] == data_post["quality_status"]
 
@@ -320,8 +315,8 @@ def test_patch_measurement_quality_status_persists_update(client, valid_measurem
     assert data_get["measurement_id"] == measurement_id
     assert data_get["asset_id"] == data_post["asset_id"]
     assert data_get["measurement_time"] == data_post["measurement_time"]
-    assert data_get["load_value"] == data_post["load_value"]
-    assert data_get["unit"] == data_post["unit"]
+    assert data_get["active_power_kw"] == data_post["active_power_kw"]
+    assert data_get["energy_kwh"] == data_post["energy_kwh"]
     assert data_get["source"] == data_post["source"]
     assert data_get["quality_status"] == "invalid"
 

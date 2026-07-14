@@ -19,10 +19,10 @@ def test_get_measurement_kpi_summary_returns_exact_values(client, reset_db):
 
     assert isinstance(data, dict)
     assert len(data) > 0
-    assert data["measurement_count"] == 22
-    assert float(data["average_load"]) == pytest.approx(259.17)
-    assert float(data["min_load"]) == pytest.approx(25)
-    assert float(data["max_load"]) == pytest.approx(790.25)
+    assert data["measurement_count"] == 21
+    assert float(data["average_power_kw"]) == pytest.approx(65500)
+    assert float(data["min_power_kw"]) == pytest.approx(8000)
+    assert float(data["max_power_kw"]) == pytest.approx(149000)
     assert data["latest_measurement_time"] is not None
 
 
@@ -31,13 +31,13 @@ def test_get_measurement_kpi_summary_returns_exact_values(client, reset_db):
 # ============================================================
 # The seed file contains specific asset scenarios:
 # - Asset 1 / Asset A has known valid measurements.
-# - Asset 4 / Asset D includes invalid measurements that should be ignored.
+# - Asset 5 / Asset F includes invalid measurements that should be ignored.
 # - Asset 9 / Asset Z exists but has no measurements.
 
 
 @pytest.mark.kpi
 def test_get_asset_kpi_summary_returns_kpis(client, reset_db):
-    """Check that Asset A returns the expected KPI values."""
+    """Check that Asset 1 returns the expected KPI values."""
 
     response = client.get("/assets/1/kpis")
 
@@ -49,10 +49,10 @@ def test_get_asset_kpi_summary_returns_kpis(client, reset_db):
     assert len(data) > 0
     assert data["measurement_count"] == 3
     assert data["asset_id"] == 1
-    assert data["asset_name"] == "Asset A"
-    assert float(data["average_load"]) == pytest.approx(92.5)
-    assert float(data["min_load"]) == pytest.approx(80.5)
-    assert float(data["max_load"]) == pytest.approx(101.75)
+    assert data["asset_name"] == "Test Wind Park North Sea"
+    assert float(data["average_power_kw"]) == pytest.approx(81000)
+    assert float(data["min_power_kw"]) == pytest.approx(79000)
+    assert float(data["max_power_kw"]) == pytest.approx(84000)
     assert data["latest_measurement_time"] is not None
 
 
@@ -68,11 +68,11 @@ def test_get_asset_kpis_without_measurements_returns_empty_kpis(client, reset_db
 
     assert isinstance(data, dict)
     assert data["asset_id"] == 9
-    assert data["asset_name"] == "Asset Z"
+    assert data["asset_name"] == "Test Asset Without Measurements"
     assert data["measurement_count"] == 0
-    assert data["average_load"] is None
-    assert data["min_load"] is None
-    assert data["max_load"] is None
+    assert data["average_power_kw"] is None
+    assert data["min_power_kw"] is None
+    assert data["max_power_kw"] is None
     assert data["latest_measurement_time"] is None
 
 
@@ -109,9 +109,9 @@ def test_get_asset_kpis_with_invalid_type_returns_422(client):
 
 @pytest.mark.kpi
 def test_get_asset_kpi_summary_excludes_invalid_measurements(client, reset_db):
-    """Check that Asset D KPIs are calculated from valid measurements only."""
+    """Check that Asset 5 KPIs are calculated from valid measurements only."""
 
-    response = client.get("/assets/4/kpis")
+    response = client.get("/assets/5/kpis")
 
     assert response.status_code == 200
 
@@ -120,9 +120,9 @@ def test_get_asset_kpi_summary_excludes_invalid_measurements(client, reset_db):
     assert isinstance(data, dict)
     assert len(data) > 0
     assert data["measurement_count"] == 1
-    assert data["asset_id"] == 4
-    assert data["asset_name"] == "Asset D"
-    assert float(data["average_load"]) == pytest.approx(25)
-    assert float(data["min_load"]) == pytest.approx(25)
-    assert float(data["max_load"]) == pytest.approx(25)
+    assert data["asset_id"] == 5
+    assert data["asset_name"] == "Test Industrial Load Stuttgart"
+    assert float(data["average_power_kw"]) == pytest.approx(102000)
+    assert float(data["min_power_kw"]) == pytest.approx(102000)
+    assert float(data["max_power_kw"]) == pytest.approx(102000)
     assert data["latest_measurement_time"] is not None
