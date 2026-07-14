@@ -19,6 +19,18 @@ class AssetResponse(BaseModel):
     longitude: float
     operating_status: Literal["online", "offline", "maintenance", "fault"]
 
+
+class AssetSummaryResponse(BaseModel):
+    asset_id: int = Field(..., ge=1)
+    asset_name: str
+    asset_code: str
+    asset_location: str
+    asset_role: str
+    asset_type: str
+    region_code: str
+    rated_power_kw: float = Field(..., ge=0)
+    operating_status: Literal["online", "offline", "maintenance", "fault"]
+
 class MeasurementResponse(BaseModel):
     measurement_id: int = Field(..., ge=1)
     asset_id: int = Field(..., ge=1)
@@ -36,6 +48,8 @@ class MeasurementResponse(BaseModel):
 
 class MeasurementSummaryResponse(BaseModel):
     measurement_id: int = Field(..., ge=1)
+    asset_code: str
+    asset_name: str
     asset_id: int = Field(..., ge=1)
     measurement_time: datetime
     active_power_kw: float

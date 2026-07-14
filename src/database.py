@@ -107,6 +107,39 @@ def fetch_assets(conn):
     
     return assets
 
+
+def fetch_asset_summaries(conn):
+    """Return compact asset data as dictionaries."""
+
+    with conn.cursor() as cursor:
+        logger.debug("Executing asset summary query.")
+        cursor.execute("""
+            SELECT
+                a.asset_id,
+                a.asset_name,
+                a.asset_code,
+                a.asset_location,
+                at.asset_role,
+                at.asset_type_name,
+                r.region_code,
+                a.rated_power_kw,
+                a.operating_status
+            FROM assets AS a
+            JOIN asset_types AS at
+                ON at.asset_type_id = a.asset_type_id
+            JOIN regions AS r
+                ON r.region_id = a.region_id
+            ORDER BY a.asset_id;
+        """)
+        rows = cursor.fetchall()
+
+    assets = []
+    for row in rows:
+        asset = map_asset_summary_row(row)
+        assets.append(asset)
+
+    return assets
+
 def fetch_measurements_by_asset_id(conn, asset_id):
     """Return all measurements for a specific asset as dictionaries."""
 
@@ -144,6 +177,68 @@ def fetch_measurements_by_asset_id(conn, asset_id):
     measurements = []
     for row in rows:
         measurement = map_measurement_row(row)
+        measurements.append(measurement)
+
+    return measurements
+
+
+def fetch_measurement_summaries(conn):
+    """Return compact measurement data as dictionaries."""
+
+    with conn.cursor() as cursor:
+        logger.debug("Executing measurement summary query.")
+        cursor.execute("""
+            SELECT
+                m.measurement_id,
+                a.asset_id,
+                a.asset_code,
+                a.asset_name,
+                m.measurement_time,
+                m.active_power_kw,
+                m.energy_kwh,
+                m.quality_status
+            FROM measurements AS m
+            JOIN assets AS a
+                ON a.asset_id = m.asset_id
+            ORDER BY a.asset_name, m.measurement_time;
+        """)
+        rows = cursor.fetchall()
+
+    measurements = []
+    for row in rows:
+        measurement = map_measurement_summary_row(row)
+        measurements.append(measurement)
+
+    return measurements
+
+def fetch_measurement_summaries_by_asset_id(conn, asset_id):
+    """Return compact measurement data for a specific asset as dictionaries."""
+
+    with conn.cursor() as cursor:
+        logger.debug("Executing measurement summary query by asset_id.")
+
+        # Use a parameterized query instead of string formatting to keep SQL execution safe.
+        cursor.execute("""
+            SELECT
+                m.measurement_id,
+                a.asset_id,
+                a.asset_code,
+                a.asset_name,
+                m.measurement_time,
+                m.active_power_kw,
+                m.energy_kwh,
+                m.quality_status
+            FROM measurements AS m
+            JOIN assets AS a
+                ON a.asset_id = m.asset_id
+            WHERE a.asset_id = %s
+            ORDER BY a.asset_name, m.measurement_time;
+        """, (asset_id,))
+        rows = cursor.fetchall()
+
+    measurements = []
+    for row in rows:
+        measurement = map_measurement_summary_row(row)
         measurements.append(measurement)
 
     return measurements
@@ -223,6 +318,24 @@ def fetch_measurement_by_id(conn, measurement_id):
 # ============================================================
 # Asset Mapping
 # ============================================================
+def map_asset_summary_row(row):
+
+    asset_id, asset_name, asset_code, asset_location, asset_role, asset_type, region_code, rated_power_kw, operating_status = row
+
+    asset = {
+        "asset_id": asset_id,
+        "asset_name": asset_name,
+        "asset_code": asset_code,
+        "asset_location": asset_location,
+        "asset_role": asset_role,
+        "asset_type": asset_type,
+        "region_code": region_code,
+        "rated_power_kw": rated_power_kw,
+        "operating_status": operating_status
+    }
+
+    return asset
+
 def map_asset_row(row):
 
     asset_id, asset_name, asset_code, asset_location, asset_role, asset_type, region_id, region_code, region_name, rated_power_kw, latitude, longitude, operating_status = row
@@ -248,6 +361,23 @@ def map_asset_row(row):
 # ============================================================
 # Measurement Mapping
 # ============================================================
+def map_measurement_summary_row(row):
+
+    measurement_id, asset_id, asset_code, asset_name, measurement_time, active_power_kw, energy_kwh, quality_status = row
+
+    measurement = {
+        "measurement_id": measurement_id,
+        "asset_id": asset_id,
+        "asset_code": asset_code,
+        "asset_name": asset_name,
+        "measurement_time": measurement_time,
+        "active_power_kw": active_power_kw,
+        "energy_kwh": energy_kwh,
+        "quality_status": quality_status,
+    }
+
+    return measurement
+
 def map_measurement_row(row):
 
     measurement_id, asset_id, asset_code, asset_name, asset_type_name, asset_role, region_code, measurement_time, interval_minutes, active_power_kw, energy_kwh, source, quality_status = row

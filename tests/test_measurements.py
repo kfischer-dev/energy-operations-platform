@@ -25,15 +25,16 @@ def test_get_measurements(client):
     assert "asset_id" in first_measurement
     assert "asset_code" in first_measurement
     assert "asset_name" in first_measurement
-    assert "asset_type_name" in first_measurement
-    assert "asset_role" in first_measurement
-    assert "region_code" in first_measurement
     assert "measurement_time" in first_measurement
-    assert "interval_minutes" in first_measurement
     assert "active_power_kw" in first_measurement
     assert "energy_kwh" in first_measurement
-    assert "source" in first_measurement
     assert "quality_status" in first_measurement
+
+    assert "asset_type_name" not in first_measurement
+    assert "asset_role" not in first_measurement
+    assert "region_code" not in first_measurement
+    assert "interval_minutes" not in first_measurement
+    assert "source" not in first_measurement
 
 
 def test_get_measurements_with_limit(client):
@@ -93,15 +94,16 @@ def test_get_measurements_of_asset_id(client):
     assert "asset_id" in first_measurement
     assert "asset_code" in first_measurement
     assert "asset_name" in first_measurement
-    assert "asset_type_name" in first_measurement
-    assert "asset_role" in first_measurement
-    assert "region_code" in first_measurement
     assert "measurement_time" in first_measurement
-    assert "interval_minutes" in first_measurement
     assert "active_power_kw" in first_measurement
     assert "energy_kwh" in first_measurement
-    assert "source" in first_measurement
     assert "quality_status" in first_measurement
+    
+    assert "asset_type_name" not in first_measurement
+    assert "asset_role" not in first_measurement
+    assert "region_code" not in first_measurement
+    assert "interval_minutes" not in first_measurement
+    assert "source" not in first_measurement
 
 
 def test_get_measurement_of_asset_id_not_found_returns_404(client):

@@ -2,8 +2,8 @@ import logging
 from src.logging_config import configure_logging
 
 from fastapi import FastAPI, HTTPException, status, Query, Path
-from src.database import get_connection, fetch_assets, fetch_joined_measurements, fetch_measurements_by_asset_id, fetch_asset_by_id, create_measurement, fetch_measurement_by_id, update_measurement_quality_status, fetch_measurement_kpi_summary, fetch_asset_kpi_summary
-from src.schemas import AssetResponse, MeasurementResponse, MeasurementCreate, MeasurementQualityUpdate, MeasurementKPIsResponse, AssetKPIsResponse
+from src.database import get_connection, fetch_asset_summaries, fetch_measurement_summaries, fetch_measurement_summaries_by_asset_id, fetch_asset_by_id, create_measurement, fetch_measurement_by_id, update_measurement_quality_status, fetch_measurement_kpi_summary, fetch_asset_kpi_summary
+from src.schemas import AssetSummaryResponse, AssetResponse, MeasurementSummaryResponse, MeasurementResponse, MeasurementCreate, MeasurementQualityUpdate, MeasurementKPIsResponse, AssetKPIsResponse
 
 configure_logging()
 logger = logging.getLogger(__name__)
@@ -95,7 +95,7 @@ def app_status():
 # ============================================================
 
 @app.get("/assets",
-    response_model=list[AssetResponse],
+    response_model=list[AssetSummaryResponse],
     tags=["Assets"],
     summary="Get all assets",
     description=(
@@ -120,7 +120,7 @@ def get_assets(asset_type: str | None = Query(
     logger.info("Loading asset data from database.")
 
     try:
-        asset_data = fetch_assets(conn)
+        asset_data = fetch_asset_summaries(conn)
         logger.info(f"Loaded {len(asset_data)} assets from database.")
 
         if asset_type is not None:
@@ -178,7 +178,7 @@ def get_asset_by_id(asset_id: int = Path(
 # ============================================================
 
 @app.get("/measurements", 
-    response_model=list[MeasurementResponse],
+    response_model=list[MeasurementSummaryResponse],
     tags=["Measurements"],
     summary="Get measurements",
     description=(
@@ -204,7 +204,7 @@ def get_measurements(limit: int | None = Query(
     logger.info("Loading joined measurement data from database.")
 
     try:
-        measurement_data = fetch_joined_measurements(conn)
+        measurement_data = fetch_measurement_summaries(conn)
         logger.info(f"Loaded {len(measurement_data)} joined measurements from database.")
 
         if limit is not None:
@@ -219,7 +219,7 @@ def get_measurements(limit: int | None = Query(
         logger.info("=" * 60)
 
 @app.get("/assets/{asset_id}/measurements", 
-    response_model=list[MeasurementResponse],
+    response_model=list[MeasurementSummaryResponse],
     tags=["Assets", "Measurements"],
     summary="Get measurements by asset ID",
     description=(
@@ -253,7 +253,7 @@ def get_measurements_by_asset_id(
         get_asset_or_404(conn, asset_id)
 
         logger.info("Loading joined measurement data from database.")
-        measurement_data = fetch_measurements_by_asset_id(conn, asset_id)
+        measurement_data = fetch_measurement_summaries_by_asset_id(conn, asset_id)
         logger.info(f"Loaded {len(measurement_data)} joined measurements of asset_id {asset_id} from database.")
 
         if limit is not None:
