@@ -64,3 +64,14 @@ def valid_measurement_payload():
         "source": "pytest",
         "quality_status": "valid",
     }
+
+@pytest.fixture
+def daylight_factor_payload():
+    # Sunrise at 06:30 AM in minutes
+    sunrise_minutes = 390
+    # Peak at 12:30 PM in minutes
+    peak_minutes = 750
+    # Sunset at 06:30 PM in minutes
+    sunset_minutes = 1110
+
+    return sunrise_minutes, peak_minutes, sunset_minutes

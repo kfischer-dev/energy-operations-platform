@@ -48,8 +48,8 @@ class SimulationConfig:
         return int(self.duration_minutes // self.interval_minutes)
     
     @property
-    def total_measurements(self) -> int:
-        """Return one generated measurement per complete simulation interval."""
+    def total_grid_points(self) -> int:
+        """Return total number of grid points per complete simulation interval."""
         return self.total_intervals + 1
 
     @property
