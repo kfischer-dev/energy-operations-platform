@@ -1,39 +1,43 @@
-from time_grid import generate_time_grid
-from datetime import datetime, time
-from profiles import calculate_solar_power_kw, time_to_minutes
+from datetime import time
+from random import Random
+
+from src.simulation.time_grid import generate_time_grid
+from src.simulation.profiles import  time_to_minutes
+from src.simulation.default_data import create_default_simulation_config, create_default_solar_asset, create_default_solar_context
+from src.simulation.engine import simulate_power_of_asset
 
 
-def simulate_solar_power_grid():
+def simulate_solar_power_grid() -> list[float]:
 
-    # Simulation time
-    start_time = datetime(2026, 7, 15, 10, 0, 0)
-    end_time =  datetime(2026, 7, 15, 14, 0, 0)
-    interval_minutes = 15
+    config = create_default_simulation_config()
+    random_generator = Random(config.random_seed)
+    asset = create_default_solar_asset()
 
-    simulation_time_grid  = generate_time_grid(start_time, end_time, interval_minutes)
+    simulation_time_grid  = generate_time_grid(config.start_time, config.end_time, config.interval_minutes)
 
     # Preliminary Asset and Profile Parameter
-    rated_power_kw = 80000
     sunrise_time = time(6, 30, 0)
-    sunrise_minutes = time_to_minutes(sunrise_time)
     sunset_time = time(18, 30, 0)
-    sunset_minutes = time_to_minutes(sunset_time)
     peak_time = time(12, 30, 0)
-    peak_minutes = time_to_minutes(peak_time)
+    
+    sun_profile= {
+        "sunrise_minutes": time_to_minutes(sunrise_time),
+        "sunset_minutes": time_to_minutes(sunset_time),
+        "peak_minutes": time_to_minutes(peak_time)
+    }
 
-    power_list = []
+    active_power_grid: list[float] = []
 
     for timestamp in simulation_time_grid:
-        time_minutes = time_to_minutes(timestamp.time())
-
-        active_power_kw = calculate_solar_power_kw(
-            rated_power_kw=rated_power_kw,
-            time_minutes=time_minutes,
-            sunrise_minutes=sunrise_minutes,
-            peak_minutes=peak_minutes,
-            sunset_minutes=sunset_minutes,
+        solar_context = create_default_solar_context(
+            config=config,
+            current_time=timestamp,
+            random_generator=random_generator,
         )
-        power_list.append(round(active_power_kw, 2))
-        print(f"{timestamp}: {active_power_kw:.2f} kW")
-    
-    print(power_list)
+        active_power_kw = simulate_power_of_asset(asset, solar_context, sun_profile)
+        active_power_grid.append(active_power_kw)
+    print(active_power_grid,2)
+    return active_power_grid
+
+if __name__ == "__main__":
+    simulate_solar_power_grid()
