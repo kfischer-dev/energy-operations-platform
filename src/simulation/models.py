@@ -97,6 +97,8 @@ class SimulationContext:
     solar_factor: float = 1.0
     wind_factor: float = 1.0
     load_factor: float = 1.0
+    hydro_factor: float = 1.0
+    biomass_factor: float = 1.0
 
 @dataclass
 class SimulationState:
@@ -107,14 +109,12 @@ class SimulationState:
     generated_measurement_count: int = 0
 
 @dataclass(frozen=True)
-class SimulationMeasurementDraft:
+class SimulationPowerMeasurementDraft:
     """Represent a simulated measurement before database persistence."""
 
     asset_id: int
     measurement_time: datetime
-    interval_minutes: int
     active_power_kw: float
 
-    energy_kwh: float | None = None
     source: Literal["simulation"] = "simulation"
     quality_status: Literal["valid", "invalid"] = "valid"
