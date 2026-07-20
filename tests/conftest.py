@@ -1,5 +1,7 @@
 import os
+
 from pathlib import Path
+
 
 # Always point the application to the dedicated test database before it is imported.
 os.environ["DB_NAME"] = "energy_operations_test"
@@ -13,6 +15,10 @@ from fastapi.testclient import TestClient
 
 from src.api import app
 from src.database import get_connection
+
+from random import Random
+from src.simulation import default_data
+from datetime import datetime
 
 
 def reset_test_database():
@@ -75,3 +81,70 @@ def daylight_factor_payload():
     sunset_minutes = 1110
 
     return sunrise_minutes, peak_minutes, sunset_minutes
+
+@pytest.fixture
+def engine_payload(request):
+    """Build config, asset, context and profile data for one asset type."""
+    asset_type = request.param
+    config = default_data.create_default_simulation_config()
+    random_generator = Random(config.random_seed)
+
+    if asset_type == "solar_park":
+        asset = default_data.create_default_solar_asset()
+
+        context = default_data.create_default_solar_context(
+            config=config,
+            current_time=datetime(2026, 7, 16, 12, 30),
+            random_generator=random_generator,
+        )
+
+        profile_data = {
+            "solar_park": {
+                "sunrise_minutes": 390,
+                "peak_minutes": 750,
+                "sunset_minutes": 1110,
+            }
+        }
+
+    elif asset_type == "wind_park":
+        asset = default_data.create_default_wind_park_asset()
+
+        context = default_data.create_default_wind_park_context(
+            config=config,
+            current_time=datetime(2026, 7, 16, 12, 30),
+            random_generator=random_generator,
+        )
+
+        profile_data = {"wind_park": {}}
+
+    elif asset_type == "hydro_power_plant":
+        asset = default_data.create_default_hydro_plant_asset()
+
+        context = default_data.create_default_hydro_plant_context(
+            config=config,
+            current_time=datetime(2026, 7, 16, 12, 30),
+            random_generator=random_generator,
+        )
+
+        profile_data = {"hydro_power_plant": {}}
+
+    elif asset_type == "biomass_power_plant":
+        asset = default_data.create_default_biomass_asset()
+
+        context = default_data.create_default_biomass_context(
+            config=config,
+            current_time=datetime(2026, 7, 16, 12, 30),
+            random_generator=random_generator,
+        )
+
+        profile_data = {"biomass_power_plant": {}}
+
+    else:
+        raise ValueError(f"Unsupported asset type: {asset_type}")
+
+    return {
+    "config": config,
+    "asset": asset,
+    "context": context,
+    "profile_data": profile_data,
+    }
