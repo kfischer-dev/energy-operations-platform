@@ -1,10 +1,5 @@
 from src.simulation.models import SimulationAsset, SimulationContext
-from src.simulation.profiles import (
-    calculate_solar_power_kw,
-    calculate_wind_power_kw,
-    calculate_hydro_power_kw,
-    calculate_biomass_power_kw
-)
+from src.simulation.registry import POWER_PROFILE_REGISTRY
 
 
 def simulate_power_of_asset(
@@ -17,41 +12,18 @@ def simulate_power_of_asset(
     if asset.operating_status != "online":
         return 0.0
 
-    if asset.asset_type == "solar_park":
+    profile_function = POWER_PROFILE_REGISTRY.get(asset.asset_type)
 
-        final_active_power_kw = calculate_solar_power_kw(
-            asset=asset,
-            context=context,
-            profile_data=profile_data,
-        )
-
-    elif asset.asset_type == "wind_park":
-
-        final_active_power_kw = calculate_wind_power_kw(
-            asset=asset,
-            context=context,
-            profile_data=profile_data,
-        )
-
-    elif asset.asset_type == "hydro_power_plant":
-
-        final_active_power_kw = calculate_hydro_power_kw(
-            asset=asset,
-            context=context,
-            profile_data=profile_data,
-        )
-
-    elif asset.asset_type == "biomass_power_plant":
-        final_active_power_kw = calculate_biomass_power_kw(
-            asset=asset,
-            context=context,
-            profile_data=profile_data,
-        )
-
-    else:
+    if profile_function is None:
         raise NotImplementedError(
             f"Asset type '{asset.asset_type}' is not supported yet."
         )
+
+    final_active_power_kw = profile_function(
+        asset=asset,
+        context=context,
+        profile_data=profile_data,
+    )
 
     if final_active_power_kw > asset.rated_power_kw:
         raise ValueError(

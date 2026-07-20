@@ -1,17 +1,7 @@
 from datetime import datetime, time
 from random import Random
 
-from src.simulation.default_data import (
-    create_default_biomass_asset,
-    create_default_biomass_context,
-    create_default_hydro_plant_asset,
-    create_default_hydro_plant_context,
-    create_default_simulation_config,
-    create_default_solar_asset,
-    create_default_solar_context,
-    create_default_wind_park_asset,
-    create_default_wind_park_context,
-)
+from src.simulation.default_data import create_default_simulation_config
 from src.simulation.engine import simulate_power_of_asset
 from src.simulation.models import (
     SimulationAsset,
@@ -20,27 +10,24 @@ from src.simulation.models import (
     SimulationPowerMeasurementDraft,
 )
 from src.simulation.profiles import time_to_minutes
+from src.simulation.registry import (
+    DEFAULT_ASSET_REGISTRY,
+    DEFAULT_CONTEXT_REGISTRY,
+)
 from src.simulation.time_grid import generate_time_grid
 
 
 def create_default_asset(asset_type: str) -> SimulationAsset:
     """Create the default simulation asset for the requested asset type."""
 
-    if asset_type == "solar_park":
-        return create_default_solar_asset()
+    default_asset_function = DEFAULT_ASSET_REGISTRY.get(asset_type)
 
-    if asset_type == "wind_park":
-        return create_default_wind_park_asset()
+    if default_asset_function is None:
+        raise ValueError(
+            f"Asset type '{asset_type}' not available for simulation."
+        )
 
-    if asset_type == "hydro_power_plant":
-        return create_default_hydro_plant_asset()
-
-    if asset_type == "biomass_power_plant":
-        return create_default_biomass_asset()
-
-    raise ValueError(
-        f"Asset type '{asset_type}' not available for simulation."
-    )
+    return default_asset_function()
 
 
 def build_profile_data(
@@ -81,36 +68,19 @@ def create_simulation_context(
 ) -> SimulationContext:
     """Create the technology-specific context for one timestamp."""
 
-    if asset.asset_type == "solar_park":
-        return create_default_solar_context(
-            config=config,
-            current_time=timestamp,
-            random_generator=random_generator,
+    default_context_function = DEFAULT_CONTEXT_REGISTRY.get(
+        asset.asset_type
+    )
+
+    if default_context_function is None:
+        raise ValueError(
+            f"Asset type '{asset.asset_type}' not available for simulation."
         )
 
-    if asset.asset_type == "wind_park":
-        return create_default_wind_park_context(
-            config=config,
-            current_time=timestamp,
-            random_generator=random_generator,
-        )
-
-    if asset.asset_type == "hydro_power_plant":
-        return create_default_hydro_plant_context(
-            config=config,
-            current_time=timestamp,
-            random_generator=random_generator,
-        )
-
-    if asset.asset_type == "biomass_power_plant":
-        return create_default_biomass_context(
-            config=config,
-            current_time=timestamp,
-            random_generator=random_generator,
-        )
-
-    raise ValueError(
-        f"Asset type '{asset.asset_type}' not available for simulation."
+    return default_context_function(
+        config=config,
+        current_time=timestamp,
+        random_generator=random_generator,
     )
 
 

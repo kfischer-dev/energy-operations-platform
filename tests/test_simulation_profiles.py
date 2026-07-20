@@ -1,5 +1,10 @@
+from dataclasses import replace
+from datetime import datetime
+from random import Random
+
 import pytest
 
+from src.simulation import default_data
 from src.simulation.profiles import (
     calculate_daylight_factor,
     calculate_solar_power_kw,
@@ -42,46 +47,82 @@ def test_daylight_factor_at_representative_times(
 def test_double_rated_power_results_in_double_solar_power(
     daylight_factor_payload,
 ):
-    rated_power_kw = 80_000
-    doubled_rated_power_kw = 160_000
-    time_minutes = 600
+    """Verify that solar output scales linearly with rated power."""
+
+    config = default_data.create_default_simulation_config()
+    asset = replace(
+        default_data.create_default_solar_asset(),
+        rated_power_kw=80_000,
+    )
+    doubled_asset = replace(
+        asset,
+        rated_power_kw=160_000,
+    )
+    context = default_data.create_default_solar_context(
+        config=config,
+        current_time=datetime(2026, 7, 16, 10, 0),
+        random_generator=Random(config.random_seed),
+    )
 
     sunrise_minutes, peak_minutes, sunset_minutes = daylight_factor_payload
+    profile_data = {
+        "solar_park": {
+            "sunrise_minutes": sunrise_minutes,
+            "peak_minutes": peak_minutes,
+            "sunset_minutes": sunset_minutes,
+        }
+    }
 
     active_power_kw = calculate_solar_power_kw(
-        rated_power_kw,
-        time_minutes,
-        sunrise_minutes,
-        peak_minutes,
-        sunset_minutes,
+        asset,
+        context,
+        profile_data,
     )
     doubled_active_power_kw = calculate_solar_power_kw(
-        doubled_rated_power_kw,
-        time_minutes,
-        sunrise_minutes,
-        peak_minutes,
-        sunset_minutes,
+        doubled_asset,
+        context,
+        profile_data,
     )
 
-    assert active_power_kw <= rated_power_kw
+    assert active_power_kw <= asset.rated_power_kw
     assert doubled_active_power_kw == pytest.approx(active_power_kw * 2)
 
 
 @pytest.mark.sim_profiles
 def test_solar_power_never_exceeds_rated_power(daylight_factor_payload):
-    rated_power_kw = 80_000
+    """Verify that the solar profile stays within valid power limits."""
+
+    config = default_data.create_default_simulation_config()
+    asset = replace(
+        default_data.create_default_solar_asset(),
+        rated_power_kw=80_000,
+    )
+    random_generator = Random(config.random_seed)
+
     sunrise_minutes, peak_minutes, sunset_minutes = daylight_factor_payload
+    profile_data = {
+        "solar_park": {
+            "sunrise_minutes": sunrise_minutes,
+            "peak_minutes": peak_minutes,
+            "sunset_minutes": sunset_minutes,
+        }
+    }
 
     for time_minutes in range(24 * 60):
-        active_power_kw = calculate_solar_power_kw(
-            rated_power_kw,
-            time_minutes,
-            sunrise_minutes,
-            peak_minutes,
-            sunset_minutes,
+        hour, minute = divmod(time_minutes, 60)
+        context = default_data.create_default_solar_context(
+            config=config,
+            current_time=datetime(2026, 7, 16, hour, minute),
+            random_generator=random_generator,
         )
 
-        assert 0 <= active_power_kw <= rated_power_kw
+        active_power_kw = calculate_solar_power_kw(
+            asset,
+            context,
+            profile_data,
+        )
+
+        assert 0 <= active_power_kw <= asset.rated_power_kw
 
 
 @pytest.mark.sim_profiles
@@ -103,6 +144,8 @@ def test_invalid_sequence_of_sun_times(
     peak_minutes,
     sunset_minutes,
 ):
+    """Reject invalid chronological sequences of solar profile times."""
+
     with pytest.raises(ValueError, match="Sequence of sun times is wrong!"):
         calculate_daylight_factor(
             time_minutes=960,
