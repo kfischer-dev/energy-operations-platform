@@ -98,7 +98,7 @@ def test_get_measurements_of_asset_id(client):
     assert "active_power_kw" in first_measurement
     assert "energy_kwh" in first_measurement
     assert "quality_status" in first_measurement
-    
+
     assert "asset_type_name" not in first_measurement
     assert "asset_role" not in first_measurement
     assert "region_code" not in first_measurement

@@ -150,4 +150,3 @@ def test_get_asset_kpi_summary_excludes_estimated_measurements(client, reset_db)
     assert float(data["max_power_kw"]) == pytest.approx(63000)
     assert float(data["total_energy_kwh"]) == pytest.approx(31250)
     assert data["latest_measurement_time"] is not None
-

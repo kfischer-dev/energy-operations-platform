@@ -1,18 +1,25 @@
-from src.simulation.models import SimulationAsset, SimulationContext, SimulationConfig
-from random import Random
 from datetime import datetime
+from random import Random
+
+from src.simulation.models import (
+    SimulationAsset,
+    SimulationConfig,
+    SimulationContext,
+)
 
 # ============================================================
 # General
 # ============================================================
 
 def create_default_simulation_config() -> SimulationConfig:
+    """Create the default configuration used for local simulations and tests."""
+
     config = SimulationConfig(
         start_time=datetime(2026, 7, 16, 12, 0, 0),
         end_time=datetime(2026, 7, 16, 14, 0, 0),
         interval_minutes=15,
         random_seed=1,
-        simulation_mode='live'
+        simulation_mode="live"
     )
     return config
 
@@ -21,6 +28,8 @@ def create_default_simulation_config() -> SimulationConfig:
 # ============================================================
 
 def create_default_solar_asset() -> SimulationAsset:
+    """Create the default solar asset used by the simulation."""
+
     solar_asset = SimulationAsset(
         asset_id=2,
         asset_code="N-SOLAR-001",
@@ -38,11 +47,12 @@ def create_default_solar_asset() -> SimulationAsset:
 
     return solar_asset
 
-def create_default_solar_context(    
+def create_default_solar_context(
     config: SimulationConfig,
     current_time: datetime,
     random_generator: Random,
 ) -> SimulationContext:
+    """Create a solar simulation context for one timestamp."""
 
     solar_context = SimulationContext(
         config=config,
@@ -62,6 +72,8 @@ def create_default_solar_context(
 # ============================================================
 
 def create_default_wind_park_asset() -> SimulationAsset:
+    """Create the default wind asset used by the simulation."""
+
     return SimulationAsset(
         asset_id=1,
         asset_code="N-WIND-001",
@@ -82,6 +94,8 @@ def create_default_wind_park_context(
     current_time: datetime,
     random_generator: Random,
 ) -> SimulationContext:
+    """Create a wind simulation context for one timestamp."""
+
     return SimulationContext(
         config=config,
         current_time=current_time,
@@ -98,6 +112,8 @@ def create_default_wind_park_context(
 # ============================================================
 
 def create_default_hydro_plant_asset() -> SimulationAsset:
+    """Create the default hydro asset used by the simulation."""
+
     return SimulationAsset(
         asset_id=5,
         asset_code="S-HYDRO-001",
@@ -118,6 +134,8 @@ def create_default_hydro_plant_context(
     current_time: datetime,
     random_generator: Random,
 ) -> SimulationContext:
+    """Create a hydro simulation context for one timestamp."""
+
     return SimulationContext(
         config=config,
         current_time=current_time,
@@ -130,10 +148,12 @@ def create_default_hydro_plant_context(
     )
 
 # ============================================================
-# Biomass Power Plant
+# Biomass power plant defaults
 # ============================================================
 
 def create_default_biomass_asset() -> SimulationAsset:
+    """Create the default biomass asset used by the simulation."""
+
     return SimulationAsset(
         asset_id=10,
         asset_code="E-BIO-001",
@@ -155,6 +175,8 @@ def create_default_biomass_context(
     current_time: datetime,
     random_generator: Random,
 ) -> SimulationContext:
+    """Create a biomass simulation context for one timestamp."""
+
     return SimulationContext(
         config=config,
         current_time=current_time,
