@@ -132,3 +132,16 @@ class SimulationPowerMeasurementDraft:
 
     source: Literal["simulation"] = "simulation"
     quality_status: Literal["valid", "invalid"] = "valid"
+
+@dataclass(frozen=True)
+class SimulationPowerIntervalDraft:
+    asset_id: int
+    interval_start: datetime
+    interval_end: datetime
+    avg_active_power_kw: float | None
+    energy_kwh: float | None
+
+    quality_status: Literal[ "valid", "incomplete", "estimated", "invalid", ]
+    aggregation_method: str
+    source_measurement_count: int
+    valid_measurement_count: int
