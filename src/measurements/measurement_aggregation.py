@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from src.measurements.models import (
     PowerIntervalDraft,
@@ -393,6 +393,40 @@ def aggregate_measurements_for_interval(
         valid_measurement_count=valid_measurement_count,
         coverage_ratio=coverage_ratio,
     )
+
+def aggregate_measurements_for_intervals(
+    asset_id: int,
+    measurements: list[PowerMeasurement],
+    start_time: datetime,
+    end_time: datetime,
+    interval_minutes: int,
+) -> list[PowerIntervalDraft]:
+    """Aggregates measurements into consecutive fixed-length intervals."""
+
+    if interval_minutes <= 0:
+        raise ValueError("interval_minutes must be greater than zero")
+
+    intervals: list[PowerIntervalDraft] = []
+    interval_start = start_time
+
+    while interval_start < end_time:
+        interval_end = interval_start + timedelta(minutes=interval_minutes)
+
+        if interval_end > end_time:
+            break
+
+        interval = aggregate_measurements_for_interval(
+            asset_id=asset_id,
+            measurements=measurements,
+            interval_start=interval_start,
+            interval_end=interval_end,
+        )
+
+        intervals.append(interval)
+        interval_start = interval_end
+
+    return intervals
+
 
 
 # ============================================================

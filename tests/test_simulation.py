@@ -1,12 +1,17 @@
 from dataclasses import replace
-from datetime import datetime
+from datetime import datetime, timedelta
 from random import Random
 
 import pytest
 
-from src.simulation.engine import simulate_power_of_asset
-from src.simulation.simulation import simulate_asset_power_grid
+from src.simulation.simulation import (
+    simulate_asset_power_grid,
+    simulate_power_of_asset,
+)
 from src.simulation.time_grid import generate_time_grid
+
+from src.measurements.measurement_aggregation import aggregate_measurements_for_interval
+from src.measurements.models import PowerIntervalDraft
 
 
 # ============================================================
@@ -356,3 +361,38 @@ def test_biomass_factor_scales_active_power(engine_payload):
         engine_payload["asset"].rated_power_kw * biomass_factor
     )
     assert active_power_kw == pytest.approx(expected_power_kw)
+
+
+#============================================================
+# Integration tests
+#============================================================
+
+@pytest.mark.simulation
+@pytest.mark.parametrize("engine_payload", ["solar_park"], indirect=True)
+def test_simulated_measurements_can_be_aggregated_into_power_interval(engine_payload) -> None:
+    measurements = simulate_asset_power_grid(
+        engine_payload["config"],
+        asset=engine_payload["asset"],
+    )
+
+    assert measurements
+    assert all(
+        measurement.source == "simulation"
+        for measurement in measurements
+    )
+
+    interval = aggregate_measurements_for_interval(
+        asset_id=engine_payload["asset"].asset_id,
+        interval_start=engine_payload["config"].start_time,
+        interval_end=(
+            engine_payload["config"].start_time
+            + timedelta(minutes=engine_payload["config"].interval_minutes)
+        ),
+        measurements=measurements,
+    )
+
+    assert isinstance(interval, PowerIntervalDraft)
+    assert interval.asset_id == engine_payload["asset"].asset_id
+    assert interval.quality_status == "valid"
+    assert interval.energy_kwh > 0
+    assert interval.avg_active_power_kw > 0

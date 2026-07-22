@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -8,8 +8,9 @@ from src.measurements.measurement_aggregation import (
     calculate_segment_energy_kwh,
     create_interpolated_support_point,
     determine_quality_status,
+    aggregate_measurements_for_intervals,
 )
-from src.measurements.models import PowerMeasurement, PowerSegment, PowerSupportPoint
+from src.measurements.models import PowerMeasurement, PowerSegment, PowerSupportPoint, PowerIntervalDraft
 
 
 # ============================================================
@@ -173,6 +174,68 @@ def test_returns_invalid_interval_without_coverage() -> None:
     assert power_interval.quality_status == "invalid"
     assert power_interval.source_measurement_count == 2
     assert power_interval.valid_measurement_count == 1
+
+
+@pytest.mark.aggregation
+@pytest.mark.intermediate
+def test_aggregates_measurements_into_consecutive_intervals() -> None:
+    """Aggregates a measurement grid into consecutive fixed-length intervals."""
+    start_time = datetime(2026, 7, 22, 10, 0, tzinfo=timezone.utc)
+    end_time = start_time + timedelta(hours=1)
+
+    measurements = [
+        PowerMeasurement(
+            asset_id=1,
+            measurement_time=start_time,
+            active_power_kw=100.0,
+            source="simulation",
+        ),
+        PowerMeasurement(
+            asset_id=1,
+            measurement_time=start_time + timedelta(minutes=15),
+            active_power_kw=110.0,
+            source="simulation",
+        ),
+        PowerMeasurement(
+            asset_id=1,
+            measurement_time=start_time + timedelta(minutes=30),
+            active_power_kw=120.0,
+            source="simulation",
+        ),
+        PowerMeasurement(
+            asset_id=1,
+            measurement_time=start_time + timedelta(minutes=45),
+            active_power_kw=130.0,
+            source="simulation",
+        ),
+        PowerMeasurement(
+            asset_id=1,
+            measurement_time=end_time,
+            active_power_kw=140.0,
+            source="simulation",
+        ),
+    ]
+
+    intervals = aggregate_measurements_for_intervals(
+        asset_id=1,
+        measurements=measurements,
+        start_time=start_time,
+        end_time=end_time,
+        interval_minutes=15,
+    )
+
+    assert len(intervals) == 4
+    assert all(isinstance(interval, PowerIntervalDraft) for interval in intervals)
+    assert all(interval.asset_id == 1 for interval in intervals)
+    assert all(interval.quality_status == "valid" for interval in intervals)
+    assert all(interval.avg_active_power_kw is not None for interval in intervals)
+    assert all(interval.energy_kwh is not None for interval in intervals)
+
+    assert intervals[0].interval_start == start_time
+    assert intervals[-1].interval_end == end_time
+
+    for current, following in zip(intervals, intervals[1:]):
+        assert current.interval_end == following.interval_start
 
 
 # ============================================================
