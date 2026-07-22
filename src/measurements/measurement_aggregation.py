@@ -394,6 +394,7 @@ def aggregate_measurements_for_interval(
         coverage_ratio=coverage_ratio,
     )
 
+
 def aggregate_measurements_for_intervals(
     asset_id: int,
     measurements: list[PowerMeasurement],

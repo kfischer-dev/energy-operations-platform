@@ -177,7 +177,6 @@ def test_returns_invalid_interval_without_coverage() -> None:
 
 
 @pytest.mark.aggregation
-@pytest.mark.intermediate
 def test_aggregates_measurements_into_consecutive_intervals() -> None:
     """Aggregates a measurement grid into consecutive fixed-length intervals."""
     start_time = datetime(2026, 7, 22, 10, 0, tzinfo=timezone.utc)
