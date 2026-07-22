@@ -14,7 +14,6 @@ from src.simulation.models import (
 
 
 @pytest.mark.simulation
-@pytest.mark.intermediate
 @pytest.mark.parametrize("engine_payload", ["solar_park"], indirect=True)
 def test_simulate_asset_intervals_returns_aggregated_intervals(
     engine_payload,
@@ -35,7 +34,6 @@ def test_simulate_asset_intervals_returns_aggregated_intervals(
 
 
 @pytest.mark.simulation
-@pytest.mark.intermediate
 def test_simulate_assets_intervals_returns_intervals_for_multiple_assets() -> None:
     """Simulate and aggregate intervals for multiple assets."""
 
