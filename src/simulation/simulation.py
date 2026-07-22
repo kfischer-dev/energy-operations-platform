@@ -1,6 +1,7 @@
 from datetime import datetime, time
 from random import Random
 
+from src.measurements.models import PowerMeasurement
 from src.simulation.default_data import create_default_simulation_config
 from src.simulation.engine import simulate_power_of_asset
 from src.simulation.models import (
@@ -15,7 +16,10 @@ from src.simulation.registry import (
 )
 from src.simulation.time_grid import generate_time_grid
 
-from src.measurements.models import PowerMeasurement
+
+# ============================================================
+# Simulation Setup
+# ============================================================
 
 
 def create_default_asset(asset_type: str) -> SimulationAsset:
@@ -85,6 +89,11 @@ def create_simulation_context(
     )
 
 
+# ============================================================
+# Measurement Generation
+# ============================================================
+
+
 def simulate_asset_power_grid(
     config: SimulationConfig,
     asset: SimulationAsset,
@@ -125,6 +134,11 @@ def simulate_asset_power_grid(
         )
 
     return measurements
+
+
+# ============================================================
+# Manual Execution
+# ============================================================
 
 
 def simulation(asset_type: str) -> None:

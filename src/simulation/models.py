@@ -4,6 +4,10 @@ from random import Random
 from typing import Literal
 
 
+# ============================================================
+# Simulation Configuration
+# ============================================================
+
 
 @dataclass(frozen=True)
 class SimulationConfig:
@@ -11,71 +15,83 @@ class SimulationConfig:
 
     start_time: datetime
     end_time: datetime
-    # Supported intervals: 5, 15, 30 and 60 minutes.
     interval_minutes: int
-    # Seed for reproducible random number generation.
-    # The same seed always produces the same simulation results.
     random_seed: int
-    # Defines how simulated measurements are generated:
-    # historical = past data, live = continuous current data,
-    # forecast = future data, scenario = predefined operating condition.
     simulation_mode: Literal["historical", "live", "forecast", "scenario"]
 
-
-    # Non-aligned end times are allowed.
-    # The simulation generates only complete intervals up to the last valid timestamp.
     def __post_init__(self) -> None:
+        """Validates the simulation configuration after initialization."""
+
         if self.start_time >= self.end_time:
             raise ValueError("start_time must be before end_time")
+
         if self.interval_minutes not in [5, 15, 30, 60]:
             raise ValueError(
                 "Unsupported interval_minutes. "
                 "Supported values are 5, 15, 30, and 60."
             )
-        if self.simulation_mode not in ["historical", "live", "forecast", "scenario"]:
+
+        if self.simulation_mode not in [
+            "historical",
+            "live",
+            "forecast",
+            "scenario",
+        ]:
             raise ValueError(
                 "Unsupported simulation_mode. Supported values are "
                 "'historical', 'live', 'forecast', and 'scenario'."
             )
+
         if self.random_seed < 0:
             raise ValueError("random_seed must be a non-negative integer")
 
     @property
     def duration(self) -> timedelta:
-        """Calculate the duration of the simulation."""
+        """Returns the configured simulation duration."""
+
         return self.end_time - self.start_time
 
     @property
     def duration_minutes(self) -> float:
-        """Calculate the duration of the simulation in minutes."""
+        """Returns the configured simulation duration in minutes."""
+
         return self.duration.total_seconds() / 60
 
     @property
     def total_intervals(self) -> int:
-        """Calculate the number of complete simulation intervals."""
+        """Returns the number of complete simulation intervals."""
+
         return int(self.duration_minutes // self.interval_minutes)
 
     @property
     def total_grid_points(self) -> int:
-        """Return total number of grid points per complete simulation interval."""
+        """Returns the number of timestamps required for all complete intervals."""
+
         return self.total_intervals + 1
 
     @property
     def effective_end_time(self) -> datetime:
-        """Return the last valid timestamp based on complete simulation intervals."""
+        """Returns the final timestamp covered by complete intervals."""
+
         return self.start_time + timedelta(
             minutes=self.total_intervals * self.interval_minutes
         )
 
     @property
     def effective_duration(self) -> timedelta:
-        """Return the duration covered by complete simulation intervals."""
+        """Returns the duration covered by complete simulation intervals."""
+
         return self.effective_end_time - self.start_time
+
+
+# ============================================================
+# Simulation Domain Models
+# ============================================================
 
 
 @dataclass(frozen=True)
 class SimulationAsset:
-    """Represent an existing database asset used by the simulation."""
+    """Represents an existing database asset used by the simulation."""
 
     asset_id: int
     asset_code: str
@@ -94,18 +110,16 @@ class SimulationAsset:
     can_store_energy: bool
 
 
-
 @dataclass(frozen=True)
 class SimulationContext:
-    """Represent the conditions for one simulation timestamp."""
+    """Represents the conditions for one simulation timestamp."""
 
     config: SimulationConfig
     current_time: datetime
-
     random_generator: Random
 
-    # Placeholder multipliers used until real weather and demand data are integrated.
-    # A value of 1.0 means no adjustment to the base profile.
+    # Temporary multipliers until real weather and demand data are integrated.
+    # A value of 1.0 leaves the corresponding base profile unchanged.
     solar_factor: float = 1.0
     wind_factor: float = 1.0
     load_factor: float = 1.0
@@ -115,33 +129,8 @@ class SimulationContext:
 
 @dataclass
 class SimulationState:
-    """Store mutable values that change during a simulation run."""
+    """Stores mutable values that change during a simulation run."""
 
     last_power_kw_by_asset: dict[int, float] = field(default_factory=dict)
     state_of_charge_percent_by_asset: dict[int, float] = field(default_factory=dict)
     generated_measurement_count: int = 0
-
-
-# @dataclass(frozen=True)
-# class SimulationPowerMeasurementDraft:
-#     """Represent a simulated measurement before database persistence."""
-
-#     asset_id: int
-#     measurement_time: datetime
-#     active_power_kw: float
-
-#     source: Literal["simulation"] = "simulation"
-#     quality_status: Literal["valid", "invalid"] = "valid"
-
-# @dataclass(frozen=True)
-# class SimulationPowerIntervalDraft:
-#     asset_id: int
-#     interval_start: datetime
-#     interval_end: datetime
-#     avg_active_power_kw: float | None
-#     energy_kwh: float | None
-
-#     quality_status: Literal[ "valid", "incomplete", "estimated", "invalid", ]
-#     aggregation_method: str
-#     source_measurement_count: int
-#     valid_measurement_count: int

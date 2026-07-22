@@ -8,6 +8,11 @@ from src.measurements.models import (
 )
 
 
+# ============================================================
+# Support-Point Creation
+# ============================================================
+
+
 def create_interpolated_support_point(
     left_measurement: PowerMeasurement,
     right_measurement: PowerMeasurement,
@@ -38,6 +43,11 @@ def create_interpolated_support_point(
         point_type="interpolated",
         is_interpolated=True,
     )
+
+
+# ============================================================
+# Input Validation and Measurement Selection
+# ============================================================
 
 
 def validate_aggregation_inputs(
@@ -160,6 +170,11 @@ def create_end_point(
     )
 
 
+# ============================================================
+# Calculation Points and Segments
+# ============================================================
+
+
 def build_calculation_points(
     left_support: PowerMeasurement | None,
     internal_measurements: list[PowerMeasurement],
@@ -169,8 +184,12 @@ def build_calculation_points(
 ) -> list[PowerSupportPoint]:
     """Builds the sorted support-point list used for aggregation."""
 
-    first_measurement_after_start = internal_measurements[0] if internal_measurements else right_support
-    last_measurement_before_end = internal_measurements[-1] if internal_measurements else left_support
+    first_measurement_after_start = (
+        internal_measurements[0] if internal_measurements else right_support
+    )
+    last_measurement_before_end = (
+        internal_measurements[-1] if internal_measurements else left_support
+    )
 
     start_point = create_start_point(
         left_support=left_support,
@@ -216,15 +235,25 @@ def build_segments(
     ]
 
 
+# ============================================================
+# Energy, Coverage, and Quality Calculations
+# ============================================================
+
+
 def calculate_segment_energy_kwh(segment: PowerSegment) -> float:
     """Calculates segment energy using the trapezoidal rule."""
 
-    duration_hours = (segment.end_point.timestamp - segment.start_point.timestamp).total_seconds() / 3600
+    duration_hours = (
+        segment.end_point.timestamp - segment.start_point.timestamp
+    ).total_seconds() / 3600
 
     if duration_hours <= 0:
         raise ValueError("Segment end time must be after segment start time.")
 
-    average_power_kw = (segment.start_point.active_power_kw + segment.end_point.active_power_kw) / 2
+    average_power_kw = (
+        segment.start_point.active_power_kw
+        + segment.end_point.active_power_kw
+    ) / 2
 
     return average_power_kw * duration_hours
 
@@ -245,7 +274,9 @@ def calculate_covered_duration_seconds(
     total_duration_seconds = 0.0
 
     for segment in segments:
-        duration_seconds = (segment.end_point.timestamp - segment.start_point.timestamp).total_seconds()
+        duration_seconds = (
+            segment.end_point.timestamp - segment.start_point.timestamp
+        ).total_seconds()
 
         if duration_seconds <= 0:
             raise ValueError("Segment end time must be after segment start time.")
@@ -279,6 +310,11 @@ def determine_quality_status(coverage_ratio: float) -> str:
         return "valid"
 
     return "incomplete"
+
+
+# ============================================================
+# Public Aggregation Interface
+# ============================================================
 
 
 def aggregate_measurements_for_interval(
@@ -339,7 +375,10 @@ def aggregate_measurements_for_interval(
             covered_duration_seconds=covered_duration_seconds,
         )
 
-    coverage_ratio = max(0.0, min(covered_duration_seconds / total_interval_seconds, 1.0))
+    coverage_ratio = max(
+        0.0,
+        min(covered_duration_seconds / total_interval_seconds, 1.0),
+    )
     quality_status = determine_quality_status(coverage_ratio)
 
     return PowerIntervalDraft(
@@ -356,6 +395,11 @@ def aggregate_measurements_for_interval(
     )
 
 
+# ============================================================
+# Persistence Placeholder
+# ============================================================
+
+
 def load_measurements_for_interval_aggregation(
     asset_id: int,
     interval_start: datetime,
@@ -365,57 +409,3 @@ def load_measurements_for_interval_aggregation(
 
     # Database implementation follows in a later block.
     raise NotImplementedError
-
-# Test Functions
-
-def run_manual_aggregation_test() -> None:
-    """Runs a simple manual smoke test for interval aggregation."""
-
-    measurements = [
-        PowerMeasurement(
-            asset_id=1,
-            measurement_time=datetime(2026, 7, 21, 9, 58),
-            active_power_kw=40.0,
-            source="database",
-        ),
-        PowerMeasurement(
-            asset_id=1,
-            measurement_time=datetime(2026, 7, 21, 10, 5),
-            active_power_kw=50.0,
-            source="database",
-        ),
-        PowerMeasurement(
-            asset_id=1,
-            measurement_time=datetime(2026, 7, 21, 10, 12),
-            active_power_kw=30.0,
-            source="database",
-        ),
-        PowerMeasurement(
-            asset_id=1,
-            measurement_time=datetime(2026, 7, 21, 10, 17),
-            active_power_kw=45.0,
-            source="database",
-        ),
-    ]
-
-    result = aggregate_measurements_for_interval(
-        asset_id=1,
-        interval_start=datetime(2026, 7, 21, 10, 0),
-        interval_end=datetime(2026, 7, 21, 10, 15),
-        measurements=measurements,
-    )
-
-    print(result)
-
-    assert result.asset_id == 1
-    assert result.interval_start == datetime(2026, 7, 21, 10, 0)
-    assert result.interval_end == datetime(2026, 7, 21, 10, 15)
-    assert result.coverage_ratio == 1.0
-    assert result.quality_status == "valid"
-    assert result.energy_kwh is not None
-    assert result.avg_active_power_kw is not None
-
-    print("Manual aggregation test passed.")
-
-if __name__ == "__main__":
-    run_manual_aggregation_test()
