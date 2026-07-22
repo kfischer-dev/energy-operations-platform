@@ -122,26 +122,26 @@ class SimulationState:
     generated_measurement_count: int = 0
 
 
-@dataclass(frozen=True)
-class SimulationPowerMeasurementDraft:
-    """Represent a simulated measurement before database persistence."""
+# @dataclass(frozen=True)
+# class SimulationPowerMeasurementDraft:
+#     """Represent a simulated measurement before database persistence."""
 
-    asset_id: int
-    measurement_time: datetime
-    active_power_kw: float
+#     asset_id: int
+#     measurement_time: datetime
+#     active_power_kw: float
 
-    source: Literal["simulation"] = "simulation"
-    quality_status: Literal["valid", "invalid"] = "valid"
+#     source: Literal["simulation"] = "simulation"
+#     quality_status: Literal["valid", "invalid"] = "valid"
 
-@dataclass(frozen=True)
-class SimulationPowerIntervalDraft:
-    asset_id: int
-    interval_start: datetime
-    interval_end: datetime
-    avg_active_power_kw: float | None
-    energy_kwh: float | None
+# @dataclass(frozen=True)
+# class SimulationPowerIntervalDraft:
+#     asset_id: int
+#     interval_start: datetime
+#     interval_end: datetime
+#     avg_active_power_kw: float | None
+#     energy_kwh: float | None
 
-    quality_status: Literal[ "valid", "incomplete", "estimated", "invalid", ]
-    aggregation_method: str
-    source_measurement_count: int
-    valid_measurement_count: int
+#     quality_status: Literal[ "valid", "incomplete", "estimated", "invalid", ]
+#     aggregation_method: str
+#     source_measurement_count: int
+#     valid_measurement_count: int

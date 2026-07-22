@@ -7,7 +7,6 @@ from src.simulation.models import (
     SimulationAsset,
     SimulationConfig,
     SimulationContext,
-    SimulationPowerMeasurementDraft,
 )
 from src.simulation.profiles import time_to_minutes
 from src.simulation.registry import (
@@ -15,6 +14,8 @@ from src.simulation.registry import (
     DEFAULT_CONTEXT_REGISTRY,
 )
 from src.simulation.time_grid import generate_time_grid
+
+from src.measurements.models import PowerMeasurement
 
 
 def create_default_asset(asset_type: str) -> SimulationAsset:
@@ -87,7 +88,7 @@ def create_simulation_context(
 def simulate_asset_power_grid(
     config: SimulationConfig,
     asset: SimulationAsset,
-) -> list[SimulationPowerMeasurementDraft]:
+) -> list[PowerMeasurement]:
     """Simulate active power for every timestamp in the configured grid."""
 
     random_generator = Random(config.random_seed)
@@ -98,7 +99,7 @@ def simulate_asset_power_grid(
     )
     profile_data = build_profile_data(asset)
 
-    measurements: list[SimulationPowerMeasurementDraft] = []
+    measurements: list[PowerMeasurement] = []
 
     for timestamp in simulation_time_grid:
         context = create_simulation_context(
@@ -114,10 +115,12 @@ def simulate_asset_power_grid(
         )
 
         measurements.append(
-            SimulationPowerMeasurementDraft(
+            PowerMeasurement(
                 asset_id=asset.asset_id,
                 measurement_time=context.current_time,
                 active_power_kw=active_power_kw,
+                source="simulation",
+                quality_status="valid",
             )
         )
 
