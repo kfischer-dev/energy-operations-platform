@@ -18,6 +18,18 @@ from src.database import get_connection
 from src.simulation import default_data
 
 
+@pytest.fixture
+def database_connection():
+    """Provide a connection to the dedicated test database."""
+
+    connection = get_connection()
+
+    try:
+        yield connection
+    finally:
+        connection.close()
+
+
 def reset_test_database() -> None:
     """Reload the test database from the SQL seed file."""
 
