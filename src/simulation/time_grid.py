@@ -20,9 +20,7 @@ def generate_time_grid(
         raise ValueError("interval_minutes must be positive")
 
     if interval_minutes > duration_minutes:
-        raise ValueError(
-            "Simulation time should be bigger than the interval"
-        )
+        raise ValueError("Simulation time should be bigger than the interval")
 
     total_intervals = int(duration_minutes // interval_minutes)
     effective_end_time = start_time + timedelta(

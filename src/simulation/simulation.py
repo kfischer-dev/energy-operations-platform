@@ -28,9 +28,7 @@ def create_default_asset(asset_type: str) -> SimulationAsset:
     default_asset_function = DEFAULT_ASSET_REGISTRY.get(asset_type)
 
     if default_asset_function is None:
-        raise ValueError(
-            f"Asset type '{asset_type}' not available for simulation."
-        )
+        raise ValueError(f"Asset type '{asset_type}' not available for simulation.")
 
     return default_asset_function()
 
@@ -60,9 +58,7 @@ def build_profile_data(
     }:
         return {asset.asset_type: {}}
 
-    raise ValueError(
-        f"Asset type '{asset.asset_type}' not available for simulation."
-    )
+    raise ValueError(f"Asset type '{asset.asset_type}' not available for simulation.")
 
 
 def create_simulation_context(
@@ -73,9 +69,7 @@ def create_simulation_context(
 ) -> SimulationContext:
     """Create the technology-specific context for one timestamp."""
 
-    default_context_function = DEFAULT_CONTEXT_REGISTRY.get(
-        asset.asset_type
-    )
+    default_context_function = DEFAULT_CONTEXT_REGISTRY.get(asset.asset_type)
 
     if default_context_function is None:
         raise ValueError(
@@ -118,14 +112,10 @@ def simulate_power_of_asset(
     )
 
     if final_active_power_kw > asset.rated_power_kw:
-        raise ValueError(
-            f"Active power of {asset.asset_code} exceeds rated power!"
-        )
+        raise ValueError(f"Active power of {asset.asset_code} exceeds rated power!")
 
     if final_active_power_kw < 0:
-        raise ValueError(
-            f"Active power of {asset.asset_code} is negative!"
-        )
+        raise ValueError(f"Active power of {asset.asset_code} is negative!")
 
     return final_active_power_kw
 

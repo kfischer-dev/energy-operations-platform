@@ -33,15 +33,13 @@ def fetch_simulation_assets(conn):
 
         rows = cursor.fetchall()
 
-    return [
-        map_simulation_asset_row(row)
-        for row in rows
-    ]
+    return [map_simulation_asset_row(row) for row in rows]
 
 
-#============================================================
+# ============================================================
 # Mapper
-#============================================================
+# ============================================================
+
 
 def map_simulation_asset_row(row):
     (

@@ -10,7 +10,12 @@ from src.measurements.measurement_aggregation import (
     determine_quality_status,
     aggregate_measurements_for_intervals,
 )
-from src.measurements.models import PowerMeasurement, PowerSegment, PowerSupportPoint, PowerIntervalDraft
+from src.measurements.models import (
+    PowerIntervalDraft,
+    PowerMeasurement,
+    PowerSegment,
+    PowerSupportPoint,
+)
 
 
 # ============================================================

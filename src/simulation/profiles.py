@@ -26,14 +26,10 @@ def calculate_daylight_factor(
         raise ValueError("Sequence of sun times is wrong!")
 
     if sunrise_minutes <= time_minutes <= peak_minutes:
-        return (time_minutes - sunrise_minutes) / (
-            peak_minutes - sunrise_minutes
-        )
+        return (time_minutes - sunrise_minutes) / (peak_minutes - sunrise_minutes)
 
     if peak_minutes <= time_minutes <= sunset_minutes:
-        return (sunset_minutes - time_minutes) / (
-            sunset_minutes - peak_minutes
-        )
+        return (sunset_minutes - time_minutes) / (sunset_minutes - peak_minutes)
 
     return 0.0
 

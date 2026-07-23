@@ -67,13 +67,16 @@ def validate_aggregation_inputs(
     for measurement in measurements:
         if measurement.asset_id != asset_id:
             raise ValueError(
-                f"Measurement asset_id {measurement.asset_id} does not match the provided asset_id {asset_id}."
+                f"Measurement asset_id {measurement.asset_id} does not match "
+                f"the provided asset_id {asset_id}."
             )
 
     measurement_times = [measurement.measurement_time for measurement in measurements]
 
     if len(measurement_times) != len(set(measurement_times)):
-        raise ValueError("Duplicate measurement times are not allowed within the same interval.")
+        raise ValueError(
+            "Duplicate measurement times are not allowed within the same interval."
+        )
 
 
 def sort_measurements_by_time(
@@ -427,7 +430,6 @@ def aggregate_measurements_for_intervals(
         interval_start = interval_end
 
     return intervals
-
 
 
 # ============================================================

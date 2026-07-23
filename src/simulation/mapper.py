@@ -1,6 +1,5 @@
 from src.simulation.models import SimulationAsset
-from src.database import get_connection
-from src.simulation.repository import fetch_simulation_assets
+
 
 def map_asset_to_simulation_asset(asset: dict) -> SimulationAsset:
     """Convert a database asset dictionary into a simulation asset."""
@@ -19,17 +18,3 @@ def map_asset_to_simulation_asset(asset: dict) -> SimulationAsset:
         is_dispatchable=asset["is_dispatchable"],
         can_store_energy=asset["can_store_energy"],
     )
-
-
-
-def test_mapping():
-    conn = get_connection()
-
-    try:
-        assets = fetch_simulation_assets(conn)
-        print(assets[0])
-    finally:
-        conn.close()
-
-if __name__ == "__main__":
-    test_mapping()

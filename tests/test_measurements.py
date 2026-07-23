@@ -169,7 +169,10 @@ def test_post_measurement_returns_201(client, valid_measurement_payload):
 
 
 @pytest.mark.post
-def test_post_measurement_with_unknown_asset_returns_404(client, valid_measurement_payload):
+def test_post_measurement_with_unknown_asset_returns_404(
+    client,
+    valid_measurement_payload,
+):
     """Check that measurements cannot be created for unknown assets."""
 
     new_measurement = valid_measurement_payload.copy()
@@ -182,7 +185,10 @@ def test_post_measurement_with_unknown_asset_returns_404(client, valid_measureme
 
 @pytest.mark.post
 @pytest.mark.validation
-def test_post_measurement_with_missing_field_returns_422(client, valid_measurement_payload):
+def test_post_measurement_with_missing_field_returns_422(
+    client,
+    valid_measurement_payload,
+):
     """Check that payloads with missing required fields are rejected."""
 
     new_measurement = valid_measurement_payload.copy()
@@ -195,7 +201,10 @@ def test_post_measurement_with_missing_field_returns_422(client, valid_measureme
 
 @pytest.mark.post
 @pytest.mark.validation
-def test_post_measurement_invalid_quality_status_returns_422(client, valid_measurement_payload):
+def test_post_measurement_invalid_quality_status_returns_422(
+    client,
+    valid_measurement_payload,
+):
     """Check that unsupported quality_status values are rejected."""
 
     new_measurement = valid_measurement_payload.copy()
@@ -221,6 +230,7 @@ def test_post_measurement_empty_source_returns_422(client, valid_measurement_pay
 # ============================================================
 # Measurement detail endpoint tests
 # ============================================================
+
 
 @pytest.mark.post
 def test_post_measurement_can_be_read_after_creation(client, valid_measurement_payload):
@@ -291,7 +301,10 @@ def test_get_measurement_by_id_with_invalid_type_returns_422(client):
 
 
 @pytest.mark.patch
-def test_patch_measurement_quality_status_persists_update(client, valid_measurement_payload):
+def test_patch_measurement_quality_status_persists_update(
+    client,
+    valid_measurement_payload,
+):
     """Check that a quality_status update is saved and can be read back."""
 
     new_measurement = valid_measurement_payload.copy()
@@ -378,7 +391,9 @@ def test_patch_measurement_quality_status_with_invalid_status_returns_422(client
 
 @pytest.mark.patch
 @pytest.mark.validation
-def test_patch_measurement_quality_status_with_invalid_measurement_id_returns_422(client):
+def test_patch_measurement_quality_status_with_invalid_measurement_id_returns_422(
+    client,
+):
     """Check that non-integer measurement IDs are rejected."""
 
     new_quality_status = {"quality_status": "invalid"}

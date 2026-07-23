@@ -147,4 +147,3 @@ def test_simulate_database_assets_runs_simulation_for_loaded_assets():
     )
 
     assert result is expected_intervals
-    

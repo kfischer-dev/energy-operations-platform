@@ -11,6 +11,7 @@ from src.simulation.models import (
 # General
 # ============================================================
 
+
 def create_default_simulation_config() -> SimulationConfig:
     """Create the default configuration used for local simulations and tests."""
 
@@ -19,13 +20,15 @@ def create_default_simulation_config() -> SimulationConfig:
         end_time=datetime(2026, 7, 16, 14, 0, 0),
         interval_minutes=15,
         random_seed=1,
-        simulation_mode="live"
+        simulation_mode="live",
     )
     return config
+
 
 # ============================================================
 # Solar Park
 # ============================================================
+
 
 def create_default_solar_asset() -> SimulationAsset:
     """Create the default solar asset used by the simulation."""
@@ -47,6 +50,7 @@ def create_default_solar_asset() -> SimulationAsset:
 
     return solar_asset
 
+
 def create_default_solar_context(
     config: SimulationConfig,
     current_time: datetime,
@@ -67,9 +71,11 @@ def create_default_solar_context(
 
     return solar_context
 
+
 # ============================================================
 # Wind Park
 # ============================================================
+
 
 def create_default_wind_park_asset() -> SimulationAsset:
     """Create the default wind asset used by the simulation."""
@@ -89,6 +95,7 @@ def create_default_wind_park_asset() -> SimulationAsset:
         can_store_energy=False,
     )
 
+
 def create_default_wind_park_context(
     config: SimulationConfig,
     current_time: datetime,
@@ -107,9 +114,11 @@ def create_default_wind_park_context(
         biomass_factor=0.0,
     )
 
+
 # ============================================================
 # Hydro Power Plant
 # ============================================================
+
 
 def create_default_hydro_plant_asset() -> SimulationAsset:
     """Create the default hydro asset used by the simulation."""
@@ -129,6 +138,7 @@ def create_default_hydro_plant_asset() -> SimulationAsset:
         can_store_energy=False,
     )
 
+
 def create_default_hydro_plant_context(
     config: SimulationConfig,
     current_time: datetime,
@@ -147,9 +157,11 @@ def create_default_hydro_plant_context(
         biomass_factor=0.0,
     )
 
+
 # ============================================================
 # Biomass power plant defaults
 # ============================================================
+
 
 def create_default_biomass_asset() -> SimulationAsset:
     """Create the default biomass asset used by the simulation."""
