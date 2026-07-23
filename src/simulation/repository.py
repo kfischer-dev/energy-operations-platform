@@ -3,7 +3,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def fetch_simulation_assets(conn):
+def fetch_simulation_assets(conn, supported_asset_types: list) -> list[dict]:
     """Return all database assets required by the simulation."""
 
     with conn.cursor() as cursor:
@@ -28,8 +28,9 @@ def fetch_simulation_assets(conn):
                 ON at.asset_type_id = a.asset_type_id
             JOIN regions AS r
                 ON r.region_id = a.region_id
+            WHERE at.asset_type_name = ANY(%s)
             ORDER BY a.asset_id;
-        """)
+        """, (supported_asset_types,))
 
         rows = cursor.fetchall()
 

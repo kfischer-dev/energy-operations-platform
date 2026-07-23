@@ -6,6 +6,7 @@ import pytest
 from src.measurements.models import PowerIntervalDraft
 from src.simulation.mapper import map_asset_to_simulation_asset
 from src.simulation.models import SimulationAsset, SimulationConfig
+from src.simulation.registry import POWER_PROFILE_REGISTRY
 from src.simulation.repository import map_simulation_asset_row
 from src.simulation.service import load_simulation_assets, simulate_database_assets
 
@@ -94,7 +95,10 @@ def test_load_simulation_assets():
     ) as fetch_simulation_assets_mock:
         result = load_simulation_assets(connection)
 
-    fetch_simulation_assets_mock.assert_called_once_with(connection)
+    fetch_simulation_assets_mock.assert_called_once_with(
+        connection,
+        list(POWER_PROFILE_REGISTRY),
+    )
     assert len(result) == 2
     assert all(isinstance(asset, SimulationAsset) for asset in result)
     assert [asset.asset_id for asset in result] == [1, 2]
