@@ -2,13 +2,13 @@ from src.measurements.models import PowerIntervalDraft
 from src.simulation.engine import simulate_assets_intervals
 from src.simulation.mapper import map_asset_to_simulation_asset
 from src.simulation.models import SimulationAsset, SimulationConfig
-from src.simulation.registry import POWER_PROFILE_REGISTRY
+from src.simulation.registry import SIMULATION_PROFILE_REGISTRY
 from src.simulation.repository import fetch_simulation_assets
 
 
 def load_simulation_assets(conn) -> list[SimulationAsset]:
     """Load all simulation assets from the database."""
-    supported_asset_types = list(POWER_PROFILE_REGISTRY)
+    supported_asset_types = list(SIMULATION_PROFILE_REGISTRY)
 
     database_assets = fetch_simulation_assets(conn, supported_asset_types)
 

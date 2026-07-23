@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import datetime
 from random import Random
 
@@ -25,7 +26,7 @@ from src.simulation.profiles import (
 )
 
 # ============================================================
-# Power Profile Registry
+# Simulation Profile Class
 # ============================================================
 
 PowerProfileFunction = Callable[
@@ -36,32 +37,8 @@ PowerProfileFunction = Callable[
     ],
     float,
 ]
-
-POWER_PROFILE_REGISTRY: dict[str, PowerProfileFunction] = {
-    "solar_park": calculate_solar_power_kw,
-    "wind_park": calculate_wind_power_kw,
-    "hydro_power_plant": calculate_hydro_power_kw,
-    "biomass_power_plant": calculate_biomass_power_kw,
-}
-
-# ============================================================
-# Default Asset Registry
-# ============================================================
-
-DefaultAssetFunction = Callable[[], SimulationAsset]
-
-DEFAULT_ASSET_REGISTRY: dict[str, DefaultAssetFunction] = {
-    "solar_park": create_default_solar_asset,
-    "wind_park": create_default_wind_park_asset,
-    "hydro_power_plant": create_default_hydro_plant_asset,
-    "biomass_power_plant": create_default_biomass_asset,
-}
-
-# ============================================================
-# Default Context Registry
-# ============================================================
-
-DefaultContextFunction = Callable[
+DefaultAssetFactory = Callable[[], SimulationAsset]
+ContextFactory = Callable[
     [
         SimulationConfig,
         datetime,
@@ -70,9 +47,39 @@ DefaultContextFunction = Callable[
     SimulationContext,
 ]
 
-DEFAULT_CONTEXT_REGISTRY: dict[str, DefaultContextFunction] = {
-    "solar_park": create_default_solar_context,
-    "wind_park": create_default_wind_park_context,
-    "hydro_power_plant": create_default_hydro_plant_context,
-    "biomass_power_plant": create_default_biomass_context,
+
+@dataclass(frozen=True)
+class SimulationProfileDefinition:
+    """Bundle all simulation behavior required by one asset type."""
+
+    power_profile: PowerProfileFunction
+    default_asset_factory: DefaultAssetFactory
+    context_factory: ContextFactory
+
+
+# ============================================================
+# Simulation Profile Registry
+# ============================================================
+
+SIMULATION_PROFILE_REGISTRY: dict[str, SimulationProfileDefinition] = {
+    "solar_park": SimulationProfileDefinition(
+        power_profile=calculate_solar_power_kw,
+        default_asset_factory=create_default_solar_asset,
+        context_factory=create_default_solar_context,
+    ),
+    "wind_park": SimulationProfileDefinition(
+        power_profile=calculate_wind_power_kw,
+        default_asset_factory=create_default_wind_park_asset,
+        context_factory=create_default_wind_park_context,
+    ),
+    "hydro_power_plant": SimulationProfileDefinition(
+        power_profile=calculate_hydro_power_kw,
+        default_asset_factory=create_default_hydro_plant_asset,
+        context_factory=create_default_hydro_plant_context,
+    ),
+    "biomass_power_plant": SimulationProfileDefinition(
+        power_profile=calculate_biomass_power_kw,
+        default_asset_factory=create_default_biomass_asset,
+        context_factory=create_default_biomass_context,
+    ),
 }

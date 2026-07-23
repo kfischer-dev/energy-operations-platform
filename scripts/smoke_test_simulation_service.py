@@ -34,9 +34,7 @@ def run_simulation_service_smoke_test() -> bool:
     }
 
     passed = bool(database_assets) and not (
-        missing_asset_ids
-        or unexpected_asset_ids
-        or assets_with_wrong_interval_count
+        missing_asset_ids or unexpected_asset_ids or assets_with_wrong_interval_count
     )
 
     print("=" * 60)
@@ -69,10 +67,7 @@ def run_simulation_service_smoke_test() -> bool:
     if unexpected_asset_ids:
         print(f"Unerwartete Asset-IDs:      {sorted(unexpected_asset_ids)}")
     if assets_with_wrong_interval_count:
-        print(
-            "Falsche Intervallanzahl:    "
-            f"{assets_with_wrong_interval_count}"
-        )
+        print(f"Falsche Intervallanzahl:    {assets_with_wrong_interval_count}")
 
     print(f"Ergebnis:                   {'BESTANDEN' if passed else 'FEHLGESCHLAGEN'}")
     print("=" * 60)

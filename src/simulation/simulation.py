@@ -9,11 +9,7 @@ from src.simulation.models import (
     SimulationContext,
 )
 from src.simulation.profiles import time_to_minutes
-from src.simulation.registry import (
-    DEFAULT_ASSET_REGISTRY,
-    DEFAULT_CONTEXT_REGISTRY,
-    POWER_PROFILE_REGISTRY,
-)
+from src.simulation.registry import SIMULATION_PROFILE_REGISTRY
 from src.simulation.time_grid import generate_time_grid
 
 # ============================================================
@@ -24,12 +20,12 @@ from src.simulation.time_grid import generate_time_grid
 def create_default_asset(asset_type: str) -> SimulationAsset:
     """Create the default simulation asset for the requested asset type."""
 
-    default_asset_function = DEFAULT_ASSET_REGISTRY.get(asset_type)
+    profile_definition = SIMULATION_PROFILE_REGISTRY.get(asset_type)
 
-    if default_asset_function is None:
+    if profile_definition is None:
         raise ValueError(f"Asset type '{asset_type}' not available for simulation.")
 
-    return default_asset_function()
+    return profile_definition.default_asset_factory()
 
 
 def build_profile_data(
@@ -68,14 +64,14 @@ def create_simulation_context(
 ) -> SimulationContext:
     """Create the technology-specific context for one timestamp."""
 
-    default_context_function = DEFAULT_CONTEXT_REGISTRY.get(asset.asset_type)
+    profile_definition = SIMULATION_PROFILE_REGISTRY.get(asset.asset_type)
 
-    if default_context_function is None:
+    if profile_definition is None:
         raise ValueError(
             f"Asset type '{asset.asset_type}' not available for simulation."
         )
 
-    return default_context_function(
+    return profile_definition.context_factory(
         config=config,
         current_time=timestamp,
         random_generator=random_generator,
@@ -97,14 +93,14 @@ def simulate_power_of_asset(
     if asset.operating_status != "online":
         return 0.0
 
-    profile_function = POWER_PROFILE_REGISTRY.get(asset.asset_type)
+    profile_definition = SIMULATION_PROFILE_REGISTRY.get(asset.asset_type)
 
-    if profile_function is None:
+    if profile_definition is None:
         raise NotImplementedError(
             f"Asset type '{asset.asset_type}' is not supported yet."
         )
 
-    final_active_power_kw = profile_function(
+    final_active_power_kw = profile_definition.power_profile(
         asset=asset,
         context=context,
         profile_data=profile_data,
@@ -166,7 +162,7 @@ def simulate_asset_power_grid(
 # ============================================================
 
 
-def simulation(asset_type: str) -> None:
+def run_default_simulation(asset_type: str) -> None:
     """Run and print one default simulation for local manual inspection."""
 
     config = create_default_simulation_config()
@@ -177,7 +173,7 @@ def simulation(asset_type: str) -> None:
 
 
 if __name__ == "__main__":
-    simulation("solar_park")
-    simulation("wind_park")
-    simulation("hydro_power_plant")
-    simulation("biomass_power_plant")
+    run_default_simulation("solar_park")
+    run_default_simulation("wind_park")
+    run_default_simulation("hydro_power_plant")
+    run_default_simulation("biomass_power_plant")
