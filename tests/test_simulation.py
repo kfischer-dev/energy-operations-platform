@@ -10,8 +10,6 @@ from src.simulation.simulation import (
 )
 from src.simulation.time_grid import generate_time_grid
 
-
-
 # ============================================================
 # General engine tests
 # ============================================================
@@ -82,10 +80,7 @@ def test_simulation_measurements_contain_correct_asset_id_and_timestamps(
     )
     asset = engine_payload["asset"]
 
-    assert all(
-        measurement.asset_id == asset.asset_id
-        for measurement in measurements
-    )
+    assert all(measurement.asset_id == asset.asset_id for measurement in measurements)
 
     expected_time_grid = generate_time_grid(
         engine_payload["config"].start_time,
@@ -94,8 +89,7 @@ def test_simulation_measurements_contain_correct_asset_id_and_timestamps(
     )
 
     assert [
-        measurement.measurement_time
-        for measurement in measurements
+        measurement.measurement_time for measurement in measurements
     ] == expected_time_grid
 
 
@@ -262,11 +256,7 @@ def test_wind_power_stays_within_expected_range(engine_payload):
         )
 
         for measurement in measurements:
-            assert (
-                minimum_power_kw
-                <= measurement.active_power_kw
-                <= rated_power_kw
-            )
+            assert minimum_power_kw <= measurement.active_power_kw <= rated_power_kw
 
 
 @pytest.mark.simulation
@@ -297,13 +287,9 @@ def test_wind_factor_scales_active_power(engine_payload):
         engine_payload["profile_data"],
     )
 
-    factor_difference = (
-        original_context.wind_factor
-        - reduced_context.wind_factor
-    )
+    factor_difference = original_context.wind_factor - reduced_context.wind_factor
     expected_reduced_power_kw = (
-        original_power_kw
-        - factor_difference * engine_payload["asset"].rated_power_kw
+        original_power_kw - factor_difference * engine_payload["asset"].rated_power_kw
     )
 
     assert reduced_power_kw == pytest.approx(expected_reduced_power_kw)
@@ -329,9 +315,7 @@ def test_hydro_factor_scales_active_power(engine_payload):
         engine_payload["profile_data"],
     )
 
-    expected_power_kw = (
-        engine_payload["asset"].rated_power_kw * hydro_factor
-    )
+    expected_power_kw = engine_payload["asset"].rated_power_kw * hydro_factor
     assert active_power_kw == pytest.approx(expected_power_kw)
 
 
@@ -355,7 +339,5 @@ def test_biomass_factor_scales_active_power(engine_payload):
         engine_payload["profile_data"],
     )
 
-    expected_power_kw = (
-        engine_payload["asset"].rated_power_kw * biomass_factor
-    )
+    expected_power_kw = engine_payload["asset"].rated_power_kw * biomass_factor
     assert active_power_kw == pytest.approx(expected_power_kw)

@@ -3,8 +3,8 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from src.simulation.mapper import map_asset_to_simulation_asset
 from src.measurements.models import PowerIntervalDraft
+from src.simulation.mapper import map_asset_to_simulation_asset
 from src.simulation.models import SimulationAsset, SimulationConfig
 from src.simulation.repository import map_simulation_asset_row
 from src.simulation.service import load_simulation_assets, simulate_database_assets
@@ -13,18 +13,18 @@ from src.simulation.service import load_simulation_assets, simulate_database_ass
 @pytest.mark.unit
 def test_map_database_asset_to_simulation_asset():
     database_row = (
-        1,                     # asset_id
-        "SOLAR-001",          # asset_code
-        "producer",           # asset_role
-        "solar_park",         # asset_type
-        10,                    # region_id
-        "DE-NORTH",           # region_code
-        Decimal("50_000.00"), # rated_power_kw
-        "online",             # operating_status
-        True,                  # is_renewable
-        True,                  # is_weather_dependent
-        False,                 # is_dispatchable
-        False,                 # can_store_energy
+        1,  # asset_id
+        "SOLAR-001",  # asset_code
+        "producer",  # asset_role
+        "solar_park",  # asset_type
+        10,  # region_id
+        "DE-NORTH",  # region_code
+        Decimal("50_000.00"),  # rated_power_kw
+        "online",  # operating_status
+        True,  # is_renewable
+        True,  # is_weather_dependent
+        False,  # is_dispatchable
+        False,  # can_store_energy
     )
 
     database_asset = map_simulation_asset_row(database_row)

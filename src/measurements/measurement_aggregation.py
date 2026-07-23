@@ -7,7 +7,6 @@ from src.measurements.models import (
     PowerSupportPoint,
 )
 
-
 # ============================================================
 # Support-Point Creation
 # ============================================================
@@ -33,9 +32,11 @@ def create_interpolated_support_point(
 
     elapsed_seconds = (target_time - left_time).total_seconds()
     interpolation_ratio = elapsed_seconds / total_duration_seconds
-    interpolated_power_kw = left_measurement.active_power_kw + (
-        right_measurement.active_power_kw - left_measurement.active_power_kw
-    ) * interpolation_ratio
+    interpolated_power_kw = (
+        left_measurement.active_power_kw
+        + (right_measurement.active_power_kw - left_measurement.active_power_kw)
+        * interpolation_ratio
+    )
 
     return PowerSupportPoint(
         timestamp=target_time,
@@ -101,18 +102,21 @@ def select_interval_measurements(
     sorted_measurements = sort_measurements_by_time(measurements)
 
     left_candidates = [
-        measurement for measurement in sorted_measurements
+        measurement
+        for measurement in sorted_measurements
         if measurement.measurement_time <= interval_start
     ]
     left_support = left_candidates[-1] if left_candidates else None
 
     internal_measurements = [
-        measurement for measurement in sorted_measurements
+        measurement
+        for measurement in sorted_measurements
         if interval_start < measurement.measurement_time < interval_end
     ]
 
     right_candidates = [
-        measurement for measurement in sorted_measurements
+        measurement
+        for measurement in sorted_measurements
         if measurement.measurement_time >= interval_end
     ]
     right_support = right_candidates[0] if right_candidates else None
@@ -254,8 +258,7 @@ def calculate_segment_energy_kwh(segment: PowerSegment) -> float:
         raise ValueError("Segment end time must be after segment start time.")
 
     average_power_kw = (
-        segment.start_point.active_power_kw
-        + segment.end_point.active_power_kw
+        segment.start_point.active_power_kw + segment.end_point.active_power_kw
     ) / 2
 
     return average_power_kw * duration_hours
@@ -338,16 +341,15 @@ def aggregate_measurements_for_interval(
     source_measurement_count = len(measurements)
 
     usable_measurements = [
-        measurement for measurement in measurements
+        measurement
+        for measurement in measurements
         if measurement.quality_status != "invalid"
     ]
 
-    left_support, internal_measurements, right_support = (
-        select_interval_measurements(
-            measurements=usable_measurements,
-            interval_start=interval_start,
-            interval_end=interval_end,
-        )
+    left_support, internal_measurements, right_support = select_interval_measurements(
+        measurements=usable_measurements,
+        interval_start=interval_start,
+        interval_end=interval_end,
     )
 
     valid_measurement_count = (

@@ -118,6 +118,7 @@ py run_api.py
 Run the automated test suite:
 
 ```bash
+py -m pip install -r requirements-dev.txt
 py -m pytest -v
 ```
 

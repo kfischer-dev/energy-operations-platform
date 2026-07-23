@@ -28,8 +28,7 @@ def test_simulate_asset_intervals_returns_aggregated_intervals(
     assert len(intervals) == engine_payload["config"].total_intervals
     assert all(isinstance(interval, PowerIntervalDraft) for interval in intervals)
     assert all(
-        interval.asset_id == engine_payload["asset"].asset_id
-        for interval in intervals
+        interval.asset_id == engine_payload["asset"].asset_id for interval in intervals
     )
 
 

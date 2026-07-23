@@ -4,11 +4,11 @@ import pytest
 
 from src.measurements.measurement_aggregation import (
     aggregate_measurements_for_interval,
+    aggregate_measurements_for_intervals,
     build_segments,
     calculate_segment_energy_kwh,
     create_interpolated_support_point,
     determine_quality_status,
-    aggregate_measurements_for_intervals,
 )
 from src.measurements.models import (
     PowerIntervalDraft,
@@ -16,7 +16,6 @@ from src.measurements.models import (
     PowerSegment,
     PowerSupportPoint,
 )
-
 
 # ============================================================
 # Test Factory

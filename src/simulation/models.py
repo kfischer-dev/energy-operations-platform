@@ -3,7 +3,6 @@ from datetime import datetime, timedelta
 from random import Random
 from typing import Literal
 
-
 # ============================================================
 # Simulation Configuration
 # ============================================================
@@ -27,8 +26,7 @@ class SimulationConfig:
 
         if self.interval_minutes not in [5, 15, 30, 60]:
             raise ValueError(
-                "Unsupported interval_minutes. "
-                "Supported values are 5, 15, 30, and 60."
+                "Unsupported interval_minutes. Supported values are 5, 15, 30, and 60."
             )
 
         if self.simulation_mode not in [

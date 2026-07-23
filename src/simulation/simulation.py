@@ -16,7 +16,6 @@ from src.simulation.registry import (
 )
 from src.simulation.time_grid import generate_time_grid
 
-
 # ============================================================
 # Simulation Setup
 # ============================================================

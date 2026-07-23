@@ -2,7 +2,6 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Literal
 
-
 MeasurementSource = Literal[
     "simulation",
     "database",

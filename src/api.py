@@ -123,8 +123,9 @@ def home():
 def app_status():
     logger.info("=" * 60)
     logger.info("Health endpoint called")
-    logger.info("=" * 60)   
+    logger.info("=" * 60)
     return {"status": "ok"}
+
 
 # ============================================================
 # Asset Endpoints
@@ -218,6 +219,7 @@ def get_asset_by_id(
         conn.close()
         logger.info("Database connection closed.")
         logger.info("=" * 60)
+
 
 # ============================================================
 # Measurement Endpoints
@@ -376,6 +378,7 @@ def get_measurement_by_id(
         logger.info("Database connection closed.")
         logger.info("=" * 60)
 
+
 # ============================================================
 # POST Measurement Endpoints
 # ============================================================
@@ -403,8 +406,7 @@ def post_measurement(measurement_data: MeasurementCreate):
 
     logger.info("=" * 60)
     logger.info(
-        "POST /measurements request received for "
-        f"asset_id {measurement_data.asset_id}."
+        f"POST /measurements request received for asset_id {measurement_data.asset_id}."
     )
 
     conn = get_connection()
@@ -420,7 +422,7 @@ def post_measurement(measurement_data: MeasurementCreate):
         measurement = fetch_measurement_by_id(conn, measurement_id)
 
         return measurement
-    
+
     finally:
         conn.close()
         logger.info("Database connection closed.")
@@ -459,7 +461,6 @@ def patch_quality_status_by_measurement_id(
     conn = get_connection()
 
     try:
-
         get_measurement_or_404(conn, measurement_id)
 
         measurement_id = update_measurement_quality_status(
@@ -474,11 +475,12 @@ def patch_quality_status_by_measurement_id(
         new_measurement = fetch_measurement_by_id(conn, measurement_id)
 
         return new_measurement
-    
+
     finally:
         conn.close()
         logger.info("Database connection closed.")
         logger.info("=" * 60)
+
 
 # ============================================================
 # GET kpi Endpoints

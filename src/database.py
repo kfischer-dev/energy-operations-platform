@@ -35,6 +35,7 @@ def get_connection():
 
     return conn
 
+
 # ============================================================
 # PostgreSQL Read Queries
 # ============================================================
@@ -44,7 +45,7 @@ def fetch_joined_measurements(conn):
     """Return joined asset and measurement data as dictionaries."""
 
     # The cursor executes SQL statements within the existing database connection.
-    with conn.cursor() as cursor: 
+    with conn.cursor() as cursor:
         logger.debug("Executing joined measurements query.")
         cursor.execute("""
             SELECT
@@ -78,7 +79,7 @@ def fetch_joined_measurements(conn):
 def fetch_assets(conn):
     """Return all assets from the database as dictionaries."""
 
-    with conn.cursor() as cursor: 
+    with conn.cursor() as cursor:
         logger.debug("Executing asset query.")
         cursor.execute("""
             SELECT
@@ -103,7 +104,7 @@ def fetch_assets(conn):
             ORDER BY a.asset_id;
         """)
         rows = cursor.fetchall()
-    
+
     return [map_asset_row(row) for row in rows]
 
 
@@ -138,11 +139,12 @@ def fetch_asset_summaries(conn):
 def fetch_measurements_by_asset_id(conn, asset_id):
     """Return all measurements for a specific asset as dictionaries."""
 
-    with conn.cursor() as cursor: 
+    with conn.cursor() as cursor:
         logger.debug("Executing joined measurements by asset_id query.")
 
         # Parameterization keeps SQL execution safe.
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT
                 m.measurement_id,
                 a.asset_id,
@@ -166,7 +168,9 @@ def fetch_measurements_by_asset_id(conn, asset_id):
                 ON a.region_id = r.region_id
             WHERE a.asset_id = %s
             ORDER BY a.asset_name, m.measurement_time;
-        """, (asset_id,))
+        """,
+            (asset_id,),
+        )
         rows = cursor.fetchall()
 
     return [map_measurement_row(row) for row in rows]
@@ -204,7 +208,8 @@ def fetch_measurement_summaries_by_asset_id(conn, asset_id):
         logger.debug("Executing measurement summary query by asset_id.")
 
         # Parameterization keeps SQL execution safe.
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT
                 m.measurement_id,
                 a.asset_id,
@@ -219,7 +224,9 @@ def fetch_measurement_summaries_by_asset_id(conn, asset_id):
                 ON a.asset_id = m.asset_id
             WHERE a.asset_id = %s
             ORDER BY a.asset_name, m.measurement_time;
-        """, (asset_id,))
+        """,
+            (asset_id,),
+        )
         rows = cursor.fetchall()
 
     return [map_measurement_summary_row(row) for row in rows]
@@ -230,7 +237,8 @@ def fetch_asset_by_id(conn, asset_id):
 
     with conn.cursor() as cursor:
         logger.debug("Executing asset query.")
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT
                 a.asset_id,
                 a.asset_name,
@@ -251,7 +259,9 @@ def fetch_asset_by_id(conn, asset_id):
             JOIN regions AS r
                 ON r.region_id = a.region_id
             WHERE a.asset_id = %s;
-        """, (asset_id,))
+        """,
+            (asset_id,),
+        )
 
         row = cursor.fetchone()
 
@@ -266,7 +276,8 @@ def fetch_measurement_by_id(conn, measurement_id):
 
     with conn.cursor() as cursor:
         logger.debug("Executing measurement query.")
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT
                 m.measurement_id,
                 a.asset_id,
@@ -289,13 +300,15 @@ def fetch_measurement_by_id(conn, measurement_id):
             JOIN regions AS r
                 ON r.region_id = a.region_id
             WHERE m.measurement_id = %s;
-        """, (measurement_id,))
+        """,
+            (measurement_id,),
+        )
 
         row = cursor.fetchone()
 
         if row is None:
             return None
-        
+
         return map_measurement_row(row)
 
 
@@ -454,10 +467,11 @@ def fetch_database_report_data():
         )
 
     finally:
-        conn.close() 
+        conn.close()
         logger.info("Database connection closed.")
 
     return asset_data, measurement_data
+
 
 # ============================================================
 # Database Create Measurement
@@ -467,7 +481,8 @@ def fetch_database_report_data():
 def create_measurement(conn, measurement_data):
 
     with conn.cursor() as cursor:
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT INTO measurements (
                 asset_id,
                 measurement_time,
@@ -480,21 +495,24 @@ def create_measurement(conn, measurement_data):
             VALUES (%s, %s, %s, %s, %s, %s, %s)
             RETURNING
                 measurement_id;
-        """, (
-            measurement_data.asset_id,
-            measurement_data.measurement_time,
-            measurement_data.interval_minutes,
-            measurement_data.active_power_kw,
-            measurement_data.energy_kwh,
-            measurement_data.source,
-            measurement_data.quality_status,
-        ))
-    
+        """,
+            (
+                measurement_data.asset_id,
+                measurement_data.measurement_time,
+                measurement_data.interval_minutes,
+                measurement_data.active_power_kw,
+                measurement_data.energy_kwh,
+                measurement_data.source,
+                measurement_data.quality_status,
+            ),
+        )
+
         measurement_id = cursor.fetchone()[0]
 
     conn.commit()
 
     return measurement_id
+
 
 # ============================================================
 # Database Patch Measurement
@@ -504,22 +522,26 @@ def create_measurement(conn, measurement_data):
 def update_measurement_quality_status(conn, measurement_id, quality_status):
 
     with conn.cursor() as cursor:
-        cursor.execute("""
+        cursor.execute(
+            """
             UPDATE measurements
             SET quality_status = %s
             WHERE measurement_id = %s
             RETURNING 
                 measurement_id;   
-        """, (
-            quality_status,
-            measurement_id,
-        ))
+        """,
+            (
+                quality_status,
+                measurement_id,
+            ),
+        )
 
         measurement_id = cursor.fetchone()[0]
-    
+
     conn.commit()
 
     return measurement_id
+
 
 # ============================================================
 # KPI Measurement Mapping
@@ -528,7 +550,7 @@ def update_measurement_quality_status(conn, measurement_id, quality_status):
 
 def map_kpi_measurement_row(row):
 
-    return {        
+    return {
         "measurement_count": row[0],
         "average_power_kw": float(row[1]) if row[1] is not None else None,
         "min_power_kw": float(row[2]) if row[2] is not None else None,
@@ -536,6 +558,7 @@ def map_kpi_measurement_row(row):
         "total_energy_kwh": float(row[4]) if row[4] is not None else None,
         "latest_measurement_time": row[5] if row[5] is not None else None,
     }
+
 
 # ============================================================
 # Database Read KPIs
@@ -560,15 +583,16 @@ def fetch_measurement_kpi_summary(conn):
         row = cursor.fetchone()
 
     if row is None:
-        return None  
-    
+        return None
+
     return map_kpi_measurement_row(row)
 
 
 def fetch_asset_kpi_summary(conn, asset_id):
 
     with conn.cursor() as cursor:
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT
                 COUNT(*) AS measurement_count,
                 ROUND(AVG(active_power_kw), 2) AS average_power_kw,
@@ -579,9 +603,10 @@ def fetch_asset_kpi_summary(conn, asset_id):
             FROM measurements
             WHERE asset_id = %s
             AND quality_status = 'valid';
-        """, (asset_id,))
+        """,
+            (asset_id,),
+        )
 
         row = cursor.fetchone()
 
     return map_kpi_measurement_row(row)
-

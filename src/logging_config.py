@@ -10,10 +10,7 @@ def configure_logging() -> None:
     logging.basicConfig(
         filename="logs/app.log",
         level=logging.DEBUG,
-        format=(
-            "%(asctime)s - %(levelname)s - "
-            "%(module)s.%(funcName)s - %(message)s"
-        ),
+        format=("%(asctime)s - %(levelname)s - %(module)s.%(funcName)s - %(message)s"),
     )
 
     # Reduce noisy server and reload logs in the application log file.

@@ -227,6 +227,7 @@ def test_post_measurement_empty_source_returns_422(client, valid_measurement_pay
 
     assert response.status_code == 422
 
+
 # ============================================================
 # Measurement detail endpoint tests
 # ============================================================
