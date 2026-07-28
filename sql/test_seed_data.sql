@@ -19,6 +19,7 @@
 TRUNCATE TABLE
     storage_specs,
     measurements,
+    simulation_runs,
     assets,
     asset_types,
     regions
@@ -67,6 +68,19 @@ VALUES
     ('W-SUB-001','Test Substation Rhine-Ruhr','North Rhine-Westphalia',250000.00,'online',51.450000,7.010000,8,4),
     ('E-SOLAR-002','Test Asset Without Measurements','Brandenburg',25000.00,'offline',52.520008,13.404954,1,3);
 
+
+-- ============================================================
+-- Insert test simulation run
+-- ============================================================
+-- Deterministic ID after RESTART IDENTITY: simulation_run_id = 1.
+-- All seeded measurements below belong to this completed run.
+-- ============================================================
+
+INSERT INTO simulation_runs(simulation_mode, start_time, end_time, interval_minutes, random_seed, status, generated_measurement_count, created_at, started_at, completed_at)
+VALUES
+    ('standard', '2026-06-22 08:00:00+02', '2026-06-22 08:45:00+02', 15, 42, 'completed', 24, '2026-06-22 07:59:00+02', '2026-06-22 08:00:00+02', '2026-06-22 08:45:00+02');
+
+
 -- ============================================================
 -- Insert test measurements
 -- ============================================================
@@ -80,47 +94,47 @@ VALUES
 --   the endpoint explicitly filters for quality_status = 'valid'.
 -- ============================================================
 
-INSERT INTO measurements(asset_id, measurement_time, interval_minutes, active_power_kw, energy_kwh, source, quality_status)
+INSERT INTO measurements(asset_id, simulation_run_id, measurement_time, interval_minutes, active_power_kw, energy_kwh, source, quality_status)
 VALUES
     -- Asset 1: wind generation, fluctuating
-    (1,'2026-06-22 08:00:00+02',15,80000.00,20000.00,'simulation','valid'),
-    (1,'2026-06-22 08:15:00+02',15,84000.00,21000.00,'simulation','valid'),
-    (1,'2026-06-22 08:30:00+02',15,79000.00,19750.00,'simulation','valid'),
+    (1,1,'2026-06-22 08:00:00+02',15,80000.00,20000.00,'simulation','valid'),
+    (1,1,'2026-06-22 08:15:00+02',15,84000.00,21000.00,'simulation','valid'),
+    (1,1,'2026-06-22 08:30:00+02',15,79000.00,19750.00,'simulation','valid'),
 
     -- Asset 2: city consumption, rising morning load
-    (2,'2026-06-22 08:00:00+02',15,138000.00,34500.00,'simulation','valid'),
-    (2,'2026-06-22 08:15:00+02',15,143000.00,35750.00,'simulation','valid'),
-    (2,'2026-06-22 08:30:00+02',15,149000.00,37250.00,'simulation','valid'),
+    (2,1,'2026-06-22 08:00:00+02',15,138000.00,34500.00,'simulation','valid'),
+    (2,1,'2026-06-22 08:15:00+02',15,143000.00,35750.00,'simulation','valid'),
+    (2,1,'2026-06-22 08:30:00+02',15,149000.00,37250.00,'simulation','valid'),
 
     -- Asset 3: stable hydro generation
-    (3,'2026-06-22 08:00:00+02',15,68000.00,17000.00,'simulation','valid'),
-    (3,'2026-06-22 08:15:00+02',15,69000.00,17250.00,'simulation','valid'),
-    (3,'2026-06-22 08:30:00+02',15,71000.00,17750.00,'simulation','valid'),
+    (3,1,'2026-06-22 08:00:00+02',15,68000.00,17000.00,'simulation','valid'),
+    (3,1,'2026-06-22 08:15:00+02',15,69000.00,17250.00,'simulation','valid'),
+    (3,1,'2026-06-22 08:30:00+02',15,71000.00,17750.00,'simulation','valid'),
 
     -- Asset 4: battery discharging into the grid
-    (4,'2026-06-22 08:00:00+02',15,15000.00,3750.00,'simulation','valid'),
-    (4,'2026-06-22 08:15:00+02',15,12000.00,3000.00,'simulation','valid'),
-    (4,'2026-06-22 08:30:00+02',15,8000.00,2000.00,'simulation','valid'),
+    (4,1,'2026-06-22 08:00:00+02',15,15000.00,3750.00,'simulation','valid'),
+    (4,1,'2026-06-22 08:15:00+02',15,12000.00,3000.00,'simulation','valid'),
+    (4,1,'2026-06-22 08:30:00+02',15,8000.00,2000.00,'simulation','valid'),
 
     -- Asset 5: industrial load with deliberately invalid negatives
-    (5,'2026-06-22 08:00:00+02',15,-92000.00,23000.00,'simulation','invalid'),
-    (5,'2026-06-22 08:15:00+02',15,-97000.00,24250.00,'simulation','invalid'),
-    (5,'2026-06-22 08:30:00+02',15,102000.00,25500.00,'simulation','valid'),
+    (5,1,'2026-06-22 08:00:00+02',15,-92000.00,23000.00,'simulation','invalid'),
+    (5,1,'2026-06-22 08:15:00+02',15,-97000.00,24250.00,'simulation','invalid'),
+    (5,1,'2026-06-22 08:30:00+02',15,102000.00,25500.00,'simulation','valid'),
 
     -- Asset 6: solar generation, increasing after sunrise
-    (6,'2026-06-22 08:00:00+02',15,18000.00,4500.00,'simulation','valid'),
-    (6,'2026-06-22 08:15:00+02',15,22500.00,5625.00,'simulation','valid'),
-    (6,'2026-06-22 08:30:00+02',15,27000.00,6750.00,'simulation','valid'),
+    (6,1,'2026-06-22 08:00:00+02',15,18000.00,4500.00,'simulation','valid'),
+    (6,1,'2026-06-22 08:15:00+02',15,22500.00,5625.00,'simulation','valid'),
+    (6,1,'2026-06-22 08:30:00+02',15,27000.00,6750.00,'simulation','valid'),
 
     -- Asset 7: stable data-center load, one estimated value
-    (7,'2026-06-22 08:00:00+02',15,62000.00,15500.00,'simulation','valid'),
-    (7,'2026-06-22 08:15:00+02',15,62500.00,15625.00,'simulation','estimated'),
-    (7,'2026-06-22 08:30:00+02',15,63000.00,15750.00,'simulation','valid'),
+    (7,1,'2026-06-22 08:00:00+02',15,62000.00,15500.00,'simulation','valid'),
+    (7,1,'2026-06-22 08:15:00+02',15,62500.00,15625.00,'simulation','estimated'),
+    (7,1,'2026-06-22 08:30:00+02',15,63000.00,15750.00,'simulation','valid'),
 
     -- Asset 8: substation power flow
-    (8,'2026-06-22 08:00:00+02',15,53000.00,13250.00,'simulation','valid'),
-    (8,'2026-06-22 08:15:00+02',15,55000.00,13750.00,'simulation','valid'),
-    (8,'2026-06-22 08:30:00+02',15,57000.00,14250.00,'simulation','valid');
+    (8,1,'2026-06-22 08:00:00+02',15,53000.00,13250.00,'simulation','valid'),
+    (8,1,'2026-06-22 08:15:00+02',15,55000.00,13750.00,'simulation','valid'),
+    (8,1,'2026-06-22 08:30:00+02',15,57000.00,14250.00,'simulation','valid');
 
 
 -- ============================================================

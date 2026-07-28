@@ -42,10 +42,12 @@ Relationships:
 /*
 DROP TABLE IF EXISTS storage_specs;
 DROP TABLE IF EXISTS measurements;
+DROP TABLE IF EXISTS simulation_runs;
 DROP TABLE IF EXISTS assets;
 DROP TABLE IF EXISTS asset_types;
 DROP TABLE IF EXISTS regions;
 */
+
 
 CREATE TABLE regions (
     region_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -56,6 +58,7 @@ CREATE TABLE regions (
 
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
 
 CREATE TABLE asset_types (
     asset_type_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -71,6 +74,7 @@ CREATE TABLE asset_types (
 
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
 
 CREATE TABLE assets (
     asset_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -94,9 +98,41 @@ CREATE TABLE assets (
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+
+CREATE TABLE simulation_runs (
+    simulation_run_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    simulation_mode VARCHAR(50) NOT NULL,
+    start_time TIMESTAMPTZ NOT NULL,
+    end_time TIMESTAMPTZ NOT NULL,
+    interval_minutes INTEGER NOT NULL,
+    random_seed INTEGER,
+    status VARCHAR(20) NOT NULL,
+    generated_measurement_count INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    started_at TIMESTAMPTZ,
+    completed_at TIMESTAMPTZ,
+
+    CONSTRAINT chk_simulation_runs_time_range
+        CHECK (end_time > start_time),
+
+    CONSTRAINT chk_simulation_runs_interval_minutes
+        CHECK (interval_minutes > 0),
+
+    CONSTRAINT chk_simulation_runs_random_seed
+        CHECK (random_seed >= 0),
+
+    CONSTRAINT chk_simulation_runs_status
+        CHECK (status IN ('created', 'running', 'completed', 'failed')),
+
+    CONSTRAINT chk_simulation_runs_measurement_count
+        CHECK (generated_measurement_count >= 0)
+);
+
+
 CREATE TABLE measurements (
     measurement_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     asset_id INT NOT NULL REFERENCES assets(asset_id) ON DELETE CASCADE,
+    simulation_run_id BIGINT REFERENCES simulation_runs(simulation_run_id) ON DELETE SET NULL,
     measurement_time TIMESTAMPTZ NOT NULL,
     interval_minutes INT NOT NULL 
         CHECK (interval_minutes > 0),
@@ -113,6 +149,7 @@ CREATE TABLE measurements (
 
     CONSTRAINT uq_measurements_asset_time UNIQUE (asset_id,measurement_time)
 );
+
 
 CREATE TABLE storage_specs (
     asset_id INT PRIMARY KEY REFERENCES assets(asset_id) ON DELETE CASCADE,
