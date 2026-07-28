@@ -1,6 +1,17 @@
 import logging
 
+from src.simulation.mapper import (
+    map_simulation_asset_row,
+    map_simulation_run_row,
+)
+from src.simulation.models import SimulationConfig
+from src.measurements.models import PowerMeasurement
+
 logger = logging.getLogger(__name__)
+
+# ============================================================
+# Simulation Asset Repository
+# ============================================================
 
 
 def fetch_simulation_assets(conn, supported_asset_types: list[str]) -> list[dict]:
@@ -41,37 +52,168 @@ def fetch_simulation_assets(conn, supported_asset_types: list[str]) -> list[dict
 
 
 # ============================================================
-# Mapper
+# Simulation Run Repository
 # ============================================================
 
 
-def map_simulation_asset_row(row):
-    (
-        asset_id,
-        asset_code,
-        asset_role,
-        asset_type,
-        region_id,
-        region_code,
-        rated_power_kw,
-        operating_status,
-        is_renewable,
-        is_weather_dependent,
-        is_dispatchable,
-        can_store_energy,
-    ) = row
+def create_simulation_run(conn, config: "SimulationConfig") -> int:
+    """Create a new simulation run in the database and return its ID."""
+    logger.debug("Creating a new simulation run in the database.")
 
-    return {
-        "asset_id": asset_id,
-        "asset_code": asset_code,
-        "asset_role": asset_role,
-        "asset_type": asset_type,
-        "region_id": region_id,
-        "region_code": region_code,
-        "rated_power_kw": rated_power_kw,
-        "operating_status": operating_status,
-        "is_renewable": is_renewable,
-        "is_weather_dependent": is_weather_dependent,
-        "is_dispatchable": is_dispatchable,
-        "can_store_energy": can_store_energy,
-    }
+    with conn.cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO simulation_runs (
+                simulation_mode,
+                start_time, 
+                end_time, 
+                interval_minutes, 
+                random_seed, 
+                status
+            )
+            VALUES (%s, %s, %s, %s, %s, %s)
+            RETURNING simulation_run_id;
+        """,
+            (
+                config.simulation_mode,
+                config.start_time,
+                config.end_time,
+                config.interval_minutes,
+                config.random_seed,
+                "created",
+            ),
+        )
+
+        simulation_run_id = cursor.fetchone()[0]
+        logger.info(f"Created new simulation run with ID: {simulation_run_id}")
+
+    return simulation_run_id
+
+
+def mark_simulation_run_running(conn, simulation_run_id):
+    logger.debug(f"Marking simulation run {simulation_run_id} as running.")
+
+    with conn.cursor() as cursor:
+        cursor.execute(
+            """
+            UPDATE simulation_runs
+            SET status = %s,
+                started_at = CURRENT_TIMESTAMP
+            WHERE simulation_run_id = %s;
+            """,
+            ("running", simulation_run_id),
+        )
+
+    logger.info(f"Simulation run {simulation_run_id} marked as running.")
+
+
+def mark_simulation_run_completed(
+    conn, simulation_run_id, generated_measurement_count: int = 0
+):
+    logger.debug(f"Marking simulation run {simulation_run_id} as completed.")
+
+    with conn.cursor() as cursor:
+        cursor.execute(
+            """
+            UPDATE simulation_runs
+            SET status = %s,
+                completed_at = CURRENT_TIMESTAMP,
+                generated_measurement_count = %s
+            WHERE simulation_run_id = %s;
+            """,
+            ("completed", generated_measurement_count, simulation_run_id),
+        )
+
+    logger.info(f"Simulation run {simulation_run_id} marked as completed.")
+
+
+def mark_simulation_run_failed(conn, simulation_run_id):
+    logger.debug(f"Marking simulation run {simulation_run_id} as failed.")
+
+    with conn.cursor() as cursor:
+        cursor.execute(
+            """
+            UPDATE simulation_runs
+            SET status = %s,
+                completed_at = CURRENT_TIMESTAMP
+            WHERE simulation_run_id = %s;
+            """,
+            ("failed", simulation_run_id),
+        )
+
+    logger.info(f"Simulation run {simulation_run_id} marked as failed.")
+
+
+def fetch_simulation_run_by_id(conn, simulation_run_id) -> dict | None:
+    """Fetch a simulation run by its ID."""
+    logger.debug(f"Fetching simulation run with ID: {simulation_run_id}")
+
+    with conn.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT
+                simulation_run_id,
+                simulation_mode,
+                start_time,
+                end_time,
+                interval_minutes,
+                random_seed,
+                status,
+                created_at,
+                started_at,
+                completed_at,
+                generated_measurement_count
+            FROM simulation_runs
+            WHERE simulation_run_id = %s;
+        """,
+            (simulation_run_id,),
+        )
+
+        row = cursor.fetchone()
+
+    if row is None:
+        logger.warning(f"No simulation run found with ID: {simulation_run_id}")
+        return None
+
+    return map_simulation_run_row(row)
+
+
+def insert_power_measurements(
+    conn,
+    measurements: list[PowerMeasurement],
+    simulation_run_id: int,
+) -> int:
+    """Persist simulated point-in-time power measurements."""
+
+    if not measurements:
+        return 0
+
+    rows = [
+        (
+            measurement.asset_id,
+            simulation_run_id,
+            measurement.measurement_time,
+            measurement.active_power_kw,
+            measurement.source,
+            measurement.quality_status,
+        )
+        for measurement in measurements
+    ]
+
+    with conn.cursor() as cursor:
+        cursor.executemany(
+            """
+            INSERT INTO power_measurements (
+                asset_id,
+                simulation_run_id,
+                measurement_time,
+                active_power_kw,
+                source,
+                quality_status
+            )
+            VALUES (%s, %s, %s, %s, %s, %s);
+            """,
+            rows,
+        )
+
+    return len(rows)

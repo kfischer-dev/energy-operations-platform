@@ -1,13 +1,32 @@
 from src.measurements.measurement_aggregation import (
     aggregate_measurements_for_intervals,
 )
-from src.measurements.models import PowerIntervalDraft
+from src.measurements.models import PowerIntervalDraft, PowerMeasurement
 from src.simulation.models import (
     SimulationAsset,
     SimulationConfig,
 )
 from src.simulation.simulation import simulate_asset_power_grid
 
+
+
+def simulate_assets_power_grid(
+    config: SimulationConfig,
+    assets: list[SimulationAsset],
+) -> list[PowerMeasurement]:
+    """Simulate point-in-time power measurements for multiple assets."""
+
+    measurements: list[PowerMeasurement] = []
+
+    for asset in assets:
+        measurements.extend(
+            simulate_asset_power_grid(
+                config=config,
+                asset=asset,
+            )
+        )
+
+    return measurements
 
 def simulate_asset_intervals(
     config: SimulationConfig,

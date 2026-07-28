@@ -1,7 +1,7 @@
 from datetime import datetime, time
 from random import Random
 
-from src.measurements.models import PowerMeasurement
+from src.measurements.models import PowerIntervalDraft, PowerMeasurement
 from src.simulation.default_data import create_default_simulation_config
 from src.simulation.models import (
     SimulationAsset,
@@ -76,6 +76,34 @@ def create_simulation_context(
         current_time=timestamp,
         random_generator=random_generator,
     )
+
+
+def validate_simulation_intervals(
+    power_intervals: list[PowerIntervalDraft],
+) -> None:
+    """Validate that all simulated interval results are complete."""
+
+    for interval in power_intervals:
+        validate_complete_interval(interval)
+
+
+def validate_complete_interval(power_interval: PowerIntervalDraft) -> None:
+    """Validate that one simulated interval result is complete."""
+
+    power = power_interval.avg_active_power_kw
+    energy = power_interval.energy_kwh
+
+    if power_interval.quality_status != "valid":
+        raise ValueError("Invalid simulation quality status detected.")
+
+    if power is None or power < 0:
+        raise ValueError("Invalid average active power value detected.")
+
+    if energy is None or energy < 0:
+        raise ValueError("Invalid energy value detected.")
+
+    if power_interval.coverage_ratio != 1.0:
+        raise ValueError("Incomplete simulation interval detected.")
 
 
 # ============================================================
