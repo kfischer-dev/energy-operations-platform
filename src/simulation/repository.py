@@ -203,7 +203,7 @@ def insert_power_measurements(
     with conn.cursor() as cursor:
         cursor.executemany(
             """
-            INSERT INTO power_measurements (
+            INSERT INTO measurements (
                 asset_id,
                 simulation_run_id,
                 measurement_time,

@@ -44,7 +44,6 @@ Relationships:
 /*
 DROP TABLE IF EXISTS storage_specs;
 DROP TABLE IF EXISTS measurements;
-DROP TABLE IF EXISTS power_measurements;
 DROP TABLE IF EXISTS simulation_runs;
 DROP TABLE IF EXISTS assets;
 DROP TABLE IF EXISTS asset_types;
@@ -132,32 +131,16 @@ CREATE TABLE simulation_runs (
 );
 
 
-CREATE TABLE power_measurements (
-    power_measurement_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    asset_id INT NOT NULL REFERENCES assets(asset_id) ON DELETE CASCADE,
-    simulation_run_id BIGINT REFERENCES simulation_runs(simulation_run_id) ON DELETE SET NULL,
-    measurement_time TIMESTAMPTZ NOT NULL,
-    active_power_kw NUMERIC(20,2) NOT NULL
-        CHECK (active_power_kw >= 0),
-    source VARCHAR(255) NOT NULL,
-    quality_status VARCHAR(20) NOT NULL
-        CHECK (quality_status IN ('valid', 'invalid', 'estimated', 'interpolated')),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT uq_power_measurements_asset_time_run
-        UNIQUE (asset_id, measurement_time, simulation_run_id)
-);
-
-
 CREATE TABLE measurements (
     measurement_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     asset_id INT NOT NULL REFERENCES assets(asset_id) ON DELETE CASCADE,
     simulation_run_id BIGINT REFERENCES simulation_runs(simulation_run_id) ON DELETE SET NULL,
     measurement_time TIMESTAMPTZ NOT NULL,
-    interval_minutes INT NOT NULL 
+    interval_minutes INT NULL 
         CHECK (interval_minutes > 0),
 
     active_power_kw NUMERIC(20,2) NOT NULL,
-    energy_kwh NUMERIC(20,2) NOT NULL 
+    energy_kwh NUMERIC(20,2) NULL 
         CHECK (energy_kwh >= 0),
 
     source VARCHAR(255) NOT NULL,
