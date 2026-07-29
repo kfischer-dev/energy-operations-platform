@@ -9,7 +9,6 @@ from src.simulation.models import (
 from src.simulation.simulation import simulate_asset_power_grid
 
 
-
 def simulate_assets_power_grid(
     config: SimulationConfig,
     assets: list[SimulationAsset],
@@ -27,6 +26,7 @@ def simulate_assets_power_grid(
         )
 
     return measurements
+
 
 def simulate_asset_intervals(
     config: SimulationConfig,

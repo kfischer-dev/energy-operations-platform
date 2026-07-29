@@ -6,7 +6,6 @@ import pytest
 from src.measurements.models import PowerIntervalDraft
 from src.simulation.simulation import validate_complete_interval
 
-
 INTERVAL_START = datetime(2026, 7, 28, 10, 0)
 INTERVAL_END = datetime(2026, 7, 28, 10, 15)
 

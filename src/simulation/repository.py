@@ -1,11 +1,11 @@
 import logging
 
+from src.measurements.models import PowerMeasurement
 from src.simulation.mapper import (
     map_simulation_asset_row,
     map_simulation_run_row,
 )
 from src.simulation.models import SimulationConfig
-from src.measurements.models import PowerMeasurement
 
 logger = logging.getLogger(__name__)
 

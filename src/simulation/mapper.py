@@ -24,7 +24,6 @@ def map_asset_to_simulation_asset(asset: dict) -> SimulationAsset:
     )
 
 
-
 # ============================================================
 # Repository Mapper
 # ============================================================

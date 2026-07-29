@@ -3,7 +3,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from src.measurements.models import PowerIntervalDraft
+from src.measurements.models import PowerMeasurement
 from src.simulation.mapper import map_asset_to_simulation_asset
 from src.simulation.models import SimulationAsset, SimulationConfig
 from src.simulation.registry import SIMULATION_PROFILE_REGISTRY
@@ -110,26 +110,19 @@ def test_load_simulation_assets():
 
 @pytest.mark.unit
 def test_simulate_database_assets_runs_simulation_for_loaded_assets():
-    """Load simulation assets, pass them to the engine, and return its result.
+    """Load simulation assets and generate point-in-time power measurements."""
 
-    Both dependencies are mocked to isolate the orchestration logic from the
-    database and the actual simulation. The test verifies that the service
-    calls each dependency with the correct arguments and returns the simulation
-    result unchanged.
-    """
     connection = Mock()
     config = Mock(spec=SimulationConfig)
 
-    # Placeholder assets returned by the mocked loading service.
     loaded_assets = [
         Mock(spec=SimulationAsset),
         Mock(spec=SimulationAsset),
     ]
 
-    # Placeholder result returned by the mocked simulation engine.
-    expected_intervals = [
-        Mock(spec=PowerIntervalDraft),
-        Mock(spec=PowerIntervalDraft),
+    expected_measurements = [
+        Mock(spec=PowerMeasurement),
+        Mock(spec=PowerMeasurement),
     ]
 
     with (
@@ -138,16 +131,16 @@ def test_simulate_database_assets_runs_simulation_for_loaded_assets():
             return_value=loaded_assets,
         ) as load_simulation_assets_mock,
         patch(
-            "src.simulation.service.simulate_assets_intervals",
-            return_value=expected_intervals,
-        ) as simulate_assets_intervals_mock,
+            "src.simulation.service.simulate_assets_power_grid",
+            return_value=expected_measurements,
+        ) as simulate_assets_power_grid_mock,
     ):
         result = simulate_database_assets(connection, config)
 
     load_simulation_assets_mock.assert_called_once_with(connection)
-    simulate_assets_intervals_mock.assert_called_once_with(
+    simulate_assets_power_grid_mock.assert_called_once_with(
         config=config,
         assets=loaded_assets,
     )
 
-    assert result is expected_intervals
+    assert result is expected_measurements

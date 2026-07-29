@@ -1,6 +1,8 @@
 import logging
 
-from src.measurements.measurement_aggregation import aggregate_measurements_for_intervals
+from src.measurements.measurement_aggregation import (
+    aggregate_measurements_for_intervals,
+)
 from src.measurements.models import PowerIntervalDraft, PowerMeasurement
 from src.simulation.engine import simulate_assets_power_grid
 from src.simulation.mapper import map_asset_to_simulation_asset
