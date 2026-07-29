@@ -109,6 +109,21 @@ def test_load_simulation_assets():
 
 
 @pytest.mark.unit
+def test_load_simulation_assets_raises_when_no_assets_are_found():
+    connection = Mock()
+
+    with patch(
+        "src.simulation.service.fetch_simulation_assets",
+        return_value=[],
+    ):
+        with pytest.raises(
+            ValueError,
+            match="No simulation assets found in the database.",
+        ):
+            load_simulation_assets(connection)
+
+
+@pytest.mark.unit
 def test_simulate_database_assets_runs_simulation_for_loaded_assets():
     """Load simulation assets and generate point-in-time power measurements."""
 

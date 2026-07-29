@@ -27,6 +27,9 @@ def load_simulation_assets(conn) -> list[SimulationAsset]:
 
     database_assets = fetch_simulation_assets(conn, supported_asset_types)
 
+    if not database_assets:
+        raise ValueError("No simulation assets found in the database.")
+
     return [map_asset_to_simulation_asset(asset) for asset in database_assets]
 
 
