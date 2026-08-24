@@ -125,7 +125,10 @@ CREATE TABLE simulation_runs (
         CHECK (status IN ('created', 'running', 'completed', 'failed')),
 
     CONSTRAINT chk_simulation_runs_measurement_count
-        CHECK (generated_measurement_count >= 0)
+        CHECK (generated_measurement_count >= 0),
+
+    CONSTRAINT chk_simulation_runs_mode
+        CHECK (simulation_mode IN ('historical', 'live', 'forecast', 'scenario'))
 );
 
 
