@@ -17,7 +17,13 @@ def create_interpolated_support_point(
     right_measurement: PowerMeasurement,
     target_time: datetime,
 ) -> PowerSupportPoint:
-    """Creates a linearly interpolated support point."""
+    """
+    Create a support point at a required interval boundary.
+
+    The power value is linearly interpolated between the surrounding
+    measurements. This is used when no actual measurement exists at
+    the target time but the interval aggregation requires a boundary value.
+    """
 
     left_time = left_measurement.measurement_time
     right_time = right_measurement.measurement_time
@@ -189,8 +195,16 @@ def build_calculation_points(
     interval_start: datetime,
     interval_end: datetime,
 ) -> list[PowerSupportPoint]:
-    """Builds the sorted support-point list used for aggregation."""
+    """
+    Build the ordered support points required for interval aggregation.
 
+    Creates boundary points for the interval start and end when possible,
+    using interpolation if no measurement exists exactly at a boundary.
+    Measurements inside the interval are converted to support points and
+    combined with the boundary points.
+    """
+
+    # Use the nearest available measurements to determine the interval boundaries.
     first_measurement_after_start = (
         internal_measurements[0] if internal_measurements else right_support
     )
@@ -210,6 +224,7 @@ def build_calculation_points(
         interval_end=interval_end,
     )
 
+    # Convert actual measurements to the common support-point representation.
     internal_points = [
         create_measured_support_point(measurement)
         for measurement in internal_measurements
