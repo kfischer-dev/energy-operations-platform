@@ -30,9 +30,12 @@ def test_load_simulation_assets_returns_supported_database_assets(
     assert solar_asset.region_code == "DE-EAST"
     assert isinstance(solar_asset.rated_power_kw, float)
 
+
+@pytest.mark.smoke
 @pytest.mark.integration
 def test_execute_simulation_run_and_save_measurements(
     reset_db,
+    client,
     database_connection,
 ):
     """Run a simulation and save the generated measurements to the database."""
@@ -68,3 +71,29 @@ def test_execute_simulation_run_and_save_measurements(
 
     assert simulation_run["generated_measurement_count"] == persisted_count
     assert simulation_run["status"] == "completed"
+
+    with conn.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT measurement_id
+            FROM measurements
+            WHERE simulation_run_id = %s
+            ORDER BY measurement_id
+            LIMIT 1;
+            """,
+            (simulation_run_id,),
+        )
+        measurement_id = cursor.fetchone()[0]
+
+    response_get = client.get(f"/measurements/{measurement_id}")
+
+    assert response_get.status_code == 200
+
+    data_get = response_get.json()
+
+    assert data_get["measurement_id"] == measurement_id
+    assert data_get["source"] == "simulation"
+    assert data_get["interval_minutes"] is None
+    assert data_get["energy_kwh"] is None
+    assert data_get["active_power_kw"] is not None
+    assert data_get["quality_status"] == "valid"
