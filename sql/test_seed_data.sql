@@ -78,7 +78,7 @@ VALUES
 
 INSERT INTO simulation_runs(simulation_mode, start_time, end_time, interval_minutes, random_seed, status, generated_measurement_count, created_at, started_at, completed_at)
 VALUES
-    ('standard', '2026-06-22 08:00:00+02', '2026-06-22 08:45:00+02', 15, 42, 'completed', 24, '2026-06-22 07:59:00+02', '2026-06-22 08:00:00+02', '2026-06-22 08:45:00+02');
+    ('historical', '2026-06-22 08:00:00+02', '2026-06-22 08:45:00+02', 15, 42, 'completed', 24, '2026-06-22 07:59:00+02', '2026-06-22 08:00:00+02', '2026-06-22 08:45:00+02');
 
 
 -- ============================================================
