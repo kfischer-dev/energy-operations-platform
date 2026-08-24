@@ -402,3 +402,101 @@ def test_patch_measurement_quality_status_with_invalid_measurement_id_returns_42
     response = client.patch("/measurements/abc", json=new_quality_status)
 
     assert response.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# Temporary v0.11 compatibility tests
+# Remove when `interval_minutes` and `energy_kwh` are removed from the
+# measurements schema and API contract.
+# ---------------------------------------------------------------------------
+
+@pytest.mark.intermediate
+def test_get_measurement_allows_null_interval_and_energy(
+    client,
+    database_connection,
+):
+    """Check that point-in-time measurements with nullable interval fields are readable."""
+
+    with database_connection.cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO measurements (
+                asset_id,
+                measurement_time,
+                interval_minutes,
+                active_power_kw,
+                energy_kwh,
+                source,
+                quality_status
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            RETURNING measurement_id;
+            """,
+            (
+                1,
+                "2026-07-10 10:00:00+02",
+                None,
+                82000.0,
+                None,
+                "simulation",
+                "valid",
+            ),
+        )
+        measurement_id = cursor.fetchone()[0]
+
+    database_connection.commit()
+
+    response = client.get(f"/measurements/{measurement_id}")
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["interval_minutes"] is None
+    assert data["energy_kwh"] is None
+
+
+@pytest.mark.intermediate
+def test_get_measurement_keeps_legacy_interval_fields(
+    client,
+    database_connection,
+):
+    """Check that existing interval measurements remain readable."""
+
+    with database_connection.cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO measurements (
+                asset_id,
+                measurement_time,
+                interval_minutes,
+                active_power_kw,
+                energy_kwh,
+                source,
+                quality_status
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            RETURNING measurement_id;
+            """,
+            (
+                1,
+                "2026-07-10 10:15:00+02",
+                15,
+                82000.0,
+                20500.0,
+                "simulation",
+                "valid",
+            ),
+        )
+        measurement_id = cursor.fetchone()[0]
+
+    database_connection.commit()
+
+    response = client.get(f"/measurements/{measurement_id}")
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["interval_minutes"] == 15
+    assert data["energy_kwh"] == 20500.0
