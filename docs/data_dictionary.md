@@ -2,36 +2,34 @@
 
 ## Purpose
 
-This document is the authoritative domain and field reference for the Energy Operations Platform data model in `v0.10.0`.
+This document is the authoritative field and domain reference for the Energy Operations Platform in `v0.11.0`.
 
-The model is intentionally realistic enough to support later simulation, weather influence, energy balance and dashboard work without becoming a full electrical-grid model.
+It covers:
 
-## Core Domain Model
-
-```text
-regions
-   └── assets ── asset_types
-          ├── measurements
-          └── storage_specs
-```
-
-## General Conventions
-
-- Internal active power uses `kW`.
-- Interval energy uses `kWh`.
-- Timestamps use PostgreSQL `TIMESTAMPTZ`.
-- Technical codes are stable identifiers; display names may change.
-- Development regions are schematic model regions, not postal-code areas or official control zones.
-- Valid-only KPI calculations include only `quality_status = 'valid'`.
-- `invalid` and `estimated` rows remain stored but are excluded from current KPI endpoints.
+- PostgreSQL tables,
+- public API models,
+- internal measurement/aggregation models,
+- internal simulation models,
+- the temporary measurement compatibility state introduced by `v0.11.0`.
 
 ---
 
-# Entity: Region
+# Core Domain
 
-Regions group assets for later regional analytics, weather generation, energy balance and map visualization.
+## Regions
 
-Initial development regions:
+Regions are schematic model areas used to group assets. They are not official TSO control areas.
+
+| Field | Type | Meaning |
+|---|---|---|
+| `region_id` | integer | Surrogate primary key |
+| `region_code` | string | Stable technical code such as `DE-NORTH` |
+| `region_prefix` | string | Short prefix used in asset codes |
+| `region_name` | string | Human-readable name |
+| `region_description` | text, nullable | Additional description |
+| `created_at` | timestamp with time zone | Creation timestamp |
+
+Development seed regions:
 
 ```text
 DE-NORTH
@@ -40,56 +38,25 @@ DE-EAST
 DE-WEST
 ```
 
-| Field | PostgreSQL type | Required | Rules | Description |
-|---|---|---:|---|---|
-| `region_id` | `INT IDENTITY` | yes | primary key | Internal database identifier |
-| `region_code` | `VARCHAR(15)` | yes | unique | Stable technical code, for example `DE-SOUTH` |
-| `region_prefix` | `VARCHAR(5)` | yes | unique | Short prefix used in asset codes, for example `S` |
-| `region_name` | `VARCHAR(255)` | yes | unique | Human-readable region name |
-| `region_description` | `TEXT` | no | – | Optional model-region description |
-| `created_at` | `TIMESTAMPTZ` | yes | defaults to current timestamp | Record creation time |
-
-### Meaning of `region_code`
-
-`region_code` is not a postcode. It is a stable internal identifier for APIs, filters, seed data and frontend logic.
-
 ---
 
-# Entity: Asset Type
+# Asset Types
 
-`asset_types` stores reusable technical classifications. It prevents classification attributes from being repeated for every asset.
+`asset_types` normalizes reusable technical categories and capability flags.
 
-| Field | PostgreSQL type | Required | Rules | Description |
-|---|---|---:|---|---|
-| `asset_type_id` | `INT IDENTITY` | yes | primary key | Internal type identifier |
-| `asset_type_name` | `VARCHAR(100)` | yes | unique | Stable type name such as `wind_park` |
-| `asset_prefix` | `VARCHAR(10)` | yes | unique | Code component such as `WIND` or `BESS` |
-| `asset_role` | `VARCHAR(30)` | yes | checked enum | Main role of the asset type |
-| `is_renewable` | `BOOLEAN` | yes | – | Whether the technology is classified as renewable |
-| `is_weather_dependent` | `BOOLEAN` | yes | – | Whether later output simulation depends strongly on weather |
-| `is_dispatchable` | `BOOLEAN` | yes | – | Whether output or operation can be controlled within the simplified model |
-| `can_store_energy` | `BOOLEAN` | yes | – | Whether the type represents energy storage |
-| `created_at` | `TIMESTAMPTZ` | yes | defaults to current timestamp | Record creation time |
+| Field | Type | Meaning |
+|---|---|---|
+| `asset_type_id` | integer | Surrogate primary key |
+| `asset_type_name` | string | Stable type name |
+| `asset_prefix` | string | Short code component |
+| `asset_role` | enum-like string | `producer`, `consumer`, `storage`, `grid` |
+| `is_renewable` | boolean | Renewable generation flag |
+| `is_weather_dependent` | boolean | Whether external conditions influence operation |
+| `is_dispatchable` | boolean | Whether output/load can be deliberately controlled |
+| `can_store_energy` | boolean | Whether the type stores energy |
+| `created_at` | timestamp with time zone | Creation timestamp |
 
-## Allowed Asset Roles
-
-```text
-producer
-consumer
-storage
-grid
-```
-
-### Role meanings
-
-| Role | Meaning |
-|---|---|
-| `producer` | Generates electrical energy |
-| `consumer` | Consumes electrical energy |
-| `storage` | Charges, stores and later discharges energy |
-| `grid` | Represents simplified grid infrastructure or power transfer |
-
-## Current Development Asset Types
+Development seed types:
 
 ### Producers
 
@@ -107,7 +74,7 @@ biomass_power_plant
 battery_storage
 ```
 
-### Grid infrastructure
+### Grid
 
 ```text
 substation
@@ -124,255 +91,479 @@ ev_charging_park
 data_center
 ```
 
-### `is_dispatchable`
+Only four producer types are registered for runtime simulation in `v0.11.0`:
 
-Within this project, dispatchable means that the asset's output or operation can be intentionally adjusted in the later simplified simulation. It does not claim to reproduce all real operational, market or grid constraints.
+```text
+solar_park
+wind_park
+hydro_power_plant
+biomass_power_plant
+```
 
 ---
 
-# Entity: Asset
+# Assets
 
-An asset is a physical or modeled energy-system object assigned to one region and one reusable asset type.
+`assets` stores physical/technical energy-system master data.
 
-| Field | PostgreSQL type | Unit | Required | Rules | Description |
-|---|---|---:|---:|---|---|
-| `asset_id` | `INT IDENTITY` | – | yes | primary key | Internal identifier |
-| `asset_code` | `VARCHAR(50)` | – | yes | unique | Stable technical code, for example `S-BESS-001` |
-| `asset_name` | `VARCHAR(255)` | – | yes | – | Human-readable name |
-| `asset_location` | `VARCHAR(255)` | – | yes | – | Human-readable location label |
-| `rated_power_kw` | `NUMERIC(12,2)` | kW | yes | `> 0` | Rated or representative maximum power |
-| `operating_status` | `VARCHAR(20)` | – | yes | checked enum | Current operational master-data status |
-| `latitude` | `NUMERIC(9,6)` | degrees | yes | `-90` to `90` | Map latitude |
-| `longitude` | `NUMERIC(9,6)` | degrees | yes | `-180` to `180` | Map longitude |
-| `asset_type_id` | `INT` | – | yes | FK to `asset_types` | Technical classification |
-| `region_id` | `INT` | – | yes | FK to `regions` | Regional assignment |
-| `created_at` | `TIMESTAMPTZ` | – | yes | defaults to current timestamp | Record creation time |
+| Field | Type | Rules / meaning |
+|---|---|---|
+| `asset_id` | integer | Identity primary key |
+| `asset_code` | string | Unique stable technical code |
+| `asset_name` | string | Human-readable name |
+| `asset_location` | string | Location description |
+| `rated_power_kw` | numeric | Must be `> 0` |
+| `operating_status` | string | `online`, `offline`, `maintenance`, `fault` |
+| `latitude` | numeric | `-90..90` |
+| `longitude` | numeric | `-180..180` |
+| `asset_type_id` | integer | FK to `asset_types` |
+| `region_id` | integer | FK to `regions` |
+| `created_at` | timestamp with time zone | Creation timestamp |
 
-## Operating Status Values
-
-```text
-online
-offline
-maintenance
-fault
-```
-
-`operating_status` currently represents the latest master-data state. Historical status changes are not yet stored as events.
-
-## Rated Power Interpretation
-
-The field is intentionally generic across asset roles:
-
-| Role | Interpretation |
-|---|---|
-| Producer | Installed or rated generation power |
-| Consumer | Representative peak or configured demand capacity |
-| Storage | Simplified rated power; detailed charge/discharge limits are stored in `storage_specs` |
-| Grid | Simplified transfer or equipment rating |
+`rated_power_kw` represents the technical upper power reference used by the simulation engine. Generated producer power is validated against it.
 
 ---
 
-# Entity: Measurement
+# Simulation Runs
 
-Measurements store interval-based time-series values for one asset.
+`simulation_runs` stores metadata and lifecycle state for a persisted simulation execution.
 
-| Field | PostgreSQL type | Unit | Required | Rules | Description |
-|---|---|---:|---:|---|---|
-| `measurement_id` | `INT IDENTITY` | – | yes | primary key | Internal measurement identifier |
-| `asset_id` | `INT` | – | yes | FK to `assets`, cascade delete | Parent asset |
-| `measurement_time` | `TIMESTAMPTZ` | – | yes | unique together with `asset_id` | Interval reference timestamp |
-| `interval_minutes` | `INT` | minutes | yes | `> 0` | Duration represented by the row |
-| `active_power_kw` | `NUMERIC(20,2)` | kW | yes | signed values allowed | Average active power during the interval |
-| `energy_kwh` | `NUMERIC(20,2)` | kWh | yes | `>= 0` | Interval energy magnitude |
-| `source` | `VARCHAR(255)` | – | yes | – | Data origin such as `simulation`, `pytest`, `import` or `manual` |
-| `quality_status` | `VARCHAR(20)` | – | yes | checked enum | Data-quality classification |
-| `created_at` | `TIMESTAMPTZ` | – | yes | defaults to current timestamp | Record creation time |
+| Field | Type | Rules / meaning |
+|---|---|---|
+| `simulation_run_id` | bigint | Identity primary key |
+| `simulation_mode` | string | `historical`, `live`, `forecast`, `scenario` |
+| `start_time` | timestamp with time zone | Configured start |
+| `end_time` | timestamp with time zone | Configured end; must be after start |
+| `interval_minutes` | integer | Positive configured grid interval |
+| `random_seed` | integer, nullable | Non-negative deterministic seed |
+| `status` | string | `created`, `running`, `completed`, `failed` |
+| `generated_measurement_count` | integer | Number of point-in-time measurements persisted by the run |
+| `created_at` | timestamp with time zone | Run metadata creation time |
+| `started_at` | timestamp with time zone, nullable | Set when marked running |
+| `completed_at` | timestamp with time zone, nullable | Set on completed or failed |
 
-## Uniqueness Rule
+### Run status lifecycle
 
-```text
-UNIQUE (asset_id, measurement_time)
-```
-
-One asset cannot have two measurement records at the same timestamp.
-
-## Power and Energy
-
-For a regular interval, the expected relationship is:
+Successful path:
 
 ```text
-energy_kwh = ABS(active_power_kw) × interval_minutes / 60
+created → running → completed
 ```
 
-The database currently does not enforce this formula. The separation is intentional:
-
-- power describes the interval's rate or level,
-- energy describes the quantity over the interval,
-- future imports may contain calculated or metered energy,
-- analytics can aggregate `energy_kwh` directly.
-
-## Signed Active Power
-
-The database permits signed `active_power_kw` values.
-
-Current use:
-
-- normal development seed values are positive,
-- deterministic test data contains negative rows marked `invalid`,
-- future storage or grid-flow conventions may use direction explicitly.
-
-No final platform-wide sign convention for charging, discharging, import and export has been implemented yet. A later simulation version should add an explicit operating mode or documented direction convention before signed values are used as valid operational data.
-
-## Quality Status Values
+Failure path:
 
 ```text
-valid
-invalid
-estimated
+created → running → failed
 ```
 
-| Status | Meaning | Included in current KPIs |
-|---|---|---:|
-| `valid` | Accepted operational value | yes |
-| `invalid` | Known bad or rejected value | no |
-| `estimated` | Derived or substituted value | no |
+`generated_measurement_count` counts persisted **PowerMeasurement rows**, not derived `PowerIntervalDraft` objects.
+
+Example for four assets over two hours at 15-minute resolution:
+
+```text
+8 complete intervals per asset
+9 grid points per asset
+4 × 9 = 36 persisted measurements
+4 × 8 = 32 derived intervals
+```
 
 ---
 
-# Entity: Storage Specs
+# Measurements
 
-`storage_specs` is a one-to-one extension of `assets` for static battery-storage specifications.
+## Current PostgreSQL fields
 
-| Field | PostgreSQL type | Unit | Required | Rules | Description |
-|---|---|---:|---:|---|---|
-| `asset_id` | `INT` | – | yes | PK and FK to `assets`, cascade delete | Storage asset identifier |
-| `energy_capacity_kwh` | `NUMERIC(20,2)` | kWh | yes | `> 0` | Usable or modeled energy capacity |
-| `max_charge_power_kw` | `NUMERIC(20,2)` | kW | yes | `> 0` | Maximum charging power |
-| `max_discharge_power_kw` | `NUMERIC(20,2)` | kW | yes | `> 0` | Maximum discharging power |
-| `charge_efficiency_percent` | `NUMERIC(5,2)` | % | yes | `> 0` and `<= 100` | Charging efficiency |
-| `discharge_efficiency_percent` | `NUMERIC(5,2)` | % | yes | `> 0` and `<= 100` | Discharging efficiency |
-| `min_state_of_charge_percent` | `NUMERIC(5,2)` | % | yes | `0` to `100` | Lower operating limit |
-| `max_state_of_charge_percent` | `NUMERIC(5,2)` | % | yes | `0` to `100` and greater than minimum | Upper operating limit |
-| `created_at` | `TIMESTAMPTZ` | – | yes | defaults to current timestamp | Record creation time |
+| Field | Type | Rules / meaning |
+|---|---|---|
+| `measurement_id` | integer | Identity primary key |
+| `asset_id` | integer | Required FK to `assets`, `ON DELETE CASCADE` |
+| `simulation_run_id` | bigint, nullable | FK to `simulation_runs`, `ON DELETE SET NULL` |
+| `measurement_time` | timestamp with time zone | Timestamp represented by the row |
+| `interval_minutes` | integer, nullable | Transitional interval metadata; positive when present |
+| `active_power_kw` | numeric | Required active power value |
+| `energy_kwh` | numeric, nullable | Transitional interval energy; non-negative when present |
+| `source` | string | Origin of the row |
+| `quality_status` | string | `valid`, `invalid`, `estimated` |
+| `created_at` | timestamp with time zone | Creation timestamp |
 
-Dynamic state of charge is not part of this static table. It will later be modeled as time-dependent simulation or measurement data.
+Uniqueness:
+
+```text
+(asset_id, measurement_time)
+```
+
+One asset therefore cannot currently store two measurements for the same timestamp, even if they belong to different simulation runs.
+
+## `v0.11.0` transitional semantics
+
+Two measurement shapes temporarily coexist.
+
+### Existing seed/API-created interval-style row
+
+```text
+measurement_time
+interval_minutes = 15
+active_power_kw
+energy_kwh
+```
+
+### New runtime simulation row
+
+```text
+measurement_time
+interval_minutes = NULL
+active_power_kw
+energy_kwh = NULL
+simulation_run_id = <run id>
+```
+
+The runtime simulation row represents an instantaneous/point-in-time active-power support value. Energy is derived later through aggregation.
+
+The coexistence is intentional for `v0.11.0` so the simulation foundation can be released without simultaneously rewriting the full legacy API/KPI layer.
+
+`v0.11.1` is planned to make the point-in-time model canonical.
 
 ---
 
-# API Naming versus Database Naming
+# Storage Specifications
 
-The database uses:
+`storage_specs` stores static battery characteristics in a one-to-one relationship with an asset.
+
+| Field | Type | Meaning / constraint |
+|---|---|---|
+| `asset_id` | integer | PK and FK to `assets` |
+| `energy_capacity_kwh` | numeric | Must be `> 0` |
+| `max_charge_power_kw` | numeric | Must be `> 0` |
+| `max_discharge_power_kw` | numeric | Must be `> 0` |
+| `charge_efficiency_percent` | numeric | `> 0` and `<= 100` |
+| `discharge_efficiency_percent` | numeric | `> 0` and `<= 100` |
+| `min_state_of_charge_percent` | numeric | `0..100` |
+| `max_state_of_charge_percent` | numeric | `0..100` and greater than minimum |
+| `created_at` | timestamp with time zone | Creation timestamp |
+
+Dynamic state of charge is not yet persisted or simulated in `v0.11.0`.
+
+---
+
+# Public API Models
+
+## `AssetSummaryResponse`
 
 ```text
-asset_types.asset_type_name
-```
-
-The public API exposes the joined value as:
-
-```text
+asset_id
+asset_name
+asset_code
+asset_location
+asset_role
 asset_type
+region_code
+rated_power_kw
+operating_status
 ```
 
-This keeps the external contract concise while preserving a descriptive internal database column name.
+## `AssetResponse`
 
----
-
-# Derived KPI Fields
-
-The following API fields are calculated from valid measurements and are not stored as columns:
-
-| Field | Calculation |
-|---|---|
-| `measurement_count` | `COUNT(*)` |
-| `average_power_kw` | rounded `AVG(active_power_kw)` |
-| `min_power_kw` | `MIN(active_power_kw)` |
-| `max_power_kw` | `MAX(active_power_kw)` |
-| `total_energy_kwh` | `SUM(energy_kwh)` |
-| `latest_measurement_time` | `MAX(measurement_time)` |
-
----
-
-# Planned Later Entities and Fields
-
-## Simulation Runs
-
-Likely fields:
-
-```text
-simulation_run_id
-simulation_mode
-start_time
-end_time
-interval_minutes
-simulation_speed
-run_status
-created_at
-```
-
-## Weather Measurements
-
-Likely fields:
+Adds:
 
 ```text
 region_id
-weather_time
-cloud_cover_percent
-solar_irradiance_w_m2
-wind_speed_m_s
-temperature_c
-source
+region_name
+latitude
+longitude
 ```
 
-## Dynamic Storage State
+## `MeasurementSummaryResponse`
 
-Likely fields:
+```text
+measurement_id
+asset_id
+asset_code
+asset_name
+measurement_time
+active_power_kw
+energy_kwh       <- nullable in v0.11.0
+quality_status
+```
+
+## `MeasurementResponse`
+
+```text
+measurement_id
+asset_id
+asset_code
+asset_name
+asset_type
+asset_role
+region_code
+measurement_time
+interval_minutes <- nullable in v0.11.0
+active_power_kw
+energy_kwh       <- nullable in v0.11.0
+source
+quality_status
+```
+
+`simulation_run_id` is a database relationship and is not currently exposed through `MeasurementResponse`.
+
+## `MeasurementCreate`
+
+The create model still requires the legacy interval fields in `v0.11.0`:
 
 ```text
 asset_id
 measurement_time
-state_of_charge_percent
-storage_mode
-charge_or_discharge_power_kw
+interval_minutes
+active_power_kw
+energy_kwh
+source
+quality_status
 ```
 
-## Energy Balance
+This asymmetry is temporary and documented for the `v0.11.1` refactor.
 
-Likely calculated outputs:
+## KPI response models
+
+Global:
 
 ```text
-total_generation_kw
-total_consumption_kw
-storage_contribution_kw
-grid_flow_kw
-surplus_kw
-deficit_kw
-balance_status
+measurement_count
+average_power_kw
+min_power_kw
+max_power_kw
+total_energy_kwh
+latest_measurement_time
 ```
 
-## Recommendations
-
-Likely actions:
+Asset-specific adds:
 
 ```text
-charge_storage
-discharge_storage
-activate_dispatchable_generation
-reduce_consumption
-no_action
+asset_id
+asset_name
 ```
 
 ---
 
-# Explicitly Out of Scope for the Current MVP
+# Internal Measurement Models
 
-- voltage and current time series,
-- reactive power and power factor,
-- physically accurate grid-frequency simulation,
-- transmission lines and full grid topology,
-- AC power-flow calculations,
-- detailed equipment condition monitoring,
-- predictive maintenance,
-- market bidding and pricing,
-- authentication and authorization.
+Defined in `src/measurements/models.py`.
 
-The current model is a backend and analytics foundation, not a certified power-system simulator.
+## `PowerMeasurement`
+
+One raw point-in-time active-power value.
+
+| Field | Meaning |
+|---|---|
+| `asset_id` | Owning asset |
+| `measurement_time` | Point timestamp |
+| `active_power_kw` | Active power at the point |
+| `source` | Measurement source |
+| `quality_status` | `valid`, `invalid`, `estimated` |
+
+Supported internal source literals:
+
+```text
+simulation
+database
+scada
+smart_meter
+csv_import
+external_api
+```
+
+Runtime simulation currently uses `source = "simulation"` and `quality_status = "valid"`.
+
+## `PowerSupportPoint`
+
+Temporary aggregation point.
+
+```text
+timestamp
+active_power_kw
+point_type
+is_interpolated
+```
+
+Support-point types:
+
+```text
+measured
+interpolated
+estimated
+```
+
+Interpolated support points are derived values and are never persisted as source measurements.
+
+## `PowerSegment`
+
+Represents one adjacent pair of support points:
+
+```text
+start_point
+end_point
+```
+
+Energy for the segment is calculated with the trapezoidal rule.
+
+## `PowerIntervalDraft`
+
+Derived interval result; it is currently returned in memory and not persisted.
+
+| Field | Meaning |
+|---|---|
+| `asset_id` | Owning asset |
+| `interval_start` | Interval start |
+| `interval_end` | Interval end |
+| `avg_active_power_kw` | Time-weighted average power, nullable if no coverage |
+| `energy_kwh` | Derived energy, nullable if no segments can be built |
+| `quality_status` | `valid`, `incomplete`, `estimated`, `invalid` type contract |
+| `aggregation_method` | Current value: `linear_interpolation_trapezoidal` |
+| `source_measurement_count` | Raw measurements relevant to this exact interval |
+| `valid_measurement_count` | Relevant measurements remaining after invalid raw rows are excluded |
+| `coverage_ratio` | Covered duration divided by full interval duration |
+
+Current quality determination is coverage-based:
+
+```text
+coverage <= 0.0 → invalid
+0.0 < coverage < 1.0 → incomplete
+coverage >= 1.0 → valid
+```
+
+`estimated` remains available in the interval type contract but is not currently produced by `determine_quality_status()`.
+
+### Source count semantics
+
+`source_measurement_count` does **not** mean the size of the complete input series. It counts only the raw measurements selected as left support, internal measurements and right support for that specific interval.
+
+Example:
+
+```text
+Measurements: 10:00, 10:15, 10:30
+Interval:     10:00–10:15
+
+source_measurement_count = 2
+```
+
+If interval boundaries must be interpolated, the surrounding raw measurements are counted, but the generated interpolated points are not.
+
+---
+
+# Internal Simulation Models
+
+Defined in `src/simulation/models.py`.
+
+## `SimulationConfig`
+
+Immutable run configuration:
+
+```text
+start_time
+end_time
+interval_minutes
+random_seed
+simulation_mode
+```
+
+Validation:
+
+- `start_time < end_time`
+- interval in `5`, `15`, `30`, `60`
+- mode in `historical`, `live`, `forecast`, `scenario`
+- non-negative seed
+
+Derived properties:
+
+```text
+duration
+duration_minutes
+total_intervals
+total_grid_points
+effective_end_time
+effective_duration
+```
+
+`total_grid_points = total_intervals + 1`.
+
+## `SimulationAsset`
+
+Internal reduced view of a database asset needed by the engine:
+
+```text
+asset_id
+asset_code
+asset_role
+asset_type
+region_id
+region_code
+rated_power_kw
+operating_status
+is_renewable
+is_weather_dependent
+is_dispatchable
+can_store_energy
+```
+
+## `SimulationContext`
+
+Per-timestamp simulation context:
+
+```text
+config
+current_time
+random_generator
+solar_factor
+wind_factor
+load_factor
+hydro_factor
+biomass_factor
+```
+
+The factors are temporary extension points until weather, demand and operating-state models are introduced.
+
+## `SimulationState`
+
+Mutable state container prepared for future stateful simulation:
+
+```text
+last_power_kw_by_asset
+state_of_charge_percent_by_asset
+generated_measurement_count
+```
+
+It is not yet the central state mechanism of the `v0.11.0` service flow.
+
+---
+
+# Simulation Profile Registry
+
+`SIMULATION_PROFILE_REGISTRY` maps one asset type to a `SimulationProfileDefinition` containing:
+
+```text
+power_profile
+default_asset_factory
+context_factory
+```
+
+Registered in `v0.11.0`:
+
+| Asset type | Default behavior |
+|---|---|
+| `solar_park` | Triangular daylight profile |
+| `wind_park` | Seeded random variation around factor `0.85` |
+| `hydro_power_plant` | Stable factor `0.90` |
+| `biomass_power_plant` | Stable factor `0.85` |
+
+Only registered asset types are loaded by `load_simulation_assets()`.
+
+---
+
+# Planned `v0.11.1` Contract Cleanup
+
+The next patch is intentionally focused on the measurement model:
+
+- remove `interval_minutes` from raw measurement persistence,
+- remove stored `energy_kwh` from raw measurement persistence,
+- simplify `MeasurementCreate` and read contracts,
+- derive interval average power and energy through aggregation,
+- align KPI energy semantics with the point-in-time model,
+- update related database/API tests.

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document describes the public REST API contract of the Energy Operations Platform for `v0.10.0`.
+This document describes the public REST API contract of the Energy Operations Platform for `v0.11.0`.
 
 Interactive OpenAPI documentation is available at:
 
@@ -18,7 +18,21 @@ Default local URL:
 http://127.0.0.1:8000
 ```
 
-All request and response bodies use JSON. Date-time values are returned as ISO 8601 timestamps.
+All request and response bodies use JSON. Date-time values are serialized as ISO 8601 timestamps.
+
+## `v0.11.0` Measurement Compatibility Note
+
+`v0.11.0` introduces runtime simulation rows as **point-in-time active-power measurements** while the public measurement API still retains the previous interval-energy contract for manual/API-created data.
+
+Therefore:
+
+- read models allow `interval_minutes = null`,
+- read models allow `energy_kwh = null`,
+- runtime simulation measurements use both fields as `null`,
+- `POST /measurements` still requires both fields,
+- the full public contract cleanup is deferred to `v0.11.1`.
+
+There is no public simulation endpoint in `v0.11.0`.
 
 ---
 
@@ -44,7 +58,7 @@ Lightweight application health endpoint.
 }
 ```
 
-The endpoint confirms that FastAPI is running. It does not perform a database query.
+The endpoint confirms that FastAPI is running. It does not query PostgreSQL.
 
 ---
 
@@ -76,7 +90,7 @@ Example response item:
 }
 ```
 
-An unknown `asset_type` returns an empty list.
+An unknown `asset_type` filter returns an empty list.
 
 ## `GET /assets/{asset_id}`
 
@@ -116,7 +130,7 @@ Unknown assets return `404 Not Found`.
 
 ## Summary versus detail contracts
 
-Measurement list endpoints intentionally return compact records. Detail, POST and PATCH endpoints return the complete measurement contract.
+Measurement list endpoints intentionally use a compact response. Detail, POST and PATCH endpoints use the complete response contract.
 
 ### `MeasurementSummaryResponse`
 
@@ -127,7 +141,7 @@ asset_code
 asset_name
 measurement_time
 active_power_kw
-energy_kwh
+energy_kwh           <- nullable in v0.11.0
 quality_status
 ```
 
@@ -142,11 +156,19 @@ asset_type
 asset_role
 region_code
 measurement_time
-interval_minutes
+interval_minutes      <- nullable in v0.11.0
 active_power_kw
-energy_kwh
+energy_kwh            <- nullable in v0.11.0
 source
 quality_status
+```
+
+Allowed measurement quality values exposed by the API:
+
+```text
+valid
+invalid
+estimated
 ```
 
 ## `GET /measurements`
@@ -159,7 +181,7 @@ Optional query parameter:
 |---|---|---|
 | `limit` | integer | optional, `1` to `100` |
 
-Example response item:
+Example interval-style seed row:
 
 ```json
 {
@@ -174,11 +196,11 @@ Example response item:
 }
 ```
 
+Runtime simulation summaries use the same shape, but `energy_kwh` is `null` because the service persists point-in-time power values rather than interval energy.
+
 ## `GET /assets/{asset_id}/measurements`
 
 Returns measurement summaries for one asset.
-
-Parameters:
 
 | Parameter | Location | Type | Rules |
 |---|---|---|---|
@@ -200,7 +222,7 @@ Path parameter:
 |---|---|---|
 | `measurement_id` | integer | `>= 1` |
 
-Example response:
+Example existing interval-style measurement:
 
 ```json
 {
@@ -220,63 +242,58 @@ Example response:
 }
 ```
 
-Unknown measurements return `404 Not Found`.
-
-## `POST /measurements`
-
-Creates a measurement for an existing asset.
-
-Request model: `MeasurementCreate`
+For point-in-time simulation measurements created by the `v0.11.0` service, the distinguishing fields are:
 
 ```json
 {
-  "asset_id": 1,
-  "measurement_time": "2026-07-14T10:00:00+02:00",
-  "interval_minutes": 15,
-  "active_power_kw": 82000.0,
-  "energy_kwh": 20500.0,
+  "interval_minutes": null,
+  "energy_kwh": null,
   "source": "simulation",
   "quality_status": "valid"
 }
 ```
 
-Field rules:
+Unknown measurement IDs return `404 Not Found`.
 
-| Field | Type | Validation |
-|---|---|---|
-| `asset_id` | integer | `>= 1` |
-| `measurement_time` | datetime | required |
-| `interval_minutes` | integer | `>= 1` |
-| `active_power_kw` | number | required; database accepts signed values |
-| `energy_kwh` | number | `>= 0` |
-| `source` | string | at least one character |
-| `quality_status` | string | `valid`, `invalid` or `estimated` |
+## `POST /measurements`
 
-Successful creation returns `201 Created` and the complete `MeasurementResponse`.
+Creates one measurement for an existing asset.
 
-Behavior:
-
-1. Validate the request with Pydantic.
-2. Check that the parent asset exists.
-3. Insert the measurement.
-4. Read the created row through the normal detail query.
-5. Return the complete API representation.
-
-Important database constraint:
-
-```text
-UNIQUE (asset_id, measurement_time)
-```
-
-## `PATCH /measurements/{measurement_id}`
-
-Updates only the measurement quality status.
-
-Request model: `MeasurementQualityUpdate`
+`v0.11.0` intentionally keeps the previous create contract. Required body:
 
 ```json
 {
-  "quality_status": "invalid"
+  "asset_id": 1,
+  "measurement_time": "2026-07-02T08:15:00+02:00",
+  "interval_minutes": 15,
+  "active_power_kw": 82000.0,
+  "energy_kwh": 20500.0,
+  "source": "manual_import",
+  "quality_status": "valid"
+}
+```
+
+Validation rules implemented by `MeasurementCreate`:
+
+- `asset_id >= 1`
+- `interval_minutes >= 1`
+- `energy_kwh >= 0`
+- `source` must not be empty
+- `quality_status` must be `valid`, `invalid` or `estimated`
+
+Successful creation returns `201 Created` and the complete `MeasurementResponse`.
+
+Unknown parent assets return `404 Not Found`.
+
+## `PATCH /measurements/{measurement_id}`
+
+Updates only `quality_status`.
+
+Request body:
+
+```json
+{
+  "quality_status": "estimated"
 }
 ```
 
@@ -288,25 +305,34 @@ invalid
 estimated
 ```
 
-A successful update returns `200 OK` and the complete updated `MeasurementResponse`.
+Successful update returns the complete `MeasurementResponse` with `200 OK`.
+
+Unknown measurements return `404 Not Found`.
 
 ---
 
 # KPI Endpoints
 
-Only rows with:
+## `GET /kpis/measurements`
+
+Returns the global KPI summary using only rows with:
 
 ```text
 quality_status = valid
 ```
 
-are included. Both `invalid` and `estimated` measurements are excluded.
+Response contract:
 
-## `GET /kpis/measurements`
+```text
+measurement_count
+average_power_kw
+min_power_kw
+max_power_kw
+total_energy_kwh
+latest_measurement_time
+```
 
-Returns global measurement KPIs.
-
-Response model: `MeasurementKPIsResponse`
+Example:
 
 ```json
 {
@@ -319,81 +345,94 @@ Response model: `MeasurementKPIsResponse`
 }
 ```
 
-Fields:
-
-- `measurement_count`
-- `average_power_kw`
-- `min_power_kw`
-- `max_power_kw`
-- `total_energy_kwh`
-- `latest_measurement_time`
-
 ## `GET /assets/{asset_id}/kpis`
 
-Returns valid-only KPIs for one asset.
-
-Response model: `AssetKPIsResponse`
-
-```json
-{
-  "asset_id": 1,
-  "asset_name": "North Sea Wind Park",
-  "measurement_count": 4,
-  "average_power_kw": 82250.0,
-  "min_power_kw": 79000.0,
-  "max_power_kw": 86000.0,
-  "total_energy_kwh": 82250.0,
-  "latest_measurement_time": "2026-06-22T08:45:00+02:00"
-}
-```
-
-If the asset exists but has no valid measurements:
-
-```json
-{
-  "asset_id": 9,
-  "asset_name": "Example Asset",
-  "measurement_count": 0,
-  "average_power_kw": null,
-  "min_power_kw": null,
-  "max_power_kw": null,
-  "total_energy_kwh": null,
-  "latest_measurement_time": null
-}
-```
-
-Unknown assets return `404 Not Found`.
-
----
-
-# Error Behavior
-
-| Scenario | Status |
-|---|---:|
-| Valid GET, POST or PATCH | `200` or `201` |
-| Unknown asset or measurement | `404` |
-| Invalid path/query type | `422` |
-| ID or limit outside the allowed range | `422` |
-| Missing required request field | `422` |
-| Unsupported `quality_status` | `422` |
-| Empty `source` | `422` |
-
-Central helper functions provide consistent not-found responses:
+Returns the same KPI fields scoped to one asset and additionally includes:
 
 ```text
-get_asset_or_404()
-get_measurement_or_404()
+asset_id
+asset_name
 ```
+
+Behavior:
+
+- unknown asset → `404 Not Found`
+- existing asset without valid measurements → `measurement_count = 0` and nullable KPI fields
+- invalid and estimated rows are excluded
+
+## KPI transition note
+
+The current KPI SQL still belongs to the pre-`v0.11` interval-energy model:
+
+```sql
+COUNT(*)
+AVG(active_power_kw)
+MIN(active_power_kw)
+MAX(active_power_kw)
+SUM(energy_kwh)
+MAX(measurement_time)
+```
+
+Runtime simulation rows introduced by `v0.11.0` have `energy_kwh = NULL`. The KPI layer is intentionally not fully refactored in this release. `v0.11.1` will align energy calculation and KPI semantics with point-in-time raw measurements and the reusable aggregation module.
 
 ---
 
-# Current API Limitations
+# Simulation Service in `v0.11.0`
 
-- No asset create/update/delete endpoints yet.
-- No region or asset-type endpoints yet.
-- Asset filtering is currently performed in Python after loading asset summaries.
-- List limiting is applied in Python rather than through SQL `LIMIT`.
-- POST does not yet validate that `energy_kwh` mathematically matches power and interval.
-- Storage state of charge and charge/discharge mode are not yet modeled as time-series fields.
-- No pagination, authentication or authorization yet.
-- No simulation-control endpoints yet.
+Simulation is **not exposed as a REST endpoint** yet.
+
+The internal service flow is:
+
+```text
+create simulation_run
+→ commit run metadata
+→ mark running
+→ commit status
+→ load registry-supported database assets
+→ simulate point-in-time PowerMeasurements
+→ batch insert measurements
+→ derive PowerIntervalDrafts in memory
+→ validate complete intervals
+→ mark completed and persist generated_measurement_count
+→ commit
+```
+
+Failure path:
+
+```text
+simulation or insert error
+→ rollback generated measurements
+→ mark simulation_run failed
+→ commit failed status
+→ re-raise original exception
+```
+
+The integration suite verifies both paths against PostgreSQL.
+
+---
+
+# HTTP and Validation Behavior
+
+Common behavior:
+
+| Scenario | Result |
+|---|---|
+| Valid GET | `200 OK` |
+| Valid POST | `201 Created` |
+| Missing asset/measurement | `404 Not Found` |
+| Invalid path/query/body input | `422 Unprocessable Entity` |
+| Empty asset measurement list | `200 OK`, `[]` |
+
+Path IDs use `ge=1`. Measurement list limits use `1..100`.
+
+---
+
+# Public versus Internal Models
+
+Public API models are defined in:
+
+```text
+src/schemas.py
+```
+
+`src/simulation/schemas.py` currently contains `SimulationRunResponse`, but no endpoint uses it in `v0.11.0`. It is preparation for a later public simulation API and must not be interpreted as an already exposed REST resource.
