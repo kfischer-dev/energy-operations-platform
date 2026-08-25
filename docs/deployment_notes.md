@@ -2,9 +2,9 @@
 
 ## Purpose
 
-This document describes the local containerized environment of the Energy Operations Platform.
+This document describes the local containerized environment and developer execution paths of the Energy Operations Platform in `v0.11.0`.
 
-The Docker foundation was established in `v0.9.x`; `v0.10.0` verifies that the expanded five-table energy-domain schema initializes and runs in the same reproducible environment.
+The Docker foundation was established in `v0.9.x`. `v0.11.0` verifies that the expanded six-table schema and simulation-run persistence continue to work in the same reproducible environment.
 
 Related documentation:
 
@@ -12,11 +12,15 @@ Related documentation:
 - [`api_reference.md`](api_reference.md)
 - [`test_strategy.md`](test_strategy.md)
 
-## Current Status
+---
 
-The local stack consists of:
+# Current Stack
 
 ```text
+Host browser / API client
+        |
+        | localhost:8000
+        v
 FastAPI container
         |
         | DB_HOST=db:5432
@@ -32,24 +36,27 @@ Current capabilities:
 - PostgreSQL readiness health check,
 - API startup only after the database is healthy,
 - automatic schema and development seed initialization for a new volume,
-- persistent database files through `db_data`,
+- persistent PostgreSQL data through `db_data`,
 - host API access on port `8000`,
-- optional host database access on port `5433`.
+- optional host database access on port `5433`,
+- simulation-run and raw-power persistence supported by the same database.
 
-## Services
+---
 
-### `api`
+# Services
+
+## `api`
 
 The API service:
 
 - builds from the local `Dockerfile`,
 - exposes `8000:8000`,
 - reads `.env`,
-- overrides `DB_HOST` with `db`,
+- overrides `DB_HOST` with Compose service name `db`,
 - depends on a healthy PostgreSQL service,
 - starts Uvicorn on `0.0.0.0:8000`.
 
-### `db`
+## `db`
 
 The database service:
 
@@ -57,10 +64,12 @@ The database service:
 - reads `POSTGRES_USER`, `POSTGRES_PASSWORD` and `POSTGRES_DB`,
 - exposes host port `5433` to container port `5432`,
 - stores data in the named volume `db_data`,
-- initializes `schema.sql` and `seed_data.sql` for a new volume,
+- initializes `schema.sql` and `seed_data.sql` only for a new data directory,
 - reports readiness through `pg_isready`.
 
-## Dockerfile
+---
+
+# Dockerfile
 
 Current build sequence:
 
@@ -80,28 +89,13 @@ uvicorn src.api:app --host 0.0.0.0 --port 8000
 
 `0.0.0.0` is required so the host can reach Uvicorn through Docker port mapping.
 
-## Ignored Files
+---
 
-`.dockerignore` excludes local or private content from the image build context, including:
+# Environment Variables
 
-```text
-.git
-.env
-.venv/
-venv/
-__pycache__/
-.pytest_cache/
-logs/
-*.log
-*.zip
-private_learning_notes.md
-```
+Create `.env` from `.env.example`.
 
-The real `.env` file must never be committed or copied into the image.
-
-## Environment Variables
-
-Create `.env` from `.env.example`:
+Base example:
 
 ```env
 # FastAPI database connection
@@ -117,42 +111,57 @@ POSTGRES_USER=postgres
 POSTGRES_PASSWORD=your_password_here
 ```
 
-Compose changes only the API database hostname:
+## Inside Compose
 
-```yaml
-environment:
-  DB_HOST: db
+Compose overrides:
+
+```text
+DB_HOST=db
 ```
 
-Inside the Compose network:
+Container-to-container PostgreSQL endpoint:
 
 ```text
 host: db
 port: 5432
 ```
 
-From Windows or another host process:
+## Host process connecting to Docker PostgreSQL
+
+Because Compose maps:
 
 ```text
-host: localhost
-port: 5433
+5433:5432
 ```
 
-## Start the Stack
+use:
 
-Foreground mode:
+```text
+DB_HOST=localhost
+DB_PORT=5433
+```
+
+for Python processes launched directly on the host when they should use the Docker database.
+
+If a separate local PostgreSQL service is used instead, configure the host/port accordingly.
+
+---
+
+# Start the Stack
+
+Foreground:
 
 ```bash
 docker compose up --build
 ```
 
-Detached mode:
+Detached:
 
 ```bash
 docker compose up --build -d
 ```
 
-Check status:
+Status:
 
 ```bash
 docker compose ps
@@ -161,6 +170,7 @@ docker compose ps
 Useful URLs:
 
 ```text
+http://127.0.0.1:8000/
 http://127.0.0.1:8000/health
 http://127.0.0.1:8000/docs
 http://127.0.0.1:8000/assets
@@ -168,7 +178,9 @@ http://127.0.0.1:8000/measurements
 http://127.0.0.1:8000/kpis/measurements
 ```
 
-## Database Initialization
+---
+
+# Database Initialization
 
 Compose mounts:
 
@@ -177,32 +189,35 @@ sql/schema.sql    → /docker-entrypoint-initdb.d/01-schema.sql
 sql/seed_data.sql → /docker-entrypoint-initdb.d/02-seed.sql
 ```
 
-For a new volume, PostgreSQL creates:
+A fresh volume creates:
 
 ```text
 regions
 asset_types
 assets
+simulation_runs
 measurements
 storage_specs
 ```
 
-and loads the development dataset.
+and loads development seed data.
 
 Initialization scripts run only when the PostgreSQL data directory is empty.
 
-## Rebuild after Schema Changes
+---
 
-Keeping the volume:
+# Rebuild after Schema Changes
+
+Keep existing volume:
 
 ```bash
 docker compose down
 docker compose up --build -d
 ```
 
-This rebuilds images but does not re-run the SQL initialization scripts.
+This rebuilds the image but does **not** re-run database initialization scripts.
 
-Recreating the database:
+Recreate database and seed:
 
 ```bash
 docker compose down -v
@@ -211,9 +226,11 @@ docker compose up --build -d
 
 > `docker compose down -v` permanently deletes the Compose development database volume.
 
-Use it deliberately when the schema or initial seed data changes.
+Use it deliberately after schema/seed changes and for release-candidate clean rebuilds.
 
-## Health Check and Startup Order
+---
+
+# Health Check and Startup Order
 
 PostgreSQL health check:
 
@@ -234,24 +251,28 @@ depends_on:
     condition: service_healthy
 ```
 
-This prevents the API from attempting its first database connection while PostgreSQL is still starting.
+This prevents FastAPI from starting before PostgreSQL reports readiness.
 
-## Port Model
+---
+
+# Port Model
 
 | Component | Container port | Host port | Purpose |
 |---|---:|---:|---|
-| FastAPI | `8000` | `8000` | HTTP and Swagger access |
-| PostgreSQL | `5432` | `5433` | Optional host database access |
+| FastAPI | `8000` | `8000` | HTTP / Swagger |
+| PostgreSQL | `5432` | `5433` | Optional host DB access |
 
-## Logs and Troubleshooting
+---
 
-Show all logs:
+# Logs and Troubleshooting
+
+All logs:
 
 ```bash
 docker compose logs
 ```
 
-Service-specific logs:
+Specific services:
 
 ```bash
 docker compose logs api
@@ -264,59 +285,112 @@ Follow API logs:
 docker compose logs -f api
 ```
 
-Resolve and inspect the final Compose configuration:
+Inspect resolved Compose configuration:
 
 ```bash
 docker compose config
 ```
 
-Common checks:
+Open PostgreSQL shell:
 
 ```bash
-docker compose ps
 docker compose exec db psql -U postgres -d energy_operations
-docker compose logs db
-docker compose logs api
 ```
 
-## Stop and Restart
+Useful database checks after a simulation demo:
 
-Stop containers and keep data:
-
-```bash
-docker compose down
+```sql
+SELECT *
+FROM simulation_runs
+ORDER BY simulation_run_id DESC
+LIMIT 5;
 ```
 
-Restart:
-
-```bash
-docker compose up --build -d
+```sql
+SELECT
+    simulation_run_id,
+    COUNT(*) AS measurement_count,
+    MIN(measurement_time) AS first_measurement,
+    MAX(measurement_time) AS last_measurement
+FROM measurements
+WHERE simulation_run_id IS NOT NULL
+GROUP BY simulation_run_id
+ORDER BY simulation_run_id DESC;
 ```
 
-## Automated Tests
+---
 
-The current pytest suite runs against the dedicated local test database rather than the development database container by default:
+# Automated Tests
+
+The pytest suite uses the dedicated test database name:
+
+```text
+energy_operations_test
+```
+
+Run:
 
 ```bash
 py -m pytest -v
 ```
 
-Running tests in Docker or CI is not yet part of the current setup.
+Key release paths:
 
-## Current Limitations
+```bash
+py -m pytest -m integration -v
+py -m pytest -m smoke -v
+py -m pytest -m failure -v
+py -m ruff check src tests scripts
+```
+
+The current setup does not run pytest inside Compose. The test process is launched from the host and must be able to connect to the configured test database.
+
+---
+
+# Manual Simulation Demo
+
+Developer demo:
+
+```bash
+py -m scripts.run_simulation_demo
+```
+
+The script:
+
+- creates a current-hour historical simulation window,
+- executes the real `execute_simulation_run()` service,
+- writes a `simulation_runs` row,
+- persists generated point-in-time measurements,
+- derives intervals in memory,
+- prints persisted counts and interval counts per asset,
+- returns a non-zero process exit code if its checks fail.
+
+Important:
+
+> The demo writes to the regular application database configured by `.env`.
+
+Because `measurements` has a unique `(asset_id, measurement_time)` constraint, repeating an identical generated timestamp window can fail with a duplicate conflict. Use the demo intentionally against a development database.
+
+---
+
+# Current Docker / Deployment Limitations
 
 - No production image hardening.
 - No non-root container user.
 - No separate development and production Compose files.
-- No API health check inside Compose.
-- No automated database migrations.
+- No FastAPI container health check.
+- No automated database migration framework.
 - No Dockerized test runner.
-- No cloud deployment or managed database configuration.
+- No CI image build/test pipeline yet.
+- No cloud deployment or managed PostgreSQL configuration yet.
+- No public simulation REST endpoint yet.
 
-## Next Deployment Steps
+---
 
-1. Keep the current local stack stable during simulation development.
-2. Introduce database migrations before Azure deployment.
-3. Add CI tests and image build validation.
-4. Add an architecture diagram for the portfolio MVP.
-5. Add production-oriented configuration only when the backend domain logic is mature.
+# Next Deployment Steps
+
+1. Keep the current local stack stable during the point-in-time measurement refactor.
+2. Add CI test/build validation before cloud deployment.
+3. Introduce a migration strategy before schema evolution becomes frequent.
+4. Add a portfolio architecture diagram and release/demo workflow.
+5. Add production-oriented configuration only after the backend domain contract is stable.

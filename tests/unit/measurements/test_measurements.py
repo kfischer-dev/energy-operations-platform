@@ -98,7 +98,7 @@ def test_get_measurements_of_asset_id(client):
     assert "active_power_kw" in first_measurement
     assert "energy_kwh" in first_measurement
     assert "quality_status" in first_measurement
-    
+
     assert "asset_type_name" not in first_measurement
     assert "asset_role" not in first_measurement
     assert "region_code" not in first_measurement
@@ -169,7 +169,10 @@ def test_post_measurement_returns_201(client, valid_measurement_payload):
 
 
 @pytest.mark.post
-def test_post_measurement_with_unknown_asset_returns_404(client, valid_measurement_payload):
+def test_post_measurement_with_unknown_asset_returns_404(
+    client,
+    valid_measurement_payload,
+):
     """Check that measurements cannot be created for unknown assets."""
 
     new_measurement = valid_measurement_payload.copy()
@@ -182,7 +185,10 @@ def test_post_measurement_with_unknown_asset_returns_404(client, valid_measureme
 
 @pytest.mark.post
 @pytest.mark.validation
-def test_post_measurement_with_missing_field_returns_422(client, valid_measurement_payload):
+def test_post_measurement_with_missing_field_returns_422(
+    client,
+    valid_measurement_payload,
+):
     """Check that payloads with missing required fields are rejected."""
 
     new_measurement = valid_measurement_payload.copy()
@@ -195,7 +201,10 @@ def test_post_measurement_with_missing_field_returns_422(client, valid_measureme
 
 @pytest.mark.post
 @pytest.mark.validation
-def test_post_measurement_invalid_quality_status_returns_422(client, valid_measurement_payload):
+def test_post_measurement_invalid_quality_status_returns_422(
+    client,
+    valid_measurement_payload,
+):
     """Check that unsupported quality_status values are rejected."""
 
     new_measurement = valid_measurement_payload.copy()
@@ -218,9 +227,11 @@ def test_post_measurement_empty_source_returns_422(client, valid_measurement_pay
 
     assert response.status_code == 422
 
+
 # ============================================================
 # Measurement detail endpoint tests
 # ============================================================
+
 
 @pytest.mark.post
 def test_post_measurement_can_be_read_after_creation(client, valid_measurement_payload):
@@ -291,7 +302,10 @@ def test_get_measurement_by_id_with_invalid_type_returns_422(client):
 
 
 @pytest.mark.patch
-def test_patch_measurement_quality_status_persists_update(client, valid_measurement_payload):
+def test_patch_measurement_quality_status_persists_update(
+    client,
+    valid_measurement_payload,
+):
     """Check that a quality_status update is saved and can be read back."""
 
     new_measurement = valid_measurement_payload.copy()
@@ -378,7 +392,9 @@ def test_patch_measurement_quality_status_with_invalid_status_returns_422(client
 
 @pytest.mark.patch
 @pytest.mark.validation
-def test_patch_measurement_quality_status_with_invalid_measurement_id_returns_422(client):
+def test_patch_measurement_quality_status_with_invalid_measurement_id_returns_422(
+    client,
+):
     """Check that non-integer measurement IDs are rejected."""
 
     new_quality_status = {"quality_status": "invalid"}
@@ -386,3 +402,102 @@ def test_patch_measurement_quality_status_with_invalid_measurement_id_returns_42
     response = client.patch("/measurements/abc", json=new_quality_status)
 
     assert response.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# Temporary v0.11 compatibility tests
+# Remove when `interval_minutes` and `energy_kwh` are removed from the
+# measurements schema and API contract.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.intermediate
+def test_get_measurement_allows_null_interval_and_energy(
+    client,
+    database_connection,
+):
+    """Check that point-in-time measurements with nullable interval fields are readable."""
+
+    with database_connection.cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO measurements (
+                asset_id,
+                measurement_time,
+                interval_minutes,
+                active_power_kw,
+                energy_kwh,
+                source,
+                quality_status
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            RETURNING measurement_id;
+            """,
+            (
+                1,
+                "2026-07-10 10:00:00+02",
+                None,
+                82000.0,
+                None,
+                "simulation",
+                "valid",
+            ),
+        )
+        measurement_id = cursor.fetchone()[0]
+
+    database_connection.commit()
+
+    response = client.get(f"/measurements/{measurement_id}")
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["interval_minutes"] is None
+    assert data["energy_kwh"] is None
+
+
+@pytest.mark.intermediate
+def test_get_measurement_keeps_legacy_interval_fields(
+    client,
+    database_connection,
+):
+    """Check that existing interval measurements remain readable."""
+
+    with database_connection.cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO measurements (
+                asset_id,
+                measurement_time,
+                interval_minutes,
+                active_power_kw,
+                energy_kwh,
+                source,
+                quality_status
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            RETURNING measurement_id;
+            """,
+            (
+                1,
+                "2026-07-10 10:15:00+02",
+                15,
+                82000.0,
+                20500.0,
+                "simulation",
+                "valid",
+            ),
+        )
+        measurement_id = cursor.fetchone()[0]
+
+    database_connection.commit()
+
+    response = client.get(f"/measurements/{measurement_id}")
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["interval_minutes"] == 15
+    assert data["energy_kwh"] == 20500.0

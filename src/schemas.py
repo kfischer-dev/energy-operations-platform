@@ -31,6 +31,7 @@ class AssetSummaryResponse(BaseModel):
     rated_power_kw: float = Field(..., ge=0)
     operating_status: Literal["online", "offline", "maintenance", "fault"]
 
+
 class MeasurementResponse(BaseModel):
     measurement_id: int = Field(..., ge=1)
     asset_id: int = Field(..., ge=1)
@@ -40,11 +41,12 @@ class MeasurementResponse(BaseModel):
     asset_role: str
     region_code: str
     measurement_time: datetime
-    interval_minutes: int = Field(..., ge=1)
+    interval_minutes: int | None = Field(..., ge=1)
     active_power_kw: float
-    energy_kwh: float = Field(..., ge=0)
+    energy_kwh: float | None = Field(..., ge=0)
     source: str = Field(..., min_length=1)
     quality_status: Literal["valid", "invalid", "estimated"]
+
 
 class MeasurementSummaryResponse(BaseModel):
     measurement_id: int = Field(..., ge=1)
@@ -53,8 +55,9 @@ class MeasurementSummaryResponse(BaseModel):
     asset_id: int = Field(..., ge=1)
     measurement_time: datetime
     active_power_kw: float
-    energy_kwh: float = Field(..., ge=0)
+    energy_kwh: float | None = Field(..., ge=0)
     quality_status: Literal["valid", "invalid", "estimated"]
+
 
 class MeasurementCreate(BaseModel):
     asset_id: int = Field(..., ge=1)
@@ -65,8 +68,10 @@ class MeasurementCreate(BaseModel):
     source: str = Field(..., min_length=1)
     quality_status: Literal["valid", "invalid", "estimated"]
 
+
 class MeasurementQualityUpdate(BaseModel):
     quality_status: Literal["valid", "invalid", "estimated"]
+
 
 class MeasurementKPIsResponse(BaseModel):
     measurement_count: int = Field(..., ge=0)
@@ -75,6 +80,7 @@ class MeasurementKPIsResponse(BaseModel):
     max_power_kw: float | None
     total_energy_kwh: float | None
     latest_measurement_time: datetime | None
+
 
 class AssetKPIsResponse(BaseModel):
     asset_id: int = Field(..., ge=1)
