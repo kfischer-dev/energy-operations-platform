@@ -148,8 +148,6 @@ def test_failure_rollback_simulation_run(
         )
         total_measurements_before = cursor.fetchone()[0]
 
-
-
     with pytest.raises(psycopg.errors.UniqueViolation):
         execute_simulation_run(conn, config)
 

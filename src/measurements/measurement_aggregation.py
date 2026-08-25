@@ -447,19 +447,3 @@ def aggregate_measurements_for_intervals(
         interval_start = interval_end
 
     return intervals
-
-
-# ============================================================
-# Persistence Placeholder
-# ============================================================
-
-
-def load_measurements_for_interval_aggregation(
-    asset_id: int,
-    interval_start: datetime,
-    interval_end: datetime,
-) -> list[PowerMeasurement]:
-    """Loads boundary-aware power measurements for an interval."""
-
-    # Database implementation follows in a later block.
-    raise NotImplementedError

@@ -1,6 +1,6 @@
 from collections import Counter
-from datetime import datetime, timedelta
 from dataclasses import replace
+from datetime import datetime, timedelta
 
 from src.database import get_connection
 from src.simulation.default_data import create_default_simulation_config
@@ -18,10 +18,14 @@ def run_simulation_service_smoke_test() -> bool:
 
     config = create_default_simulation_config()
 
-    start_time = datetime.now().astimezone().replace(
-        minute=0,
-        second=0,
-        microsecond=0,
+    start_time = (
+        datetime.now()
+        .astimezone()
+        .replace(
+            minute=0,
+            second=0,
+            microsecond=0,
+        )
     )
 
     config = replace(
@@ -94,9 +98,7 @@ def run_simulation_service_smoke_test() -> bool:
     finally:
         conn.close()
 
-    interval_count_by_asset = Counter(
-        interval.asset_id for interval in power_intervals
-    )
+    interval_count_by_asset = Counter(interval.asset_id for interval in power_intervals)
     interval_asset_ids = set(interval_count_by_asset)
 
     measurement_asset_ids = {row[0] for row in measurement_rows}
@@ -113,8 +115,7 @@ def run_simulation_service_smoke_test() -> bool:
 
     run_completed = simulation_run["status"] == "completed"
     measurement_count_matches = (
-        simulation_run["generated_measurement_count"]
-        == persisted_measurement_count
+        simulation_run["generated_measurement_count"] == persisted_measurement_count
     )
 
     passed = (
@@ -143,9 +144,7 @@ def run_simulation_service_smoke_test() -> bool:
     print("-" * 72)
 
     if measurement_rows:
-        print(
-            "Asset-ID | Asset-Code       | Measurements | Intervals"
-        )
+        print("Asset-ID | Asset-Code       | Measurements | Intervals")
         print("-" * 72)
 
         for asset_id, asset_code, measurement_count in measurement_rows:
@@ -175,8 +174,7 @@ def run_simulation_service_smoke_test() -> bool:
 
     if assets_with_wrong_interval_count:
         print(
-            "Assets with unexpected interval count: "
-            f"{assets_with_wrong_interval_count}"
+            f"Assets with unexpected interval count: {assets_with_wrong_interval_count}"
         )
 
     if not measurement_count_matches:

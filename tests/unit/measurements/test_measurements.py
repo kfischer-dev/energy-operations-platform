@@ -410,6 +410,7 @@ def test_patch_measurement_quality_status_with_invalid_measurement_id_returns_42
 # measurements schema and API contract.
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.intermediate
 def test_get_measurement_allows_null_interval_and_energy(
     client,
