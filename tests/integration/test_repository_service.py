@@ -1,9 +1,11 @@
+import psycopg
 import pytest
+
 from src.simulation.default_data import create_default_simulation_config
 from src.simulation.models import SimulationAsset
 from src.simulation.registry import SIMULATION_PROFILE_REGISTRY
-from src.simulation.service import execute_simulation_run, load_simulation_assets
 from src.simulation.repository import fetch_simulation_run_by_id
+from src.simulation.service import execute_simulation_run, load_simulation_assets
 
 
 @pytest.mark.integration
@@ -43,7 +45,7 @@ def test_execute_simulation_run_and_save_measurements(
     conn = database_connection
     config = create_default_simulation_config()
 
-    power_intervals = execute_simulation_run(conn, config)
+    execute_simulation_run(conn, config)
 
     with conn.cursor() as cursor:
         cursor.execute(
@@ -97,3 +99,99 @@ def test_execute_simulation_run_and_save_measurements(
     assert data_get["energy_kwh"] is None
     assert data_get["active_power_kw"] is not None
     assert data_get["quality_status"] == "valid"
+
+
+@pytest.mark.failure
+@pytest.mark.integration
+def test_failure_rollback_simulation_run(
+    reset_db,
+    client,
+    database_connection,
+):
+    """Simulate a failure during a simulation run and verify rollback."""
+
+    conn = database_connection
+    config = create_default_simulation_config()
+
+    execute_simulation_run(conn, config)
+
+    with conn.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT simulation_run_id
+            FROM simulation_runs
+            ORDER BY simulation_run_id DESC
+            LIMIT 1;
+            """
+        )
+        simulation_run_a_id = cursor.fetchone()[0]
+
+    simulation_run_a = fetch_simulation_run_by_id(conn, simulation_run_a_id)
+
+    with conn.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT COUNT(*)
+            FROM measurements
+            WHERE simulation_run_id = %s;
+            """,
+            (simulation_run_a_id,),
+        )
+        persisted_count_a = cursor.fetchone()[0]
+
+    with conn.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT COUNT(*)
+            FROM measurements
+            """,
+        )
+        total_measurements_before = cursor.fetchone()[0]
+
+
+
+    with pytest.raises(psycopg.errors.UniqueViolation):
+        execute_simulation_run(conn, config)
+
+    with conn.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT simulation_run_id
+            FROM simulation_runs
+            ORDER BY simulation_run_id DESC
+            LIMIT 1;
+            """
+        )
+        simulation_run_b_id = cursor.fetchone()[0]
+
+    simulation_run_b = fetch_simulation_run_by_id(conn, simulation_run_b_id)
+
+    with conn.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT COUNT(*)
+            FROM measurements
+            """,
+        )
+        total_measurements_after = cursor.fetchone()[0]
+
+    with conn.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT COUNT(*)
+            FROM measurements
+            WHERE simulation_run_id = %s;
+            """,
+            (simulation_run_b_id,),
+        )
+        persisted_count_b = cursor.fetchone()[0]
+
+    assert simulation_run_a["generated_measurement_count"] == persisted_count_a
+    assert simulation_run_a["status"] == "completed"
+    assert simulation_run_a["generated_measurement_count"] > 0
+
+    assert simulation_run_b["status"] == "failed"
+    assert persisted_count_b == 0
+    assert simulation_run_b["generated_measurement_count"] == 0
+
+    assert total_measurements_after == total_measurements_before
