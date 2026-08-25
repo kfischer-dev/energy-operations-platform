@@ -15,7 +15,6 @@ MeasurementQualityStatus = Literal[
     "valid",
     "invalid",
     "estimated",
-    "interpolated",
 ]
 
 SupportPointType = Literal[
@@ -55,7 +54,7 @@ class PowerSupportPoint:
 
 @dataclass(frozen=True)
 class PowerIntervalDraft:
-    """Represents an aggregated power interval before persistence."""
+    """Represents a derived power interval produced by measurement aggregation."""
 
     asset_id: int
     interval_start: datetime

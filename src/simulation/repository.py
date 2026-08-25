@@ -178,6 +178,10 @@ def fetch_simulation_run_by_id(conn, simulation_run_id) -> dict | None:
     return map_simulation_run_row(row)
 
 
+# ============================================================
+# Simulation Measurement Repository
+# ============================================================
+
 def insert_power_measurements(
     conn,
     measurements: list[PowerMeasurement],

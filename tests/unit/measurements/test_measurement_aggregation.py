@@ -171,12 +171,12 @@ def test_returns_invalid_interval_without_coverage() -> None:
         interval_end=interval_end,
         measurements=power_measurements,
     )
-
+    
     assert power_interval.energy_kwh is None
     assert power_interval.avg_active_power_kw is None
     assert power_interval.coverage_ratio == pytest.approx(0.0)
     assert power_interval.quality_status == "invalid"
-    assert power_interval.source_measurement_count == 2
+    assert power_interval.source_measurement_count == 1
     assert power_interval.valid_measurement_count == 1
 
 

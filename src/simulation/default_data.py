@@ -20,7 +20,7 @@ def create_default_simulation_config() -> SimulationConfig:
         end_time=datetime(2026, 7, 16, 14, 0, 0),
         interval_minutes=15,
         random_seed=1,
-        simulation_mode="live",
+        simulation_mode="historical",
     )
     return config
 

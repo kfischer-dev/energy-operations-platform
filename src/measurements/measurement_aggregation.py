@@ -130,6 +130,20 @@ def select_interval_measurements(
     return left_support, internal_measurements, right_support
 
 
+def count_selected_measurements(
+    left_support: PowerMeasurement | None,
+    internal_measurements: list[PowerMeasurement],
+    right_support: PowerMeasurement | None,
+) -> int:
+    """Counts measurements selected as relevant sources for one interval."""
+
+    return (
+        len(internal_measurements)
+        + int(left_support is not None)
+        + int(right_support is not None)
+    )
+
+
 def create_measured_support_point(
     measurement: PowerMeasurement,
 ) -> PowerSupportPoint:
@@ -353,7 +367,19 @@ def aggregate_measurements_for_interval(
         measurements=measurements,
     )
 
-    source_measurement_count = len(measurements)
+    source_left_support, source_internal_measurements, source_right_support = (
+        select_interval_measurements(
+            measurements=measurements,
+            interval_start=interval_start,
+            interval_end=interval_end,
+        )
+    )
+
+    source_measurement_count = count_selected_measurements(
+        left_support=source_left_support,
+        internal_measurements=source_internal_measurements,
+        right_support=source_right_support,
+    )
 
     usable_measurements = [
         measurement
@@ -367,10 +393,10 @@ def aggregate_measurements_for_interval(
         interval_end=interval_end,
     )
 
-    valid_measurement_count = (
-        len(internal_measurements)
-        + int(left_support is not None)
-        + int(right_support is not None)
+    valid_measurement_count = count_selected_measurements(
+        left_support=left_support,
+        internal_measurements=internal_measurements,
+        right_support=right_support,
     )
 
     calculation_points = build_calculation_points(
