@@ -78,7 +78,6 @@ SELECT
     at.asset_type_name,
     m.measurement_time,
     m.active_power_kw,
-    m.energy_kwh,
     m.quality_status
 FROM measurements AS m
 JOIN assets AS a
@@ -101,7 +100,6 @@ SELECT
     r.region_code,
     m.measurement_time,
     m.active_power_kw,
-    m.energy_kwh,
     m.quality_status
 FROM measurements AS m
 JOIN assets AS a

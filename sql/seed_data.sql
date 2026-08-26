@@ -62,103 +62,103 @@ VALUES
     ('historical', '2026-06-22 08:00:00+02', '2026-06-22 09:00:00+02', 15, 42, 'completed', 64, '2026-06-22 07:59:00+02', '2026-06-22 08:00:00+02', '2026-06-22 09:00:00+02');
 
 
-INSERT INTO measurements(asset_id, simulation_run_id, measurement_time, interval_minutes, active_power_kw, energy_kwh, source, quality_status)
+INSERT INTO measurements(asset_id, simulation_run_id, measurement_time, active_power_kw, source, quality_status)
 VALUES
     -- North: North Sea Wind Park
-    (1,1,'2026-06-22 08:00:00+02',15,80000,20000,'simulation','valid'),
-    (1,1,'2026-06-22 08:15:00+02',15,84000,21000,'simulation','valid'),
-    (1,1,'2026-06-22 08:30:00+02',15,79000,19750,'simulation','valid'),
-    (1,1,'2026-06-22 08:45:00+02',15,86000,21500,'simulation','valid'),
+    (1,1,'2026-06-22 08:00:00+02',80000,'simulation','valid'),
+    (1,1,'2026-06-22 08:15:00+02',84000,'simulation','valid'),
+    (1,1,'2026-06-22 08:30:00+02',79000,'simulation','valid'),
+    (1,1,'2026-06-22 08:45:00+02',86000,'simulation','valid'),
 
     -- North: Solar Park Schleswig-Holstein
-    (2,1,'2026-06-22 08:00:00+02',15,12000,3000,'simulation','valid'),
-    (2,1,'2026-06-22 08:15:00+02',15,15000,3750,'simulation','valid'),
-    (2,1,'2026-06-22 08:30:00+02',15,18500,4625,'simulation','valid'),
-    (2,1,'2026-06-22 08:45:00+02',15,22000,5500,'simulation','valid'),
+    (2,1,'2026-06-22 08:00:00+02',12000,'simulation','valid'),
+    (2,1,'2026-06-22 08:15:00+02',15000,'simulation','valid'),
+    (2,1,'2026-06-22 08:30:00+02',18500,'simulation','valid'),
+    (2,1,'2026-06-22 08:45:00+02',22000,'simulation','valid'),
 
     -- North: City Load Hamburg
-    (3,1,'2026-06-22 08:00:00+02',15,138000,34500,'simulation','valid'),
-    (3,1,'2026-06-22 08:15:00+02',15,143000,35750,'simulation','valid'),
-    (3,1,'2026-06-22 08:30:00+02',15,149000,37250,'simulation','valid'),
-    (3,1,'2026-06-22 08:45:00+02',15,153000,38250,'simulation','valid'),
+    (3,1,'2026-06-22 08:00:00+02',138000,'simulation','valid'),
+    (3,1,'2026-06-22 08:15:00+02',143000,'simulation','valid'),
+    (3,1,'2026-06-22 08:30:00+02',149000,'simulation','valid'),
+    (3,1,'2026-06-22 08:45:00+02',153000,'simulation','valid'),
 
     -- North: Substation Hamburg, regional import
-    (4,1,'2026-06-22 08:00:00+02',15,46000,11500,'simulation','valid'),
-    (4,1,'2026-06-22 08:15:00+02',15,44000,11000,'simulation','valid'),
-    (4,1,'2026-06-22 08:30:00+02',15,51500,12875,'simulation','valid'),
-    (4,1,'2026-06-22 08:45:00+02',15,45000,11250,'simulation','valid'),
+    (4,1,'2026-06-22 08:00:00+02',46000,'simulation','valid'),
+    (4,1,'2026-06-22 08:15:00+02',44000,'simulation','valid'),
+    (4,1,'2026-06-22 08:30:00+02',51500,'simulation','valid'),
+    (4,1,'2026-06-22 08:45:00+02',45000,'simulation','valid'),
 
     -- South: Hydro Power Plant Black Forest
-    (5,1,'2026-06-22 08:00:00+02',15,68000,17000,'simulation','valid'),
-    (5,1,'2026-06-22 08:15:00+02',15,69000,17250,'simulation','valid'),
-    (5,1,'2026-06-22 08:30:00+02',15,71000,17750,'simulation','valid'),
-    (5,1,'2026-06-22 08:45:00+02',15,70000,17500,'simulation','valid'),
+    (5,1,'2026-06-22 08:00:00+02',68000,'simulation','valid'),
+    (5,1,'2026-06-22 08:15:00+02',69000,'simulation','valid'),
+    (5,1,'2026-06-22 08:30:00+02',71000,'simulation','valid'),
+    (5,1,'2026-06-22 08:45:00+02',70000,'simulation','valid'),
 
     -- South: Solar Park Ulm
-    (6,1,'2026-06-22 08:00:00+02',15,12000,3000,'simulation','valid'),
-    (6,1,'2026-06-22 08:15:00+02',15,16000,4000,'simulation','valid'),
-    (6,1,'2026-06-22 08:30:00+02',15,20000,5000,'simulation','valid'),
-    (6,1,'2026-06-22 08:45:00+02',15,24000,6000,'simulation','valid'),
+    (6,1,'2026-06-22 08:00:00+02',12000,'simulation','valid'),
+    (6,1,'2026-06-22 08:15:00+02',16000,'simulation','valid'),
+    (6,1,'2026-06-22 08:30:00+02',20000,'simulation','valid'),
+    (6,1,'2026-06-22 08:45:00+02',24000,'simulation','valid'),
 
     -- South: Battery Storage Stuttgart, discharging
-    (7,1,'2026-06-22 08:00:00+02',15,15000,3750,'simulation','valid'),
-    (7,1,'2026-06-22 08:15:00+02',15,12000,3000,'simulation','valid'),
-    (7,1,'2026-06-22 08:30:00+02',15,8000,2000,'simulation','valid'),
-    (7,1,'2026-06-22 08:45:00+02',15,5000,1250,'simulation','valid'),
+    (7,1,'2026-06-22 08:00:00+02',15000,'simulation','valid'),
+    (7,1,'2026-06-22 08:15:00+02',12000,'simulation','valid'),
+    (7,1,'2026-06-22 08:30:00+02',8000,'simulation','valid'),
+    (7,1,'2026-06-22 08:45:00+02',5000,'simulation','valid'),
 
     -- South: Industrial Load Stuttgart
-    (8,1,'2026-06-22 08:00:00+02',15,92000,23000,'simulation','valid'),
-    (8,1,'2026-06-22 08:15:00+02',15,97000,24250,'simulation','valid'),
-    (8,1,'2026-06-22 08:30:00+02',15,102000,25500,'simulation','valid'),
-    (8,1,'2026-06-22 08:45:00+02',15,105000,26250,'simulation','valid'),
+    (8,1,'2026-06-22 08:00:00+02',92000,'simulation','valid'),
+    (8,1,'2026-06-22 08:15:00+02',97000,'simulation','valid'),
+    (8,1,'2026-06-22 08:30:00+02',102000,'simulation','valid'),
+    (8,1,'2026-06-22 08:45:00+02',105000,'simulation','valid'),
 
     -- East: Solar Park Brandenburg
-    (9,1,'2026-06-22 08:00:00+02',15,18000,4500,'simulation','valid'),
-    (9,1,'2026-06-22 08:15:00+02',15,22500,5625,'simulation','valid'),
-    (9,1,'2026-06-22 08:30:00+02',15,27000,6750,'simulation','valid'),
-    (9,1,'2026-06-22 08:45:00+02',15,32000,8000,'simulation','valid'),
+    (9,1,'2026-06-22 08:00:00+02',18000,'simulation','valid'),
+    (9,1,'2026-06-22 08:15:00+02',22500,'simulation','valid'),
+    (9,1,'2026-06-22 08:30:00+02',27000,'simulation','valid'),
+    (9,1,'2026-06-22 08:45:00+02',32000,'simulation','valid'),
 
     -- East: Biomass Power Plant Brandenburg
-    (10,1,'2026-06-22 08:00:00+02',15,42000,10500,'simulation','valid'),
-    (10,1,'2026-06-22 08:15:00+02',15,42500,10625,'simulation','valid'),
-    (10,1,'2026-06-22 08:30:00+02',15,43000,10750,'simulation','valid'),
-    (10,1,'2026-06-22 08:45:00+02',15,42800,10700,'simulation','valid'),
+    (10,1,'2026-06-22 08:00:00+02',42000,'simulation','valid'),
+    (10,1,'2026-06-22 08:15:00+02',42500,'simulation','valid'),
+    (10,1,'2026-06-22 08:30:00+02',43000,'simulation','valid'),
+    (10,1,'2026-06-22 08:45:00+02',42800,'simulation','valid'),
 
     -- East: Residential Load Berlin
-    (11,1,'2026-06-22 08:00:00+02',15,112000,28000,'simulation','valid'),
-    (11,1,'2026-06-22 08:15:00+02',15,118000,29500,'simulation','valid'),
-    (11,1,'2026-06-22 08:30:00+02',15,121000,30250,'simulation','valid'),
-    (11,1,'2026-06-22 08:45:00+02',15,116000,29000,'simulation','valid'),
+    (11,1,'2026-06-22 08:00:00+02',112000,'simulation','valid'),
+    (11,1,'2026-06-22 08:15:00+02',118000,'simulation','valid'),
+    (11,1,'2026-06-22 08:30:00+02',121000,'simulation','valid'),
+    (11,1,'2026-06-22 08:45:00+02',116000,'simulation','valid'),
 
     -- East: Substation Berlin, regional import
-    (12,1,'2026-06-22 08:00:00+02',15,52000,13000,'simulation','valid'),
-    (12,1,'2026-06-22 08:15:00+02',15,53000,13250,'simulation','valid'),
-    (12,1,'2026-06-22 08:30:00+02',15,51000,12750,'simulation','valid'),
-    (12,1,'2026-06-22 08:45:00+02',15,41200,10300,'simulation','valid'),
+    (12,1,'2026-06-22 08:00:00+02',52000,'simulation','valid'),
+    (12,1,'2026-06-22 08:15:00+02',53000,'simulation','valid'),
+    (12,1,'2026-06-22 08:30:00+02',51000,'simulation','valid'),
+    (12,1,'2026-06-22 08:45:00+02',41200,'simulation','valid'),
 
     -- West: Gas Power Plant Rhine-Ruhr
-    (13,1,'2026-06-22 08:00:00+02',15,105000,26250,'simulation','valid'),
-    (13,1,'2026-06-22 08:15:00+02',15,112000,28000,'simulation','valid'),
-    (13,1,'2026-06-22 08:30:00+02',15,120000,30000,'simulation','valid'),
-    (13,1,'2026-06-22 08:45:00+02',15,128000,32000,'simulation','valid'),
+    (13,1,'2026-06-22 08:00:00+02',105000,'simulation','valid'),
+    (13,1,'2026-06-22 08:15:00+02',112000,'simulation','valid'),
+    (13,1,'2026-06-22 08:30:00+02',120000,'simulation','valid'),
+    (13,1,'2026-06-22 08:45:00+02',128000,'simulation','valid'),
 
     -- West: Wind Park Sauerland
-    (14,1,'2026-06-22 08:00:00+02',15,36000,9000,'simulation','valid'),
-    (14,1,'2026-06-22 08:15:00+02',15,39000,9750,'simulation','valid'),
-    (14,1,'2026-06-22 08:30:00+02',15,37500,9375,'simulation','valid'),
-    (14,1,'2026-06-22 08:45:00+02',15,41000,10250,'simulation','valid'),
+    (14,1,'2026-06-22 08:00:00+02',36000,'simulation','valid'),
+    (14,1,'2026-06-22 08:15:00+02',39000,'simulation','valid'),
+    (14,1,'2026-06-22 08:30:00+02',37500,'simulation','valid'),
+    (14,1,'2026-06-22 08:45:00+02',41000,'simulation','valid'),
 
     -- West: Industrial Load Ruhr
-    (15,1,'2026-06-22 08:00:00+02',15,132000,33000,'simulation','valid'),
-    (15,1,'2026-06-22 08:15:00+02',15,139000,34750,'simulation','valid'),
-    (15,1,'2026-06-22 08:30:00+02',15,145000,36250,'simulation','valid'),
-    (15,1,'2026-06-22 08:45:00+02',15,148000,37000,'simulation','valid'),
+    (15,1,'2026-06-22 08:00:00+02',132000,'simulation','valid'),
+    (15,1,'2026-06-22 08:15:00+02',139000,'simulation','valid'),
+    (15,1,'2026-06-22 08:30:00+02',145000,'simulation','valid'),
+    (15,1,'2026-06-22 08:45:00+02',148000,'simulation','valid'),
 
     -- West: Data Center Düsseldorf
-    (16,1,'2026-06-22 08:00:00+02',15,62000,15500,'simulation','valid'),
-    (16,1,'2026-06-22 08:15:00+02',15,62500,15625,'simulation','valid'),
-    (16,1,'2026-06-22 08:30:00+02',15,63000,15750,'simulation','valid'),
-    (16,1,'2026-06-22 08:45:00+02',15,62800,15700,'simulation','valid');
+    (16,1,'2026-06-22 08:00:00+02',62000,'simulation','valid'),
+    (16,1,'2026-06-22 08:15:00+02',62500,'simulation','valid'),
+    (16,1,'2026-06-22 08:30:00+02',63000,'simulation','valid'),
+    (16,1,'2026-06-22 08:45:00+02',62800,'simulation','valid');
 
 
 INSERT INTO storage_specs(asset_id, energy_capacity_kwh, max_charge_power_kw, max_discharge_power_kw, charge_efficiency_percent, discharge_efficiency_percent, min_state_of_charge_percent, max_state_of_charge_percent)

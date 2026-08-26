@@ -137,12 +137,7 @@ CREATE TABLE measurements (
     asset_id INT NOT NULL REFERENCES assets(asset_id) ON DELETE CASCADE,
     simulation_run_id BIGINT REFERENCES simulation_runs(simulation_run_id) ON DELETE SET NULL,
     measurement_time TIMESTAMPTZ NOT NULL,
-    interval_minutes INT NULL 
-        CHECK (interval_minutes > 0),
-
     active_power_kw NUMERIC(20,2) NOT NULL,
-    energy_kwh NUMERIC(20,2) NULL 
-        CHECK (energy_kwh >= 0),
 
     source VARCHAR(255) NOT NULL,
     quality_status VARCHAR(20) NOT NULL
