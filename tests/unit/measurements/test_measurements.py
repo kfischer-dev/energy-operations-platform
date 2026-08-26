@@ -27,13 +27,11 @@ def test_get_measurements(client):
     assert "asset_name" in first_measurement
     assert "measurement_time" in first_measurement
     assert "active_power_kw" in first_measurement
-    assert "energy_kwh" in first_measurement
     assert "quality_status" in first_measurement
 
     assert "asset_type_name" not in first_measurement
     assert "asset_role" not in first_measurement
     assert "region_code" not in first_measurement
-    assert "interval_minutes" not in first_measurement
     assert "source" not in first_measurement
 
 
@@ -96,13 +94,11 @@ def test_get_measurements_of_asset_id(client):
     assert "asset_name" in first_measurement
     assert "measurement_time" in first_measurement
     assert "active_power_kw" in first_measurement
-    assert "energy_kwh" in first_measurement
     assert "quality_status" in first_measurement
 
     assert "asset_type_name" not in first_measurement
     assert "asset_role" not in first_measurement
     assert "region_code" not in first_measurement
-    assert "interval_minutes" not in first_measurement
     assert "source" not in first_measurement
 
 
@@ -148,7 +144,6 @@ def test_post_measurement_returns_201(client, valid_measurement_payload):
     new_measurement = valid_measurement_payload.copy()
     new_measurement["asset_id"] = 8
     new_measurement["active_power_kw"] = 125000
-    new_measurement["energy_kwh"] = 31250.0
 
     response = client.post("/measurements", json=new_measurement)
 
@@ -161,9 +156,7 @@ def test_post_measurement_returns_201(client, valid_measurement_payload):
     assert "asset_type_name" not in data
     assert data["asset_id"] == 8
     assert data["measurement_time"] == "2026-07-02T08:15:00+02:00"
-    assert data["interval_minutes"] == 15
     assert data["active_power_kw"] == 125000
-    assert data["energy_kwh"] == 31250.0
     assert data["source"] == "pytest"
     assert data["quality_status"] == "valid"
 
@@ -241,7 +234,6 @@ def test_post_measurement_can_be_read_after_creation(client, valid_measurement_p
     new_measurement["asset_id"] = 8
     new_measurement["measurement_time"] = "2026-07-03T12:15:00+02:00"
     new_measurement["active_power_kw"] = 150000.00
-    new_measurement["energy_kwh"] = 37500.0
     new_measurement["quality_status"] = "invalid"
 
     response_post = client.post("/measurements", json=new_measurement)
@@ -261,7 +253,6 @@ def test_post_measurement_can_be_read_after_creation(client, valid_measurement_p
     assert data_get["asset_id"] == data_post["asset_id"]
     assert data_get["measurement_time"] == data_post["measurement_time"]
     assert data_get["active_power_kw"] == data_post["active_power_kw"]
-    assert data_get["energy_kwh"] == data_post["energy_kwh"]
     assert data_get["source"] == data_post["source"]
     assert data_get["quality_status"] == data_post["quality_status"]
 
@@ -334,7 +325,6 @@ def test_patch_measurement_quality_status_persists_update(
     assert data_get["asset_id"] == data_post["asset_id"]
     assert data_get["measurement_time"] == data_post["measurement_time"]
     assert data_get["active_power_kw"] == data_post["active_power_kw"]
-    assert data_get["energy_kwh"] == data_post["energy_kwh"]
     assert data_get["source"] == data_post["source"]
     assert data_get["quality_status"] == "invalid"
 
@@ -404,100 +394,3 @@ def test_patch_measurement_quality_status_with_invalid_measurement_id_returns_42
     assert response.status_code == 422
 
 
-# ---------------------------------------------------------------------------
-# Temporary v0.11 compatibility tests
-# Remove when `interval_minutes` and `energy_kwh` are removed from the
-# measurements schema and API contract.
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.intermediate
-def test_get_measurement_allows_null_interval_and_energy(
-    client,
-    database_connection,
-):
-    """Check that point-in-time measurements with nullable interval fields are readable."""
-
-    with database_connection.cursor() as cursor:
-        cursor.execute(
-            """
-            INSERT INTO measurements (
-                asset_id,
-                measurement_time,
-                interval_minutes,
-                active_power_kw,
-                energy_kwh,
-                source,
-                quality_status
-            )
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-            RETURNING measurement_id;
-            """,
-            (
-                1,
-                "2026-07-10 10:00:00+02",
-                None,
-                82000.0,
-                None,
-                "simulation",
-                "valid",
-            ),
-        )
-        measurement_id = cursor.fetchone()[0]
-
-    database_connection.commit()
-
-    response = client.get(f"/measurements/{measurement_id}")
-
-    assert response.status_code == 200
-
-    data = response.json()
-
-    assert data["interval_minutes"] is None
-    assert data["energy_kwh"] is None
-
-
-@pytest.mark.intermediate
-def test_get_measurement_keeps_legacy_interval_fields(
-    client,
-    database_connection,
-):
-    """Check that existing interval measurements remain readable."""
-
-    with database_connection.cursor() as cursor:
-        cursor.execute(
-            """
-            INSERT INTO measurements (
-                asset_id,
-                measurement_time,
-                interval_minutes,
-                active_power_kw,
-                energy_kwh,
-                source,
-                quality_status
-            )
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-            RETURNING measurement_id;
-            """,
-            (
-                1,
-                "2026-07-10 10:15:00+02",
-                15,
-                82000.0,
-                20500.0,
-                "simulation",
-                "valid",
-            ),
-        )
-        measurement_id = cursor.fetchone()[0]
-
-    database_connection.commit()
-
-    response = client.get(f"/measurements/{measurement_id}")
-
-    assert response.status_code == 200
-
-    data = response.json()
-
-    assert data["interval_minutes"] == 15
-    assert data["energy_kwh"] == 20500.0

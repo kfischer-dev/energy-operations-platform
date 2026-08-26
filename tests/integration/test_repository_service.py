@@ -95,8 +95,8 @@ def test_execute_simulation_run_and_save_measurements(
 
     assert data_get["measurement_id"] == measurement_id
     assert data_get["source"] == "simulation"
-    assert data_get["interval_minutes"] is None
-    assert data_get["energy_kwh"] is None
+    assert "interval_minutes" not in data_get
+    assert "energy_kwh" not in data_get
     assert data_get["active_power_kw"] is not None
     assert data_get["quality_status"] == "valid"
 
