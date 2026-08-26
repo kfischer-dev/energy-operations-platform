@@ -41,9 +41,7 @@ class MeasurementResponse(BaseModel):
     asset_role: str
     region_code: str
     measurement_time: datetime
-    interval_minutes: int | None = Field(..., ge=1)
     active_power_kw: float
-    energy_kwh: float | None = Field(..., ge=0)
     source: str = Field(..., min_length=1)
     quality_status: Literal["valid", "invalid", "estimated"]
 
@@ -55,16 +53,13 @@ class MeasurementSummaryResponse(BaseModel):
     asset_id: int = Field(..., ge=1)
     measurement_time: datetime
     active_power_kw: float
-    energy_kwh: float | None = Field(..., ge=0)
     quality_status: Literal["valid", "invalid", "estimated"]
 
 
 class MeasurementCreate(BaseModel):
     asset_id: int = Field(..., ge=1)
     measurement_time: datetime
-    interval_minutes: int = Field(..., ge=1)
     active_power_kw: float
-    energy_kwh: float = Field(..., ge=0)
     source: str = Field(..., min_length=1)
     quality_status: Literal["valid", "invalid", "estimated"]
 
