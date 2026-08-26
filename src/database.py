@@ -57,9 +57,7 @@ def fetch_joined_measurements(conn):
                 at.asset_role,
                 r.region_code,
                 m.measurement_time,
-                m.interval_minutes,
                 m.active_power_kw,
-                m.energy_kwh,
                 m.source,
                 m.quality_status
             FROM measurements m
@@ -154,9 +152,7 @@ def fetch_measurements_by_asset_id(conn, asset_id):
                 at.asset_role,
                 r.region_code,
                 m.measurement_time,
-                m.interval_minutes,
                 m.active_power_kw,
-                m.energy_kwh,
                 m.source,
                 m.quality_status
             FROM measurements m
@@ -189,7 +185,6 @@ def fetch_measurement_summaries(conn):
                 a.asset_name,
                 m.measurement_time,
                 m.active_power_kw,
-                m.energy_kwh,
                 m.quality_status
             FROM measurements AS m
             JOIN assets AS a
@@ -217,7 +212,6 @@ def fetch_measurement_summaries_by_asset_id(conn, asset_id):
                 a.asset_name,
                 m.measurement_time,
                 m.active_power_kw,
-                m.energy_kwh,
                 m.quality_status
             FROM measurements AS m
             JOIN assets AS a
@@ -287,9 +281,7 @@ def fetch_measurement_by_id(conn, measurement_id):
                 at.asset_role,
                 r.region_code,
                 m.measurement_time,
-                m.interval_minutes,
                 m.active_power_kw,
-                m.energy_kwh,
                 m.source,
                 m.quality_status
             FROM measurements AS m
@@ -394,7 +386,6 @@ def map_measurement_summary_row(row):
         asset_name,
         measurement_time,
         active_power_kw,
-        energy_kwh,
         quality_status,
     ) = row
 
@@ -405,7 +396,6 @@ def map_measurement_summary_row(row):
         "asset_name": asset_name,
         "measurement_time": measurement_time,
         "active_power_kw": active_power_kw,
-        "energy_kwh": energy_kwh,
         "quality_status": quality_status,
     }
 
@@ -422,9 +412,7 @@ def map_measurement_row(row):
         asset_role,
         region_code,
         measurement_time,
-        interval_minutes,
         active_power_kw,
-        energy_kwh,
         source,
         quality_status,
     ) = row
@@ -438,9 +426,7 @@ def map_measurement_row(row):
         "asset_role": asset_role,
         "region_code": region_code,
         "measurement_time": measurement_time,
-        "interval_minutes": interval_minutes,
         "active_power_kw": active_power_kw,
-        "energy_kwh": energy_kwh,
         "source": source,
         "quality_status": quality_status,
     }
@@ -486,22 +472,18 @@ def create_measurement(conn, measurement_data):
             INSERT INTO measurements (
                 asset_id,
                 measurement_time,
-                interval_minutes,
                 active_power_kw,
-                energy_kwh,
                 source,
                 quality_status
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s)
             RETURNING
                 measurement_id;
         """,
             (
                 measurement_data.asset_id,
                 measurement_data.measurement_time,
-                measurement_data.interval_minutes,
                 measurement_data.active_power_kw,
-                measurement_data.energy_kwh,
                 measurement_data.source,
                 measurement_data.quality_status,
             ),
