@@ -1,11 +1,16 @@
+from datetime import datetime
+
 import psycopg
 import pytest
 
+from src.database import fetch_measurements_for_asset_kpi_period
+from src.measurements.measurement_aggregation import aggregate_measurements_for_intervals
 from src.simulation.default_data import create_default_simulation_config
 from src.simulation.models import SimulationAsset
 from src.simulation.registry import SIMULATION_PROFILE_REGISTRY
 from src.simulation.repository import fetch_simulation_run_by_id
 from src.simulation.service import execute_simulation_run, load_simulation_assets
+from tests.factories import create_power_measurement
 
 
 @pytest.mark.integration
@@ -193,3 +198,104 @@ def test_failure_rollback_simulation_run(
     assert simulation_run_b["generated_measurement_count"] == 0
 
     assert total_measurements_after == total_measurements_before
+
+@pytest.mark.integration
+def test_fetch_measurements_for_asset_kpi_period_returns_interval_and_support_points(
+    reset_db,
+    database_connection,
+):
+
+    start_time = datetime.fromisoformat("2026-06-22T08:00:00+02:00")
+    end_time = datetime.fromisoformat("2026-06-22T08:30:00+02:00")
+
+    left_support_time = datetime.fromisoformat("2026-06-22T07:45:00+02:00")
+    right_support_time = datetime.fromisoformat("2026-06-22T08:45:00+02:00")
+    
+    measurements = fetch_measurements_for_asset_kpi_period(
+        database_connection,
+        asset_id=1,
+        start_time=start_time,
+        end_time=end_time,
+    )
+
+    assert len(measurements) == 5
+
+    assert measurements[0]["measurement_time"] == left_support_time
+    assert measurements[-1]["measurement_time"] == right_support_time
+
+    assert all(
+        measurement["asset_id"] == 1
+        for measurement in measurements
+    )
+
+    measurement_times = [
+        measurement["measurement_time"]
+        for measurement in measurements
+    ]
+
+    assert measurement_times == sorted(measurement_times)
+
+
+# ============================================================
+# KPI Aggregation
+# ============================================================
+
+@pytest.mark.intermediate
+def test_aggregates_measurements_for_asset_kpi(
+    reset_db,
+    database_connection,
+):
+    """Aggregates measurements into intervals for a KPI period."""
+
+    # interval_start = datetime(2026, 6, 22, 8, 0)
+    # interval_end = datetime(2026, 6, 22, 8, 30)
+
+    start_time = datetime.fromisoformat("2026-06-22T08:00:00+02:00")
+    end_time = datetime.fromisoformat("2026-06-22T08:30:00+02:00")
+
+    measurements = fetch_measurements_for_asset_kpi_period(
+        database_connection,
+        asset_id=1,
+        start_time=start_time,
+        end_time=end_time,
+    )
+
+    power_measurements = [
+        create_power_measurement(
+            measurement["measurement_time"],
+            measurement["active_power_kw"],
+            asset_id=measurement["asset_id"],
+            source=measurement["source"],
+            quality_status=measurement["quality_status"],
+        )
+        for measurement in measurements
+    ]
+
+    intervals = aggregate_measurements_for_intervals(
+        asset_id=1,
+        measurements=power_measurements,
+        start_time=start_time,
+        end_time=end_time,
+        interval_minutes=15,
+    )
+
+    total_energy_kwh = sum(
+        interval.energy_kwh
+        for interval in intervals
+        if interval.energy_kwh is not None
+    )
+
+    assert len(intervals) == 2
+
+    assert intervals[0].interval_start == start_time
+    assert intervals[-1].interval_end == end_time
+
+    assert all(interval.asset_id == 1 for interval in intervals)
+    assert all(interval.coverage_ratio == 1.0 for interval in intervals)
+    assert all(interval.quality_status == "valid" for interval in intervals)
+
+    assert all(interval.energy_kwh is not None for interval in intervals)
+    assert all(interval.avg_active_power_kw is not None for interval in intervals)
+
+    assert total_energy_kwh == pytest.approx(40799.48, abs=0.01)
+

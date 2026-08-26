@@ -1,16 +1,18 @@
+from datetime import datetime
 import logging
 
 from fastapi import FastAPI, HTTPException, Path, Query, status
 
+from src.measurements.service import calculate_asset_kpis
 from src.database import (
     create_measurement,
     fetch_asset_by_id,
-    fetch_asset_kpi_summary,
     fetch_asset_summaries,
     fetch_measurement_by_id,
     fetch_measurement_kpi_summary,
     fetch_measurement_summaries,
     fetch_measurement_summaries_by_asset_id,
+    fetch_measurements_for_asset_kpi_period,
     get_connection,
     update_measurement_quality_status,
 )
@@ -344,10 +346,9 @@ def get_measurements_by_asset_id(
     tags=["Measurements"],
     summary="Get measurement by ID",
     description=(
-        "Returns one specific measurement record by its measurement ID. "
-        "The response includes measurement details such as asset ID, "
-        "measurement time, interval duration, "
-        "active power, energy, source and quality status. "
+        "Returns one specific point-in-time power measurement by its measurement ID. "
+        "The response includes the asset ID, measurement timestamp, active power, "
+        "source and quality status. "
         "If no measurement exists for the given ID, the API returns a 404 error."
     ),
     response_description="Single measurement record.",
@@ -391,13 +392,11 @@ def get_measurement_by_id(
     tags=["Measurements"],
     summary="Create a new asset measurement",
     description=(
-        "Creates a new measurement record and assigns it to an existing energy asset. "
-        "The endpoint accepts measurement data such as asset ID, "
-        "measurement time, interval duration, "
-        "active power, energy, source and quality status. "
+        "Creates a new point-in-time power measurement and assigns it to an existing "
+        "energy asset. The endpoint accepts the asset ID, measurement timestamp, "
+        "active power, source and quality status. "
         "After validation, the measurement is stored in the PostgreSQL database "
-        "and can be retrieved "
-        "through the measurement endpoints."
+        "and can be retrieved through the measurement endpoints."
     ),
     response_description="The newly created measurement record.",
 )
@@ -530,14 +529,12 @@ def get_measurement_kpi_summary():
     tags=["KPIs"],
     summary="Get KPI summary for an asset",
     description=(
-        "Returns aggregated KPI values for one specific energy asset. "
-        "The asset is selected by asset_id. The response includes asset information, "
-        "the number of valid measurements, average, minimum and maximum active "
-        "power, total interval energy "
-        "and the latest measurement timestamp. Only measurements with quality "
-        "status valid are included in the calculation. If the asset exists but "
-        "has no valid measurements, "
-        "the endpoint returns zero measurements and null KPI values."
+        "Returns KPI values for one energy asset over a requested time period. "
+        "Minimum and maximum power are based on actual valid measurements within "
+        "the requested period. Average power and total energy are derived from the "
+        "time-dependent power curve using interpolation at period boundaries when "
+        "required. Measurements outside the requested period may be used only as "
+        "support points for boundary interpolation."
     ),
 )
 def get_asset_kpi_summary(
@@ -546,21 +543,48 @@ def get_asset_kpi_summary(
         ge=1,
         description="Unique ID of the requested energy asset.",
     ),
+    start_time: datetime = Query(
+        ...,
+        description="Start time for the KPI summary period.",
+    ),
+    end_time: datetime = Query(
+        ...,
+        description="End time for the KPI summary period.",
+    ),
 ):
-    """Get measurement KPI by asset_id summary."""
+    """Get KPI summary for one specific asset at a given time period."""
 
     logger.info("=" * 60)
     logger.info(f"GET /assets/{asset_id}/kpis request received.")
+
+    if end_time <= start_time:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="end_time must be after start_time",
+        )
 
     conn = get_connection()
 
     try:
         asset = get_asset_or_404(conn, asset_id)
 
-        kpi_summary = fetch_asset_kpi_summary(conn, asset_id)
+        measurements = fetch_measurements_for_asset_kpi_period(
+            conn,
+            asset_id=asset_id,
+            start_time=start_time,
+            end_time=end_time,
+        )
+
+        kpi_summary = calculate_asset_kpis(
+            measurements=measurements,
+            asset_id=asset_id,
+            start_time=start_time,
+            end_time=end_time,
+        )
+
         logger.info(
             f"Loaded KPI summary for {asset['asset_name']} with "
-            f"{kpi_summary['measurement_count']} valid measurements from database."
+            f"{kpi_summary['measurement_count']} valid measurements."
         )
 
         return {

@@ -530,15 +530,14 @@ def update_measurement_quality_status(conn, measurement_id, quality_status):
 # ============================================================
 
 
-def map_kpi_measurement_row(row):
+def map_kpi_source_measurement_row(row):
 
     return {
-        "measurement_count": row[0],
-        "average_power_kw": float(row[1]) if row[1] is not None else None,
-        "min_power_kw": float(row[2]) if row[2] is not None else None,
-        "max_power_kw": float(row[3]) if row[3] is not None else None,
-        "total_energy_kwh": float(row[4]) if row[4] is not None else None,
-        "latest_measurement_time": row[5] if row[5] is not None else None,
+        "asset_id": row[0],
+        "measurement_time": row[1],
+        "active_power_kw": float(row[2]),
+        "source": row[3],
+        "quality_status": row[4],
     }
 
 
@@ -567,28 +566,97 @@ def fetch_measurement_kpi_summary(conn):
     if row is None:
         return None
 
-    return map_kpi_measurement_row(row)
+    return map_kpi_source_measurement_row(row)
 
 
-def fetch_asset_kpi_summary(conn, asset_id):
-
+def fetch_measurements_for_asset_kpi_period(
+    conn,
+    asset_id,
+    start_time,
+    end_time,
+):
     with conn.cursor() as cursor:
         cursor.execute(
             """
-            SELECT
-                COUNT(*) AS measurement_count,
-                ROUND(AVG(active_power_kw), 2) AS average_power_kw,
-                MIN(active_power_kw) AS min_power_kw,
-                MAX(active_power_kw) AS max_power_kw,
-                SUM(energy_kwh) AS total_energy_kwh,
-                MAX(measurement_time) AS latest_measurement_time
-            FROM measurements
-            WHERE asset_id = %s
-            AND quality_status = 'valid';
-        """,
-            (asset_id,),
+            (
+                SELECT
+                    asset_id,
+                    measurement_time,
+                    active_power_kw,
+                    source,
+                    quality_status
+                FROM measurements
+                WHERE asset_id = %s
+                  AND quality_status = 'valid'
+                  AND measurement_time < %s
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM measurements
+                      WHERE asset_id = %s
+                        AND quality_status = 'valid'
+                        AND measurement_time = %s
+                  )
+                ORDER BY measurement_time DESC
+                LIMIT 1
+            )
+
+            UNION ALL
+
+            (
+                SELECT
+                    asset_id,
+                    measurement_time,
+                    active_power_kw,
+                    source,
+                    quality_status
+                FROM measurements
+                WHERE asset_id = %s
+                  AND quality_status = 'valid'
+                  AND measurement_time >= %s
+                  AND measurement_time <= %s
+            )
+
+            UNION ALL
+
+            (
+                SELECT
+                    asset_id,
+                    measurement_time,
+                    active_power_kw,
+                    source,
+                    quality_status
+                FROM measurements
+                WHERE asset_id = %s
+                  AND quality_status = 'valid'
+                  AND measurement_time > %s
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM measurements
+                      WHERE asset_id = %s
+                        AND quality_status = 'valid'
+                        AND measurement_time = %s
+                  )
+                ORDER BY measurement_time ASC
+                LIMIT 1
+            )
+
+            ORDER BY measurement_time;
+            """,
+            (
+                asset_id,
+                start_time,
+                asset_id,
+                start_time,
+                asset_id,
+                start_time,
+                end_time,
+                asset_id,
+                end_time,
+                asset_id,
+                end_time,
+            ),
         )
 
-        row = cursor.fetchone()
+        rows = cursor.fetchall()
 
-    return map_kpi_measurement_row(row)
+    return [map_kpi_source_measurement_row(row) for row in rows]

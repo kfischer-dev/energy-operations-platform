@@ -80,9 +80,11 @@ class MeasurementKPIsResponse(BaseModel):
 class AssetKPIsResponse(BaseModel):
     asset_id: int = Field(..., ge=1)
     asset_name: str
+    period_start: datetime
+    period_end: datetime
     measurement_count: int = Field(..., ge=0)
+    min_measured_power_kw: float | None
+    max_measured_power_kw: float | None
     average_power_kw: float | None
-    min_power_kw: float | None
-    max_power_kw: float | None
     total_energy_kwh: float | None
-    latest_measurement_time: datetime | None
+    coverage_ratio: float | None

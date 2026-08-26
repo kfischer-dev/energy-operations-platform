@@ -16,29 +16,7 @@ from src.measurements.models import (
     PowerSegment,
     PowerSupportPoint,
 )
-
-# ============================================================
-# Test Factory
-# ============================================================
-
-
-def create_power_measurement(
-    measurement_time: datetime,
-    active_power_kw: float,
-    *,
-    asset_id: int = 1,
-    source: str = "simulation",
-    quality_status: str = "valid",
-) -> PowerMeasurement:
-    """Creates a power measurement for aggregation tests."""
-
-    return PowerMeasurement(
-        asset_id=asset_id,
-        measurement_time=measurement_time,
-        active_power_kw=active_power_kw,
-        source=source,
-        quality_status=quality_status,
-    )
+from tests.factories import create_power_measurement
 
 
 # ============================================================

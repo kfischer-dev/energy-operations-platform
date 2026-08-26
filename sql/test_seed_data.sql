@@ -98,9 +98,11 @@ VALUES
 INSERT INTO measurements(asset_id, simulation_run_id, measurement_time, active_power_kw, source, quality_status)
 VALUES
     -- Asset 1: wind generation, fluctuating
-    (1,1,'2026-06-22 08:00:00+02',80000.00,'simulation','valid'),
+    (1,1,'2026-06-22 07:45:00+02',76000.00,'simulation','valid'),
+    (1,1,'2026-06-22 08:01:00+02',80000.00,'simulation','valid'),
     (1,1,'2026-06-22 08:15:00+02',84000.00,'simulation','valid'),
-    (1,1,'2026-06-22 08:30:00+02',79000.00,'simulation','valid'),
+    (1,1,'2026-06-22 08:29:00+02',79000.00,'simulation','valid'),
+    (1,1,'2026-06-22 08:45:00+02',82000.00,'simulation','valid'),
 
     -- Asset 2: city consumption, rising morning load
     (2,1,'2026-06-22 08:00:00+02',138000.00,'simulation','valid'),
