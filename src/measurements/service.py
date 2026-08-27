@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from src.measurements.measurement_aggregation import aggregate_measurements_for_interval
 from src.measurements.models import PowerMeasurement
 
@@ -5,6 +7,8 @@ from src.measurements.models import PowerMeasurement
 def map_measurements_to_power_measurements(
     measurements: list[dict],
 ) -> list[PowerMeasurement]:
+    """Map measurement dictionaries to PowerMeasurement domain objects."""
+
     return [
         PowerMeasurement(
             asset_id=measurement["asset_id"],
@@ -18,11 +22,20 @@ def map_measurements_to_power_measurements(
 
 
 def calculate_asset_kpis(
-    measurements,
-    asset_id,
-    start_time,
-    end_time,
-):
+    measurements: list[dict],
+    asset_id: int,
+    start_time: datetime,
+    end_time: datetime,
+) -> dict[str, object]:
+    """Calculate period-based KPIs for one asset.
+
+    Measured min/max values and measurement count use only measurements inside
+    the requested period. Average power, energy, and coverage are derived from
+    interval aggregation and may use surrounding measurements as support points.
+    If fewer than two usable measurements are available, interval-based KPIs
+    cannot be calculated.
+    """
+
     power_measurements = map_measurements_to_power_measurements(measurements)
 
     period_measurements = [
@@ -71,11 +84,18 @@ def calculate_asset_kpis(
 
 
 def calculate_kpis_for_all_measurements(
-    measurements,
-    start_time,
-    end_time,
-):
-    measurements_by_asset = {}
+    measurements: list[dict],
+    start_time: datetime,
+    end_time: datetime,
+) -> dict[str, object]:
+    """Calculate global period-based KPIs across all assets.
+
+    Measurements are grouped by asset first so that each asset is aggregated
+    independently. The resulting asset KPIs are then combined into one global
+    KPI summary for the requested period.
+    """
+
+    measurements_by_asset: dict[int, list[dict]] = {}
 
     for measurement in measurements:
         asset_id = measurement["asset_id"]
@@ -84,7 +104,7 @@ def calculate_kpis_for_all_measurements(
 
         measurements_by_asset[asset_id].append(measurement)
 
-    asset_kpis = {}
+    asset_kpis: dict[int, dict[str, object]] = {}
 
     for asset_id, asset_measurements in measurements_by_asset.items():
         asset_kpis[asset_id] = calculate_asset_kpis(

@@ -302,7 +302,6 @@ def test_aggregates_measurements_for_asset_kpi(
     assert total_energy_kwh == pytest.approx(40799.48, abs=0.01)
 
 
-@pytest.mark.intermediate
 @pytest.mark.integration
 def test_kpi_summary_for_all_measurements(
     reset_db,
