@@ -2,7 +2,9 @@ from src.measurements.measurement_aggregation import aggregate_measurements_for_
 from src.measurements.models import PowerMeasurement
 
 
-def map_measurements_to_power_measurements(measurements: list[dict]) -> list[PowerMeasurement]:
+def map_measurements_to_power_measurements(
+    measurements: list[dict],
+) -> list[PowerMeasurement]:
     return [
         PowerMeasurement(
             asset_id=measurement["asset_id"],
@@ -29,26 +31,30 @@ def calculate_asset_kpis(
         if start_time <= measurement.measurement_time <= end_time
     ]
 
-    period_interval = aggregate_measurements_for_interval(
-        asset_id=asset_id,
-        interval_start=start_time,
-        interval_end=end_time,
-        measurements=power_measurements,
-    )
+    if len(power_measurements) >= 2:
+        period_interval = aggregate_measurements_for_interval(
+            asset_id=asset_id,
+            interval_start=start_time,
+            interval_end=end_time,
+            measurements=power_measurements,
+        )
+
+        avg_active_power_kw = period_interval.avg_active_power_kw
+        total_energy_kwh = period_interval.energy_kwh
+        coverage_ratio = period_interval.coverage_ratio
+
+    else:
+        avg_active_power_kw = None
+        total_energy_kwh = None
+        coverage_ratio = 0.0
 
     min_measured_power_kw = min(
-        (
-            measurement.active_power_kw
-            for measurement in period_measurements
-        ),
+        (measurement.active_power_kw for measurement in period_measurements),
         default=None,
     )
 
     max_measured_power_kw = max(
-        (
-            measurement.active_power_kw
-            for measurement in period_measurements
-        ),
+        (measurement.active_power_kw for measurement in period_measurements),
         default=None,
     )
 
@@ -56,9 +62,88 @@ def calculate_asset_kpis(
         "period_start": start_time,
         "period_end": end_time,
         "measurement_count": len(period_measurements),
-        "average_power_kw": period_interval.avg_active_power_kw,
+        "avg_active_power_kw": avg_active_power_kw,
         "min_measured_power_kw": min_measured_power_kw,
         "max_measured_power_kw": max_measured_power_kw,
-        "total_energy_kwh": period_interval.energy_kwh,
-        "coverage_ratio": period_interval.coverage_ratio,
+        "total_energy_kwh": total_energy_kwh,
+        "coverage_ratio": coverage_ratio,
+    }
+
+
+def calculate_kpis_for_all_measurements(
+    measurements,
+    start_time,
+    end_time,
+):
+    measurements_by_asset = {}
+
+    for measurement in measurements:
+        asset_id = measurement["asset_id"]
+        if asset_id not in measurements_by_asset:
+            measurements_by_asset[asset_id] = []
+
+        measurements_by_asset[asset_id].append(measurement)
+
+    asset_kpis = {}
+
+    for asset_id, asset_measurements in measurements_by_asset.items():
+        asset_kpis[asset_id] = calculate_asset_kpis(
+            measurements=asset_measurements,
+            asset_id=asset_id,
+            start_time=start_time,
+            end_time=end_time,
+        )
+
+    measurement_count = sum(kpis["measurement_count"] for kpis in asset_kpis.values())
+
+    total_energy_kwh = sum(
+        kpis["total_energy_kwh"]
+        for kpis in asset_kpis.values()
+        if kpis["total_energy_kwh"] is not None
+    )
+
+    min_measured_power_kw = min(
+        (
+            kpis["min_measured_power_kw"]
+            for kpis in asset_kpis.values()
+            if kpis["min_measured_power_kw"] is not None
+        ),
+        default=None,
+    )
+
+    max_measured_power_kw = max(
+        (
+            kpis["max_measured_power_kw"]
+            for kpis in asset_kpis.values()
+            if kpis["max_measured_power_kw"] is not None
+        ),
+        default=None,
+    )
+
+    avg_active_power_kw = sum(
+        kpis["avg_active_power_kw"]
+        for kpis in asset_kpis.values()
+        if kpis["avg_active_power_kw"] is not None
+    )
+
+    coverage_ratio = (
+        sum(
+            kpis["coverage_ratio"]
+            for kpis in asset_kpis.values()
+            if kpis["coverage_ratio"] is not None
+        )
+        / len(asset_kpis)
+        if asset_kpis
+        else None
+    )
+
+    return {
+        "period_start": start_time,
+        "period_end": end_time,
+        "measurement_count": measurement_count,
+        "avg_active_power_kw": avg_active_power_kw,
+        "min_measured_power_kw": min_measured_power_kw,
+        "max_measured_power_kw": max_measured_power_kw,
+        "total_energy_kwh": total_energy_kwh,
+        "coverage_ratio": coverage_ratio,
     }

@@ -68,23 +68,41 @@ class MeasurementQualityUpdate(BaseModel):
     quality_status: Literal["valid", "invalid", "estimated"]
 
 
-class MeasurementKPIsResponse(BaseModel):
-    measurement_count: int = Field(..., ge=0)
-    average_power_kw: float | None
-    min_power_kw: float | None
-    max_power_kw: float | None
-    total_energy_kwh: float | None
-    latest_measurement_time: datetime | None
-
-
-class AssetKPIsResponse(BaseModel):
-    asset_id: int = Field(..., ge=1)
-    asset_name: str
+class KPIResponseBase(BaseModel):
     period_start: datetime
     period_end: datetime
     measurement_count: int = Field(..., ge=0)
     min_measured_power_kw: float | None
     max_measured_power_kw: float | None
-    average_power_kw: float | None
-    total_energy_kwh: float | None
-    coverage_ratio: float | None
+    avg_active_power_kw: float | None = Field(
+        default=None,
+        description=(
+            "Time-weighted average active power over the covered portion "
+            "of the requested period. If coverage_ratio is below 1.0, "
+            "the value does not represent the entire requested period."
+        ),
+    )
+    total_energy_kwh: float | None = Field(
+        default=None,
+        description=(
+            "Total energy calculated over the covered portion of the requested period."
+        ),
+    )
+    coverage_ratio: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "Fraction of the requested period covered by valid measurement data. "
+            "A value of 1.0 represents full coverage."
+        ),
+    )
+
+
+class MeasurementKPIsResponse(KPIResponseBase):
+    pass
+
+
+class AssetKPIsResponse(KPIResponseBase):
+    asset_id: int = Field(..., ge=1)
+    asset_name: str

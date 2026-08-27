@@ -18,7 +18,6 @@ from src.measurements.models import (
 )
 from tests.factories import create_power_measurement
 
-
 # ============================================================
 # Aggregate Interval
 # ============================================================
@@ -149,7 +148,7 @@ def test_returns_invalid_interval_without_coverage() -> None:
         interval_end=interval_end,
         measurements=power_measurements,
     )
-    
+
     assert power_interval.energy_kwh is None
     assert power_interval.avg_active_power_kw is None
     assert power_interval.coverage_ratio == pytest.approx(0.0)

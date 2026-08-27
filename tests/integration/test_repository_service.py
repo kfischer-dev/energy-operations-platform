@@ -3,8 +3,14 @@ from datetime import datetime
 import psycopg
 import pytest
 
-from src.database import fetch_measurements_for_asset_kpi_period
-from src.measurements.measurement_aggregation import aggregate_measurements_for_intervals
+from src.database import (
+    fetch_measurement_kpi_summary,
+    fetch_measurements_for_asset_kpi_period,
+)
+from src.measurements.measurement_aggregation import (
+    aggregate_measurements_for_intervals,
+)
+from src.measurements.service import calculate_kpis_for_all_measurements
 from src.simulation.default_data import create_default_simulation_config
 from src.simulation.models import SimulationAsset
 from src.simulation.registry import SIMULATION_PROFILE_REGISTRY
@@ -199,6 +205,7 @@ def test_failure_rollback_simulation_run(
 
     assert total_measurements_after == total_measurements_before
 
+
 @pytest.mark.integration
 def test_fetch_measurements_for_asset_kpi_period_returns_interval_and_support_points(
     reset_db,
@@ -210,7 +217,7 @@ def test_fetch_measurements_for_asset_kpi_period_returns_interval_and_support_po
 
     left_support_time = datetime.fromisoformat("2026-06-22T07:45:00+02:00")
     right_support_time = datetime.fromisoformat("2026-06-22T08:45:00+02:00")
-    
+
     measurements = fetch_measurements_for_asset_kpi_period(
         database_connection,
         asset_id=1,
@@ -223,14 +230,10 @@ def test_fetch_measurements_for_asset_kpi_period_returns_interval_and_support_po
     assert measurements[0]["measurement_time"] == left_support_time
     assert measurements[-1]["measurement_time"] == right_support_time
 
-    assert all(
-        measurement["asset_id"] == 1
-        for measurement in measurements
-    )
+    assert all(measurement["asset_id"] == 1 for measurement in measurements)
 
     measurement_times = [
-        measurement["measurement_time"]
-        for measurement in measurements
+        measurement["measurement_time"] for measurement in measurements
     ]
 
     assert measurement_times == sorted(measurement_times)
@@ -240,7 +243,8 @@ def test_fetch_measurements_for_asset_kpi_period_returns_interval_and_support_po
 # KPI Aggregation
 # ============================================================
 
-@pytest.mark.intermediate
+
+@pytest.mark.integration
 def test_aggregates_measurements_for_asset_kpi(
     reset_db,
     database_connection,
@@ -280,9 +284,7 @@ def test_aggregates_measurements_for_asset_kpi(
     )
 
     total_energy_kwh = sum(
-        interval.energy_kwh
-        for interval in intervals
-        if interval.energy_kwh is not None
+        interval.energy_kwh for interval in intervals if interval.energy_kwh is not None
     )
 
     assert len(intervals) == 2
@@ -299,3 +301,62 @@ def test_aggregates_measurements_for_asset_kpi(
 
     assert total_energy_kwh == pytest.approx(40799.48, abs=0.01)
 
+
+@pytest.mark.intermediate
+@pytest.mark.integration
+def test_kpi_summary_for_all_measurements(
+    reset_db,
+    database_connection,
+):
+    """Calculate global KPI summary for all assets within a period."""
+
+    start_time = datetime.fromisoformat("2026-06-22T08:00:00+02:00")
+    end_time = datetime.fromisoformat("2026-06-22T08:30:00+02:00")
+
+    measurements = fetch_measurement_kpi_summary(database_connection)
+
+    kpi_summary = calculate_kpis_for_all_measurements(
+        measurements=measurements,
+        start_time=start_time,
+        end_time=end_time,
+    )
+
+    period_measurements = [
+        measurement
+        for measurement in measurements
+        if start_time <= measurement["measurement_time"] <= end_time
+    ]
+
+    expected_min_power_kw = min(
+        measurement["active_power_kw"] for measurement in period_measurements
+    )
+
+    expected_max_power_kw = max(
+        measurement["active_power_kw"] for measurement in period_measurements
+    )
+
+    # Period contract
+    assert kpi_summary["period_start"] == start_time
+    assert kpi_summary["period_end"] == end_time
+
+    # Measurement-based KPIs
+    assert kpi_summary["measurement_count"] == 48
+
+    assert kpi_summary["min_measured_power_kw"] == pytest.approx(8000.0)
+    assert kpi_summary["max_measured_power_kw"] == pytest.approx(149000.0)
+
+    assert kpi_summary["min_measured_power_kw"] == expected_min_power_kw
+    assert kpi_summary["max_measured_power_kw"] == expected_max_power_kw
+
+    assert kpi_summary["min_measured_power_kw"] <= kpi_summary["max_measured_power_kw"]
+
+    # Period-based KPIs
+    assert kpi_summary["avg_active_power_kw"] == pytest.approx(1066375.0)
+    assert kpi_summary["total_energy_kwh"] == pytest.approx(533187.5)
+
+    assert kpi_summary["avg_active_power_kw"] > 0
+    assert kpi_summary["total_energy_kwh"] > 0
+
+    # Coverage
+    assert kpi_summary["coverage_ratio"] == pytest.approx(1.0)
+    assert 0.0 <= kpi_summary["coverage_ratio"] <= 1.0

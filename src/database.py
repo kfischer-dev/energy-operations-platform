@@ -547,26 +547,24 @@ def map_kpi_source_measurement_row(row):
 
 
 def fetch_measurement_kpi_summary(conn):
-
     with conn.cursor() as cursor:
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT
-                COUNT(*) AS measurement_count,
-                ROUND(AVG(active_power_kw), 2) AS average_power_kw,
-                MIN(active_power_kw) AS min_power_kw,
-                MAX(active_power_kw) AS max_power_kw,
-                SUM(energy_kwh) AS total_energy_kwh,
-                MAX(measurement_time) AS latest_measurement_time
+                asset_id,
+                measurement_time,
+                active_power_kw,
+                source,
+                quality_status
             FROM measurements
-            WHERE quality_status = 'valid';
-        """)
+            WHERE quality_status = 'valid'
+            ORDER BY asset_id, measurement_time;
+            """
+        )
 
-        row = cursor.fetchone()
+        rows = cursor.fetchall()
 
-    if row is None:
-        return None
-
-    return map_kpi_source_measurement_row(row)
+    return [map_kpi_source_measurement_row(row) for row in rows]
 
 
 def fetch_measurements_for_asset_kpi_period(

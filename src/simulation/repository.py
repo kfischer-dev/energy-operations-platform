@@ -182,6 +182,7 @@ def fetch_simulation_run_by_id(conn, simulation_run_id) -> dict | None:
 # Simulation Measurement Repository
 # ============================================================
 
+
 def insert_power_measurements(
     conn,
     measurements: list[PowerMeasurement],

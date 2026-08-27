@@ -392,5 +392,3 @@ def test_patch_measurement_quality_status_with_invalid_measurement_id_returns_42
     response = client.patch("/measurements/abc", json=new_quality_status)
 
     assert response.status_code == 422
-
-

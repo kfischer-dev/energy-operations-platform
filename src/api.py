@@ -1,9 +1,8 @@
-from datetime import datetime
 import logging
+from datetime import datetime
 
 from fastapi import FastAPI, HTTPException, Path, Query, status
 
-from src.measurements.service import calculate_asset_kpis
 from src.database import (
     create_measurement,
     fetch_asset_by_id,
@@ -17,6 +16,10 @@ from src.database import (
     update_measurement_quality_status,
 )
 from src.logging_config import configure_logging
+from src.measurements.service import (
+    calculate_asset_kpis,
+    calculate_kpis_for_all_measurements,
+)
 from src.schemas import (
     AssetKPIsResponse,
     AssetResponse,
@@ -493,27 +496,52 @@ def patch_quality_status_by_measurement_id(
     tags=["KPIs"],
     summary="Get global measurement KPI summary",
     description=(
-        "Returns aggregated KPI values across all valid measurements. "
-        "The summary includes the number of valid measurements, average, "
-        "minimum and maximum active power, "
-        "total interval energy and the latest measurement timestamp. "
-        "Only measurements with quality status valid are included in the calculation."
+        "Returns global KPI values across all energy assets for a requested time period. "
+        "Minimum and maximum power are based on actual valid measurements within "
+        "the requested period. Average power and total energy are derived separately "
+        "for each asset from its time-dependent power curve and then aggregated. "
+        "Measurements outside the requested period may be used as support points "
+        "for boundary interpolation. Coverage indicates the average temporal data "
+        "coverage across the evaluated assets."
     ),
 )
-def get_measurement_kpi_summary():
+def get_measurement_kpi_summary(
+    start_time: datetime = Query(
+        ...,
+        description="Start time for the KPI summary period.",
+    ),
+    end_time: datetime = Query(
+        ...,
+        description="End time for the KPI summary period.",
+    ),
+):
     """Get measurement KPI summary."""
 
     logger.info("=" * 60)
     logger.info("GET /kpis/measurements request received.")
 
+    if end_time <= start_time:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="end_time must be after start_time",
+        )
+
     conn = get_connection()
 
     try:
-        kpi_summary = fetch_measurement_kpi_summary(conn)
-        logger.info(
-            f"Loaded {kpi_summary['measurement_count']} valid measurements "
-            "from database."
+        measurements = fetch_measurement_kpi_summary(conn)
+
+        kpi_summary = calculate_kpis_for_all_measurements(
+            measurements=measurements,
+            start_time=start_time,
+            end_time=end_time,
         )
+
+        logger.info(
+            f"Calculated global KPI summary from "
+            f"{kpi_summary['measurement_count']} measurements within the requested period."
+        )
+
         return kpi_summary
 
     finally:
