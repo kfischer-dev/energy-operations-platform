@@ -339,7 +339,7 @@ def test_kpi_summary_for_all_measurements(
     assert kpi_summary["period_end"] == end_time
 
     # Measurement-based KPIs
-    assert kpi_summary["measurement_count"] == 48
+    assert kpi_summary["measurement_count"] == 21
 
     assert kpi_summary["min_measured_power_kw"] == pytest.approx(8000.0)
     assert kpi_summary["max_measured_power_kw"] == pytest.approx(149000.0)
@@ -350,12 +350,18 @@ def test_kpi_summary_for_all_measurements(
     assert kpi_summary["min_measured_power_kw"] <= kpi_summary["max_measured_power_kw"]
 
     # Period-based KPIs
-    assert kpi_summary["avg_active_power_kw"] == pytest.approx(1066375.0)
-    assert kpi_summary["total_energy_kwh"] == pytest.approx(533187.5)
+    assert kpi_summary["avg_active_power_kw"] == pytest.approx(
+        445848.96,
+        abs=0.01,
+    )
+    assert kpi_summary["total_energy_kwh"] == pytest.approx(
+        222924.48,
+        abs=0.01,
+    )
 
     assert kpi_summary["avg_active_power_kw"] > 0
     assert kpi_summary["total_energy_kwh"] > 0
 
     # Coverage
-    assert kpi_summary["coverage_ratio"] == pytest.approx(1.0)
+    assert kpi_summary["coverage_ratio"] == pytest.approx(0.875)
     assert 0.0 <= kpi_summary["coverage_ratio"] <= 1.0

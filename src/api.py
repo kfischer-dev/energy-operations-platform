@@ -522,7 +522,7 @@ def get_measurement_kpi_summary(
 
     if end_time <= start_time:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="end_time must be after start_time",
         )
 
@@ -587,7 +587,7 @@ def get_asset_kpi_summary(
 
     if end_time <= start_time:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="end_time must be after start_time",
         )
 

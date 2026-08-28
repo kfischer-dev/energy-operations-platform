@@ -41,9 +41,7 @@ def test_calculate_asset_kpis_returns_measurement_kpis_for_single_measurement():
     measurements = [
         {
             "asset_id": 5,
-            "measurement_time": datetime.fromisoformat(
-                "2026-06-22T08:30:00+02:00"
-            ),
+            "measurement_time": datetime.fromisoformat("2026-06-22T08:30:00+02:00"),
             "active_power_kw": 102000.0,
             "source": "simulation",
             "quality_status": "valid",
