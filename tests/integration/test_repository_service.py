@@ -35,6 +35,8 @@ def test_load_simulation_assets_returns_supported_database_assets(
     assert all(isinstance(asset, SimulationAsset) for asset in assets)
     assert loaded_asset_types <= supported_asset_types
     assert "battery_storage" not in loaded_asset_types
+    assert "city_load" in loaded_asset_types
+    assert "industrial_load" in loaded_asset_types
 
     solar_asset = next(asset for asset in assets if asset.asset_code == "E-SOLAR-001")
 
@@ -56,6 +58,20 @@ def test_execute_simulation_run_and_save_measurements(
     conn = database_connection
     config = create_default_simulation_config()
 
+    assets = load_simulation_assets(conn)
+
+    consumer_asset_ids = {
+        asset.asset_id
+        for asset in assets
+        if asset.asset_type
+        in {
+            "city_load",
+            "industrial_load",
+        }
+    }
+
+    assert consumer_asset_ids
+
     execute_simulation_run(conn, config)
 
     with conn.cursor() as cursor:
@@ -69,7 +85,10 @@ def test_execute_simulation_run_and_save_measurements(
         )
         simulation_run_id = cursor.fetchone()[0]
 
-    simulation_run = fetch_simulation_run_by_id(conn, simulation_run_id)
+    simulation_run = fetch_simulation_run_by_id(
+        conn,
+        simulation_run_id,
+    )
 
     with conn.cursor() as cursor:
         cursor.execute(
@@ -82,8 +101,22 @@ def test_execute_simulation_run_and_save_measurements(
         )
         persisted_count = cursor.fetchone()[0]
 
+    with conn.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT DISTINCT asset_id
+            FROM measurements
+            WHERE simulation_run_id = %s;
+            """,
+            (simulation_run_id,),
+        )
+        simulated_asset_ids = {row[0] for row in cursor.fetchall()}
+
     assert simulation_run["generated_measurement_count"] == persisted_count
     assert simulation_run["status"] == "completed"
+
+    # Consumer assets are part of the complete simulation run.
+    assert consumer_asset_ids <= simulated_asset_ids
 
     with conn.cursor() as cursor:
         cursor.execute(

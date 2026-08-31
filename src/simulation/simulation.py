@@ -1,3 +1,4 @@
+from dataclasses import replace
 from datetime import datetime, time
 from random import Random
 
@@ -50,6 +51,8 @@ def build_profile_data(
         "wind_park",
         "hydro_power_plant",
         "biomass_power_plant",
+        "city_load",
+        "industrial_load",
     }:
         return {asset.asset_type: {}}
 
@@ -194,10 +197,29 @@ def run_default_simulation(asset_type: str) -> None:
     """Run and print one default simulation for local manual inspection."""
 
     config = create_default_simulation_config()
+
+    config = replace(
+        config,
+        start_time=datetime(2026, 7, 16, 0, 0),
+        end_time=datetime(2026, 7, 17, 0, 0),
+        interval_minutes=60,
+    )
+
     asset = create_default_asset(asset_type)
     measurements = simulate_asset_power_grid(config, asset)
 
-    print(measurements)
+    print(f"\n--- {asset.asset_code} ({asset.asset_type}) ---")
+    print(f"{'Time':<8} {'Power [kW]':>12} {'Load [%]':>10}")
+    print("-" * 34)
+
+    for measurement in measurements:
+        load_percent = measurement.active_power_kw / asset.rated_power_kw * 100
+
+        print(
+            f"{measurement.measurement_time:%H:%M} "
+            f"{measurement.active_power_kw:>12.1f} "
+            f"{load_percent:>9.1f}%"
+        )
 
 
 if __name__ == "__main__":
@@ -205,3 +227,5 @@ if __name__ == "__main__":
     run_default_simulation("wind_park")
     run_default_simulation("hydro_power_plant")
     run_default_simulation("biomass_power_plant")
+    run_default_simulation("city_load")
+    run_default_simulation("industrial_load")

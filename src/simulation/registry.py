@@ -6,8 +6,12 @@ from random import Random
 from src.simulation.default_data import (
     create_default_biomass_asset,
     create_default_biomass_context,
+    create_default_city_load_asset,
+    create_default_city_load_context,
     create_default_hydro_plant_asset,
     create_default_hydro_plant_context,
+    create_default_industrial_load_asset,
+    create_default_industrial_load_context,
     create_default_solar_asset,
     create_default_solar_context,
     create_default_wind_park_asset,
@@ -20,7 +24,9 @@ from src.simulation.models import (
 )
 from src.simulation.profiles import (
     calculate_biomass_power_kw,
+    calculate_city_load_kw,
     calculate_hydro_power_kw,
+    calculate_industrial_load_kw,
     calculate_solar_power_kw,
     calculate_wind_power_kw,
 )
@@ -81,5 +87,15 @@ SIMULATION_PROFILE_REGISTRY: dict[str, SimulationProfileDefinition] = {
         power_profile=calculate_biomass_power_kw,
         default_asset_factory=create_default_biomass_asset,
         context_factory=create_default_biomass_context,
+    ),
+    "city_load": SimulationProfileDefinition(
+        power_profile=calculate_city_load_kw,
+        default_asset_factory=create_default_city_load_asset,
+        context_factory=create_default_city_load_context,
+    ),
+    "industrial_load": SimulationProfileDefinition(
+        power_profile=calculate_industrial_load_kw,
+        default_asset_factory=create_default_industrial_load_asset,
+        context_factory=create_default_industrial_load_context,
     ),
 }

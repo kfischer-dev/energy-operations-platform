@@ -199,3 +199,89 @@ def create_default_biomass_context(
         hydro_factor=0.0,
         biomass_factor=0.85,
     )
+
+
+# ============================================================
+# City Load
+# ============================================================
+
+
+def create_default_city_load_asset() -> SimulationAsset:
+    """Create the default city load asset used by the simulation."""
+
+    return SimulationAsset(
+        asset_id=3,
+        asset_code="N-CITY-001",
+        asset_role="consumer",
+        asset_type="city_load",
+        region_id=1,
+        region_code="DE-NORTH",
+        rated_power_kw=180_000,
+        operating_status="online",
+        is_renewable=False,
+        is_weather_dependent=False,
+        is_dispatchable=False,
+        can_store_energy=False,
+    )
+
+
+def create_default_city_load_context(
+    config: SimulationConfig,
+    current_time: datetime,
+    random_generator: Random,
+) -> SimulationContext:
+    """Create a city load simulation context for one timestamp."""
+
+    return SimulationContext(
+        config=config,
+        current_time=current_time,
+        random_generator=random_generator,
+        solar_factor=0.0,
+        wind_factor=0.0,
+        load_factor=1.0,
+        hydro_factor=0.0,
+        biomass_factor=0.0,
+    )
+
+
+# ============================================================
+# Industrial Load
+# ============================================================
+
+
+def create_default_industrial_load_asset() -> SimulationAsset:
+    """Create the default industrial load asset used by the simulation."""
+
+    return SimulationAsset(
+        asset_id=8,
+        asset_code="S-IND-001",
+        asset_role="consumer",
+        asset_type="industrial_load",
+        region_id=2,
+        region_code="DE-SOUTH",
+        rated_power_kw=130_000,
+        operating_status="online",
+        is_renewable=False,
+        is_weather_dependent=False,
+        is_dispatchable=False,
+        can_store_energy=False,
+    )
+
+
+def create_default_industrial_load_context(
+    config: SimulationConfig,
+    current_time: datetime,
+    random_generator: Random,
+) -> SimulationContext:
+    """Create an industrial load simulation context for one timestamp."""
+
+    return SimulationContext(
+        config=config,
+        current_time=current_time,
+        random_generator=random_generator,
+        solar_factor=0.0,
+        wind_factor=0.0,
+        load_factor=1.0,
+        hydro_factor=0.0,
+        biomass_factor=0.0,
+    )
