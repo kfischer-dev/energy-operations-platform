@@ -2,7 +2,10 @@ from datetime import datetime
 
 import pytest
 
-from src.measurements.service import calculate_asset_kpis, calculate_kpis_for_all_measurements
+from src.measurements.service import (
+    calculate_asset_kpis,
+    calculate_kpis_for_all_measurements,
+)
 
 
 @pytest.mark.basic
@@ -138,18 +141,14 @@ def test_calculate_kpis_for_all_measurements_returns_none_when_no_asset_is_aggre
     measurements = [
         {
             "asset_id": 1,
-            "measurement_time": datetime.fromisoformat(
-                "2026-06-22T08:15:00+02:00"
-            ),
+            "measurement_time": datetime.fromisoformat("2026-06-22T08:15:00+02:00"),
             "active_power_kw": 100.0,
             "source": "simulation",
             "quality_status": "valid",
         },
         {
             "asset_id": 2,
-            "measurement_time": datetime.fromisoformat(
-                "2026-06-22T08:15:00+02:00"
-            ),
+            "measurement_time": datetime.fromisoformat("2026-06-22T08:15:00+02:00"),
             "active_power_kw": 200.0,
             "source": "simulation",
             "quality_status": "valid",
@@ -255,7 +254,6 @@ def test_calculate_kpis_for_all_measurements_averages_asset_coverage():
             "source": "simulation",
             "quality_status": "valid",
         },
-
         # Asset 2: only 15 of 30 minutes covered
         {
             "asset_id": 2,
@@ -266,9 +264,7 @@ def test_calculate_kpis_for_all_measurements_averages_asset_coverage():
         },
         {
             "asset_id": 2,
-            "measurement_time": datetime.fromisoformat(
-                "2026-06-22T08:15:00+02:00"
-            ),
+            "measurement_time": datetime.fromisoformat("2026-06-22T08:15:00+02:00"),
             "active_power_kw": 200.0,
             "source": "simulation",
             "quality_status": "valid",

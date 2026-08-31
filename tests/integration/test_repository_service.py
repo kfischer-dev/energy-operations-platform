@@ -312,7 +312,9 @@ def test_kpi_summary_for_all_measurements(
     start_time = datetime.fromisoformat("2026-06-22T08:00:00+02:00")
     end_time = datetime.fromisoformat("2026-06-22T08:30:00+02:00")
 
-    measurements = fetch_measurement_kpi_summary(database_connection, start_time, end_time)
+    measurements = fetch_measurement_kpi_summary(
+        database_connection, start_time, end_time
+    )
 
     kpi_summary = calculate_kpis_for_all_measurements(
         measurements=measurements,
@@ -395,13 +397,11 @@ def test_fetch_measurement_kpi_summary_includes_only_required_support_points(
         measurements_by_asset[asset_id].append(measurement)
 
     asset_1_times = [
-        measurement["measurement_time"]
-        for measurement in measurements_by_asset[1]
+        measurement["measurement_time"] for measurement in measurements_by_asset[1]
     ]
 
     asset_2_times = [
-        measurement["measurement_time"]
-        for measurement in measurements_by_asset[2]
+        measurement["measurement_time"] for measurement in measurements_by_asset[2]
     ]
 
     # Asset 1 has no measurements exactly at 08:00 or 08:30.

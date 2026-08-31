@@ -143,11 +143,7 @@ def calculate_kpis_for_all_measurements(
         if kpis["avg_active_power_kw"] is not None
     ]
 
-    avg_active_power_kw = (
-        sum(average_power_values)
-        if average_power_values
-        else None
-    )
+    avg_active_power_kw = sum(average_power_values) if average_power_values else None
 
     min_measured_power_kw = min(
         (
