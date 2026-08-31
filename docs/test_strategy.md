@@ -2,20 +2,18 @@
 
 ## Purpose
 
-This document describes the automated test approach of the Energy Operations Platform in `v0.11.0`.
+This document describes the automated test approach of the Energy Operations Platform in `v0.11.1`.
 
-The current source defines **101 test functions**. Literal parameterization expands these to **128 collected test cases** in this source state.
+The strategy keeps strong coverage around domain-heavy logic and critical persistence paths while following an 80/20 learning-project rule: tests should prevent realistic regressions or clarify complex behavior, not duplicate framework-standard validation on every layer.
 
-The strategy combines:
+Current focus areas include:
 
-- deterministic API tests,
-- database-backed endpoint tests,
-- pure simulation/profile logic tests,
-- reusable measurement aggregation tests,
-- mocked repository/service unit-style tests,
-- real PostgreSQL integration, smoke and rollback tests.
-
----
+- point-in-time measurement CRUD,
+- boundary-aware KPI source retrieval,
+- interpolation and trapezoidal integration,
+- asset/global period KPI semantics,
+- deterministic simulation,
+- PostgreSQL success and rollback integration.
 
 # Test Structure
 
@@ -134,40 +132,30 @@ Tests cover:
 
 Tests cover:
 
-- summary list behavior,
-- limit query validation,
-- asset-specific list behavior,
-- detail read,
-- `404` and `422` behavior,
+- point-in-time summary/detail reads,
+- list limits and asset-scoped reads,
 - POST success and persistence,
-- POST validation,
-- PATCH success and persistence,
-- PATCH validation,
-- read compatibility with nullable `interval_minutes` / `energy_kwh` for runtime simulation rows.
+- PATCH quality-status persistence,
+- key validation/not-found behavior,
+- continued compatibility with simulation-generated raw power measurements.
 
-`POST /measurements` still uses the previous interval-energy create contract in `v0.11.0`.
+Measurement API tests no longer assert interval or persisted energy fields.
 
 ## KPIs
 
-Tests cover exact valid-only:
+KPI tests now use explicit `start_time` / `end_time` periods and verify the semantics that are easy to implement incorrectly:
 
-```text
-measurement_count
-average_power_kw
-min_power_kw
-max_power_kw
-total_energy_kwh
-latest_measurement_time
-```
+- measured count/min/max use valid in-period measurements only,
+- missing boundaries can be reconstructed from nearest supports,
+- supports/interpolated values do not change measured count/min/max,
+- average power is time weighted,
+- energy is derived with trapezoidal integration,
+- coverage reflects the reconstructed duration,
+- zero/one-measurement edge cases return sensible nullable derived values,
+- invalid and estimated rows are excluded,
+- global KPIs group by asset before combining results.
 
-They also verify:
-
-- invalid rows are excluded,
-- estimated rows are excluded,
-- existing asset without valid measurements returns zero/null values,
-- unknown asset returns `404`.
-
-The KPI tests intentionally remain tied to the deterministic pre-refactor interval seed in `v0.11.0`. KPI semantics for new point-in-time simulation rows are planned for `v0.11.1`.
+Repository integration tests also cover boundary-aware source retrieval, including exact-boundary behavior and global per-asset support selection.
 
 ---
 
@@ -507,10 +495,10 @@ Before tagging a release:
 6. inspect git status and release diff
 ```
 
-`v0.11.0` specifically requires the success smoke path and real PostgreSQL rollback path to remain green.
+`v0.11.1` requires the point-in-time measurement/KPI paths plus the existing simulation success-smoke and PostgreSQL rollback paths to remain green.
 
 ---
 
 # Known Test-Architecture Improvement
 
-A later cleanup can move database setup fixtures closer to integration/API tests so truly pure simulation and aggregation tests can run without any database-session initialization. That is a structural improvement, not a blocker for `v0.11.0`.
+A later cleanup can move database setup fixtures closer to integration/API tests so truly pure simulation and aggregation tests can run without any database-session initialization. That is a structural improvement, not a blocker for `v0.11.1`.

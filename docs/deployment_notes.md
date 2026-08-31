@@ -2,9 +2,9 @@
 
 ## Purpose
 
-This document describes the local containerized environment and developer execution paths of the Energy Operations Platform in `v0.11.0`.
+This document describes the local containerized environment and developer execution paths of the Energy Operations Platform in `v0.11.1`.
 
-The Docker foundation was established in `v0.9.x`. `v0.11.0` verifies that the expanded six-table schema and simulation-run persistence continue to work in the same reproducible environment.
+The Docker foundation was established in `v0.9.x`. `v0.11.1` keeps the same container architecture while changing the `measurements` schema to canonical point-in-time power rows.
 
 Related documentation:
 
@@ -228,6 +228,8 @@ docker compose up --build -d
 
 Use it deliberately after schema/seed changes and for release-candidate clean rebuilds.
 
+`v0.11.1` removes the former `measurements.interval_minutes` and `measurements.energy_kwh` columns, so moving a local `v0.11.0` development volume to this version requires this clean rebuild while the project still uses SQL initialization instead of migrations.
+
 ---
 
 # Health Check and Startup Order
@@ -389,8 +391,9 @@ Because `measurements` has a unique `(asset_id, measurement_time)` constraint, r
 
 # Next Deployment Steps
 
-1. Keep the current local stack stable during the point-in-time measurement refactor.
+1. Keep the current local stack stable while new domain features are added.
 2. Add CI test/build validation before cloud deployment.
-3. Introduce a migration strategy before schema evolution becomes frequent.
+3. Introduce a migration strategy when preserving real environments/data across schema versions becomes necessary.
 4. Add a portfolio architecture diagram and release/demo workflow.
 5. Add production-oriented configuration only after the backend domain contract is stable.
+

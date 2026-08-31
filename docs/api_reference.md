@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document describes the public REST API contract of the Energy Operations Platform for `v0.11.0`.
+This document describes the public REST API contract of the Energy Operations Platform for `v0.11.1`.
 
 Interactive OpenAPI documentation is available at:
 
@@ -20,19 +20,20 @@ http://127.0.0.1:8000
 
 All request and response bodies use JSON. Date-time values are serialized as ISO 8601 timestamps.
 
-## `v0.11.0` Measurement Compatibility Note
+## `v0.11.1` Measurement Model
 
-`v0.11.0` introduces runtime simulation rows as **point-in-time active-power measurements** while the public measurement API still retains the previous interval-energy contract for manual/API-created data.
+`v0.11.1` makes point-in-time active power the canonical public measurement contract.
 
-Therefore:
+Raw measurement requests/responses no longer include:
 
-- read models allow `interval_minutes = null`,
-- read models allow `energy_kwh = null`,
-- runtime simulation measurements use both fields as `null`,
-- `POST /measurements` still requires both fields,
-- the full public contract cleanup is deferred to `v0.11.1`.
+```text
+interval_minutes
+energy_kwh
+```
 
-There is no public simulation endpoint in `v0.11.0`.
+Energy is derived by period-based KPI/aggregation logic rather than persisted redundantly. `simulation_runs.interval_minutes` remains part of simulation configuration.
+
+There is no public simulation endpoint in `v0.11.1`.
 
 ---
 
@@ -130,7 +131,7 @@ Unknown assets return `404 Not Found`.
 
 ## Summary versus detail contracts
 
-Measurement list endpoints intentionally use a compact response. Detail, POST and PATCH endpoints use the complete response contract.
+Measurement list endpoints use a compact response. Detail, POST and PATCH endpoints use the complete response contract.
 
 ### `MeasurementSummaryResponse`
 
@@ -141,7 +142,6 @@ asset_code
 asset_name
 measurement_time
 active_power_kw
-energy_kwh           <- nullable in v0.11.0
 quality_status
 ```
 
@@ -156,14 +156,12 @@ asset_type
 asset_role
 region_code
 measurement_time
-interval_minutes      <- nullable in v0.11.0
 active_power_kw
-energy_kwh            <- nullable in v0.11.0
 source
 quality_status
 ```
 
-Allowed measurement quality values exposed by the API:
+Allowed quality values:
 
 ```text
 valid
@@ -181,23 +179,6 @@ Optional query parameter:
 |---|---|---|
 | `limit` | integer | optional, `1` to `100` |
 
-Example interval-style seed row:
-
-```json
-{
-  "measurement_id": 1,
-  "asset_id": 1,
-  "asset_code": "N-WIND-001",
-  "asset_name": "North Sea Wind Park",
-  "measurement_time": "2026-06-22T08:00:00+02:00",
-  "active_power_kw": 80000.0,
-  "energy_kwh": 20000.0,
-  "quality_status": "valid"
-}
-```
-
-Runtime simulation summaries use the same shape, but `energy_kwh` is `null` because the service persists point-in-time power values rather than interval energy.
-
 ## `GET /assets/{asset_id}/measurements`
 
 Returns measurement summaries for one asset.
@@ -214,7 +195,7 @@ The parent asset is checked first:
 
 ## `GET /measurements/{measurement_id}`
 
-Returns one complete measurement using `MeasurementResponse`.
+Returns one complete point-in-time measurement.
 
 Path parameter:
 
@@ -222,62 +203,27 @@ Path parameter:
 |---|---|---|
 | `measurement_id` | integer | `>= 1` |
 
-Example existing interval-style measurement:
-
-```json
-{
-  "measurement_id": 1,
-  "asset_id": 1,
-  "asset_code": "N-WIND-001",
-  "asset_name": "North Sea Wind Park",
-  "asset_type": "wind_park",
-  "asset_role": "producer",
-  "region_code": "DE-NORTH",
-  "measurement_time": "2026-06-22T08:00:00+02:00",
-  "interval_minutes": 15,
-  "active_power_kw": 80000.0,
-  "energy_kwh": 20000.0,
-  "source": "simulation",
-  "quality_status": "valid"
-}
-```
-
-For point-in-time simulation measurements created by the `v0.11.0` service, the distinguishing fields are:
-
-```json
-{
-  "interval_minutes": null,
-  "energy_kwh": null,
-  "source": "simulation",
-  "quality_status": "valid"
-}
-```
-
 Unknown measurement IDs return `404 Not Found`.
 
 ## `POST /measurements`
 
-Creates one measurement for an existing asset.
+Creates one point-in-time active-power measurement for an existing asset.
 
-`v0.11.0` intentionally keeps the previous create contract. Required body:
+Required body:
 
 ```json
 {
   "asset_id": 1,
   "measurement_time": "2026-07-02T08:15:00+02:00",
-  "interval_minutes": 15,
   "active_power_kw": 82000.0,
-  "energy_kwh": 20500.0,
   "source": "manual_import",
   "quality_status": "valid"
 }
 ```
 
-Validation rules implemented by `MeasurementCreate`:
+Validation includes:
 
 - `asset_id >= 1`
-- `interval_minutes >= 1`
-- `energy_kwh >= 0`
 - `source` must not be empty
 - `quality_status` must be `valid`, `invalid` or `estimated`
 
@@ -289,65 +235,56 @@ Unknown parent assets return `404 Not Found`.
 
 Updates only `quality_status`.
 
-Request body:
-
 ```json
 {
   "quality_status": "estimated"
 }
 ```
 
-Allowed values:
-
-```text
-valid
-invalid
-estimated
-```
-
 Successful update returns the complete `MeasurementResponse` with `200 OK`.
-
-Unknown measurements return `404 Not Found`.
 
 ---
 
 # KPI Endpoints
 
+Both KPI endpoints are period based and require ISO-8601 `start_time` and `end_time` query parameters.
+
+Common KPI fields:
+
+```text
+period_start
+period_end
+measurement_count
+avg_active_power_kw
+min_measured_power_kw
+max_measured_power_kw
+total_energy_kwh
+coverage_ratio
+```
+
+Field semantics:
+
+- `measurement_count` counts valid measured points inside the requested period,
+- `min_measured_power_kw` / `max_measured_power_kw` use measured in-period points only,
+- `avg_active_power_kw` is time weighted over the reconstructed curve,
+- `total_energy_kwh` is derived with trapezoidal integration,
+- `coverage_ratio` is covered duration divided by requested duration.
+
+Boundary measurements immediately before/after the requested period may be loaded for interpolation. They contribute to derived average/energy/coverage but do not increase measured count or measured min/max values.
+
+Only `quality_status = valid` participates in the current KPI calculation. `invalid` and `estimated` rows are excluded.
+
 ## `GET /kpis/measurements`
 
-Returns the global KPI summary using only rows with:
+Returns the global period KPI summary.
 
-```text
-quality_status = valid
-```
+Measurements are grouped by asset before energy integration so segments are never built between different assets. Asset-level results are then combined into the global response.
 
-Response contract:
-
-```text
-measurement_count
-average_power_kw
-min_power_kw
-max_power_kw
-total_energy_kwh
-latest_measurement_time
-```
-
-Example:
-
-```json
-{
-  "measurement_count": 64,
-  "average_power_kw": 67481.25,
-  "min_power_kw": 5000.0,
-  "max_power_kw": 153000.0,
-  "total_energy_kwh": 1079700.0,
-  "latest_measurement_time": "2026-06-22T08:45:00+02:00"
-}
-```
+The database query retrieves the requested period plus only the nearest required support measurements per asset. It uses PostgreSQL `DISTINCT ON` and exact-boundary checks to avoid duplicate support rows when the requested boundary already exists as a measurement.
 
 ## `GET /assets/{asset_id}/kpis`
 
-Returns the same KPI fields scoped to one asset and additionally includes:
+Returns the same period KPI semantics scoped to one asset and additionally includes:
 
 ```text
 asset_id
@@ -357,27 +294,12 @@ asset_name
 Behavior:
 
 - unknown asset → `404 Not Found`
-- existing asset without valid measurements → `measurement_count = 0` and nullable KPI fields
-- invalid and estimated rows are excluded
-
-## KPI transition note
-
-The current KPI SQL still belongs to the pre-`v0.11` interval-energy model:
-
-```sql
-COUNT(*)
-AVG(active_power_kw)
-MIN(active_power_kw)
-MAX(active_power_kw)
-SUM(energy_kwh)
-MAX(measurement_time)
-```
-
-Runtime simulation rows introduced by `v0.11.0` have `energy_kwh = NULL`. The KPI layer is intentionally not fully refactored in this release. `v0.11.1` will align energy calculation and KPI semantics with point-in-time raw measurements and the reusable aggregation module.
+- existing asset without usable measurements → zero count/coverage and nullable derived values
+- one valid in-period point can define measured min/max/count but cannot define energy by itself
 
 ---
 
-# Simulation Service in `v0.11.0`
+# Simulation Service in `v0.11.1`
 
 Simulation is **not exposed as a REST endpoint** yet.
 
@@ -435,4 +357,4 @@ Public API models are defined in:
 src/schemas.py
 ```
 
-`src/simulation/schemas.py` currently contains `SimulationRunResponse`, but no endpoint uses it in `v0.11.0`. It is preparation for a later public simulation API and must not be interpreted as an already exposed REST resource.
+`src/simulation/schemas.py` currently contains `SimulationRunResponse`, but no endpoint uses it in `v0.11.1`. It is preparation for a later public simulation API and must not be interpreted as an already exposed REST resource.

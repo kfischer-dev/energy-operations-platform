@@ -8,7 +8,7 @@ The project uses small, explainable versions so the GitHub history shows how the
 
 | Version | Status | Summary |
 |---|---|---|
-| `v0.11.0` | current | Simulation foundation with producer profiles, raw power persistence, interval aggregation, simulation-run tracking and real PostgreSQL success/rollback integration tests |
+| `v0.11.1` | current | Canonical point-in-time measurement model with period-based KPI derivation from raw power measurements |
 
 ## Version Timeline
 
@@ -42,7 +42,8 @@ The project uses small, explainable versions so the GitHub history shows how the
 | `v0.9.1` | completed | Compose stack for FastAPI and PostgreSQL | Multi-container networking, volumes and initialization |
 | `v0.9.2` | completed | PostgreSQL health check and delayed API startup | Reliable service readiness |
 | `v0.10.0` | completed | Energy-domain database, API and test migration | Domain modeling, schema evolution, API contracts and energy analytics |
-| `v0.11.0` | current | Deterministic producer simulation, point-in-time persistence, interval aggregation and run lifecycle | Simulation architecture, seeded randomness, time-series integration, repositories/services and transactional failure handling |
+| `v0.11.0` | completed | Deterministic producer simulation, point-in-time persistence, interval aggregation and run lifecycle | Simulation architecture, seeded randomness, time-series integration, repositories/services and transactional failure handling |
+| `v0.11.1` | current | Canonical point-in-time measurements and period-based KPI derivation | Time-series modeling, boundary-aware SQL, interpolation and trapezoidal integration |
 
 ---
 
@@ -307,6 +308,66 @@ Existing seed/API-created measurements still use interval/energy fields, and KPI
 
 ---
 
+# v0.11.1 — Point-in-Time Measurement Refactor
+
+## Canonical measurement model
+
+Removed the former raw-measurement fields:
+
+```text
+interval_minutes
+energy_kwh
+```
+
+A measurement row now represents active power at one timestamp. API-created and simulation-created measurements use the same contract.
+
+## Period-based KPI endpoints
+
+Both global and asset KPI endpoints now require:
+
+```text
+start_time
+end_time
+```
+
+Measured count/min/max are based on valid measurements inside the period. Average power, energy and coverage are derived from the reconstructed power curve.
+
+## Derived energy and boundary handling
+
+Energy is calculated on demand through:
+
+```text
+point-in-time power measurements
+→ nearest boundary supports when needed
+→ linear boundary interpolation
+→ adjacent segments
+→ trapezoidal integration
+```
+
+Support/interpolated values can influence derived average power, energy and coverage but do not change measured count/min/max.
+
+## Global KPI source query
+
+The global KPI database query was changed from loading the complete valid history to a bounded query using `start_time` and `end_time`.
+
+It selects:
+
+- valid measurements inside the requested period,
+- nearest left/right support measurements per asset where required,
+- no duplicate support row when an exact boundary measurement already exists.
+
+This introduced practical use of PostgreSQL `DISTINCT ON`, exact-boundary checks and `NOT EXISTS` logic.
+
+## Quality policy
+
+Current KPI calculations use only `quality_status = valid`. Invalid and estimated measurements are excluded from KPI source data.
+
+## Testing / learning focus
+
+Tests were updated for the new measurement and KPI contracts, with detailed coverage concentrated on time-series behavior, boundary selection, energy integration and critical database/service flows. Future feature work follows an 80/20 testing approach so the learning project remains implementation-focused.
+
+---
+
 # Documentation Split
 
 | Document | Role |
@@ -323,14 +384,16 @@ Existing seed/API-created measurements still use interval/energy fields, and KPI
 
 # Next Planned Work
 
-| Planned version/block | Focus |
+| Planned block | Focus |
 |---|---|
-| `v0.11.1` | point-in-time raw measurement refactor; remove interval/energy persistence coupling and align API/KPI energy derivation |
-| later simulation patch | public simulation endpoint after the measurement contract is stable |
-| producer/consumer expansion | load profiles and broader asset coverage |
+| consumer simulation | city/industrial load profiles and broader mixed-asset simulation |
+| energy-balance block | combine producer and consumer power into global/regional balance |
 | storage block | state of charge and dispatch behavior |
 | weather block | regional weather time series and weather-driven generation |
-| analytics block | global and regional energy balance |
+| later simulation patch | public simulation endpoint after internal workflows are stable |
 | recommendation block | rule-based operational actions |
 | frontend phase | React dashboard with map, KPIs, charts and live/history views |
 | cloud phase | Azure deployment after the backend MVP is stable |
+
+Large structural cleanup remains secondary unless it solves a concrete project problem.
+

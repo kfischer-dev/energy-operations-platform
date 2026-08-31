@@ -178,10 +178,8 @@ Example for four assets over two hours at 15-minute resolution:
 | `measurement_id` | integer | Identity primary key |
 | `asset_id` | integer | Required FK to `assets`, `ON DELETE CASCADE` |
 | `simulation_run_id` | bigint, nullable | FK to `simulation_runs`, `ON DELETE SET NULL` |
-| `measurement_time` | timestamp with time zone | Timestamp represented by the row |
-| `interval_minutes` | integer, nullable | Transitional interval metadata; positive when present |
-| `active_power_kw` | numeric | Required active power value |
-| `energy_kwh` | numeric, nullable | Transitional interval energy; non-negative when present |
+| `measurement_time` | timestamp with time zone | Point-in-time timestamp represented by the row |
+| `active_power_kw` | numeric | Required active-power value |
 | `source` | string | Origin of the row |
 | `quality_status` | string | `valid`, `invalid`, `estimated` |
 | `created_at` | timestamp with time zone | Creation timestamp |
@@ -192,38 +190,22 @@ Uniqueness:
 (asset_id, measurement_time)
 ```
 
-One asset therefore cannot currently store two measurements for the same timestamp, even if they belong to different simulation runs.
+## Point-in-time semantics
 
-## `v0.11.0` transitional semantics
+A measurement row answers:
 
-Two measurement shapes temporarily coexist.
+> What was the active power of this asset at this timestamp?
 
-### Existing seed/API-created interval-style row
+Raw measurements deliberately do **not** store:
 
 ```text
-measurement_time
-interval_minutes = 15
-active_power_kw
+interval_minutes
 energy_kwh
 ```
 
-### New runtime simulation row
+Energy and interval-average power are derived from a sequence of raw power measurements. This keeps the raw model independent of later analysis interval choices.
 
-```text
-measurement_time
-interval_minutes = NULL
-active_power_kw
-energy_kwh = NULL
-simulation_run_id = <run id>
-```
-
-The runtime simulation row represents an instantaneous/point-in-time active-power support value. Energy is derived later through aggregation.
-
-The coexistence is intentional for `v0.11.0` so the simulation foundation can be released without simultaneously rewriting the full legacy API/KPI layer.
-
-`v0.11.1` is planned to make the point-in-time model canonical.
-
----
+`simulation_run_id` is nullable because measurements may originate from simulation or from other sources. `simulation_runs.interval_minutes` remains part of the simulation configuration.
 
 # Storage Specifications
 
@@ -281,7 +263,6 @@ asset_code
 asset_name
 measurement_time
 active_power_kw
-energy_kwh       <- nullable in v0.11.0
 quality_status
 ```
 
@@ -296,52 +277,61 @@ asset_type
 asset_role
 region_code
 measurement_time
-interval_minutes <- nullable in v0.11.0
 active_power_kw
-energy_kwh       <- nullable in v0.11.0
 source
 quality_status
 ```
 
-`simulation_run_id` is a database relationship and is not currently exposed through `MeasurementResponse`.
+`simulation_run_id` remains an internal database relationship and is not currently exposed in this response.
 
 ## `MeasurementCreate`
-
-The create model still requires the legacy interval fields in `v0.11.0`:
 
 ```text
 asset_id
 measurement_time
-interval_minutes
 active_power_kw
-energy_kwh
 source
 quality_status
 ```
 
-This asymmetry is temporary and documented for the `v0.11.1` refactor.
+POST-created and simulation-created rows therefore share the same canonical raw measurement model.
 
 ## KPI response models
 
-Global:
+Global and asset KPI responses are period based.
+
+Common fields:
+
+```text
+period_start
+period_end
+measurement_count
+avg_active_power_kw
+min_measured_power_kw
+max_measured_power_kw
+total_energy_kwh
+coverage_ratio
+```
+
+Asset-specific responses additionally expose asset identity fields.
+
+Measured fields:
 
 ```text
 measurement_count
-average_power_kw
-min_power_kw
-max_power_kw
-total_energy_kwh
-latest_measurement_time
+min_measured_power_kw
+max_measured_power_kw
 ```
 
-Asset-specific adds:
+Derived fields:
 
 ```text
-asset_id
-asset_name
+avg_active_power_kw
+total_energy_kwh
+coverage_ratio
 ```
 
----
+Boundary supports can contribute to derived fields without changing measured count/min/max.
 
 # Internal Measurement Models
 
@@ -557,13 +547,15 @@ Only registered asset types are loaded by `load_simulation_assets()`.
 
 ---
 
-# Planned `v0.11.1` Contract Cleanup
+# `v0.11.1` Contract Result
 
-The next patch is intentionally focused on the measurement model:
+The point-in-time cleanup planned after `v0.11.0` is now complete:
 
-- remove `interval_minutes` from raw measurement persistence,
-- remove stored `energy_kwh` from raw measurement persistence,
-- simplify `MeasurementCreate` and read contracts,
-- derive interval average power and energy through aggregation,
-- align KPI energy semantics with the point-in-time model,
-- update related database/API tests.
+- raw measurements no longer store interval duration or energy,
+- create/read API contracts match the raw database model,
+- global and asset KPIs use requested time periods,
+- average power, energy and coverage are derived through the aggregation layer,
+- global KPI source retrieval selects period data plus the nearest required per-asset supports.
+
+Future schema additions should preserve this distinction between **raw measured values** and **derived analytical results**.
+

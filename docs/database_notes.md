@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document describes the PostgreSQL implementation, Python database access and simulation persistence behavior of the Energy Operations Platform in `v0.11.0`.
+This document describes the PostgreSQL implementation, Python database access and simulation persistence behavior of the Energy Operations Platform in `v0.11.1`.
 
 Related documents:
 
@@ -113,12 +113,13 @@ Rules:
 - optional simulation-run FK,
 - required `measurement_time`,
 - required `active_power_kw`,
-- nullable positive `interval_minutes`,
-- nullable non-negative `energy_kwh`,
+- required source,
 - quality in `valid`, `invalid`, `estimated`,
 - unique `(asset_id, measurement_time)`.
 
-The unique asset/timestamp rule is deliberately used by the rollback integration test: running the same simulation twice over the same timestamps causes PostgreSQL `UniqueViolation` and exercises the real transaction failure path.
+Raw measurement rows no longer contain `interval_minutes` or persisted `energy_kwh`.
+
+The unique asset/timestamp rule is still deliberately used by the rollback integration test: running the same simulation twice over the same timestamps causes PostgreSQL `UniqueViolation` and exercises the real transaction failure path.
 
 ## Storage specifications
 
@@ -126,24 +127,9 @@ The unique asset/timestamp rule is deliberately used by the rollback integration
 
 ---
 
-# `v0.11.0` Measurement Transition
+# `v0.11.1` Point-in-Time Measurement Model
 
-The table name `measurements` now serves two temporarily coexisting contracts.
-
-## Seed/API interval rows
-
-Existing deterministic seeds and `POST /measurements` still use:
-
-```text
-measurement_time
-interval_minutes
-active_power_kw
-energy_kwh
-```
-
-## Runtime simulation rows
-
-The new simulation service inserts:
+`measurements` now has one canonical meaning: a row stores active power at a timestamp.
 
 ```text
 asset_id
@@ -154,107 +140,50 @@ source
 quality_status
 ```
 
-and leaves:
+The following former measurement columns were removed:
 
 ```text
-interval_minutes = NULL
-energy_kwh = NULL
+interval_minutes
+energy_kwh
 ```
 
-This is deliberate. Runtime simulation measurements are point-in-time power support values. Interval average power and energy are derived in memory by `src/measurements/measurement_aggregation.py`.
-
-The mixed schema is a temporary compatibility measure for `v0.11.0`. The canonical point-in-time migration is planned for `v0.11.1`.
-
----
+Energy is derived from the power time series through the reusable aggregation layer. `simulation_runs.interval_minutes` remains unchanged because it describes the simulation grid configuration rather than raw measurement semantics.
 
 # Development Seed
 
-`sql/seed_data.sql` creates:
+`sql/seed_data.sql` creates the current energy-domain master data, one completed historical simulation run and deterministic point-in-time power measurements.
 
-- four model regions,
-- 13 asset types,
-- 16 assets,
-- one completed historical `simulation_run`,
-- 64 deterministic legacy interval-style measurements,
-- one battery storage specification.
-
-The seeded simulation run uses:
-
-```text
-simulation_mode = historical
-interval_minutes = 15
-random_seed = 42
-status = completed
-generated_measurement_count = 64
-```
-
-These seed rows predate the runtime point-in-time persistence path and intentionally retain interval/energy values until the next refactor.
-
----
+The seeded run retains its own `interval_minutes` configuration, while measurement rows themselves are interval-independent.
 
 # Test Seed
 
-`sql/test_seed_data.sql` is deterministic and starts with:
+`sql/test_seed_data.sql` remains deterministic and resets identities before loading known scenarios.
 
-```sql
-TRUNCATE TABLE
-    storage_specs,
-    measurements,
-    simulation_runs,
-    assets,
-    asset_types,
-    regions
-RESTART IDENTITY CASCADE;
-```
+The test data includes:
 
-The test seed contains:
-
-- four regions,
-- eight asset types,
-- nine assets,
-- one completed historical seed run,
-- 24 deterministic interval-style measurements,
+- valid point-in-time power series,
 - deliberate invalid and estimated rows,
-- one asset without measurements,
-- one storage specification.
+- exact and non-exact KPI boundaries,
+- assets with one or no usable measurements,
+- one storage specification,
+- one completed historical simulation run.
 
-The test suite points the application to:
-
-```text
-energy_operations_test
-```
-
-and includes a safety guard that refuses to reset another database name.
-
----
+The suite points the application to `energy_operations_test` and keeps the existing safety guard that refuses to reset another database name.
 
 # Existing General Database Access
 
-`src/database.py` contains the older application data-access layer for:
+`src/database.py` remains the application data-access layer for general asset/measurement CRUD and KPI source queries.
 
-- database connection creation,
-- asset summary/detail queries,
-- measurement summary/detail queries,
-- measurement create/update flows,
-- KPI queries,
-- row-to-dictionary mapping.
+For `v0.11.1` it was aligned with the point-in-time model:
 
-This file intentionally remains unchanged in `v0.11.0` except for compatibility with nullable interval/energy fields.
+- measurement SELECT/INSERT mapping no longer includes interval or stored energy fields,
+- `POST /measurements` writes only raw power data,
+- asset KPI retrieval loads the requested period plus nearest support measurements,
+- global KPI retrieval accepts `start_time` / `end_time` and returns only period-relevant measurements plus per-asset support points.
 
-The current KPI queries still aggregate valid rows using:
+The global KPI query uses PostgreSQL `DISTINCT ON` to select nearest supports per asset and exact-boundary checks/`NOT EXISTS` logic to avoid adding a support row when the boundary itself is already measured.
 
-```sql
-COUNT(*)
-AVG(active_power_kw)
-MIN(active_power_kw)
-MAX(active_power_kw)
-SUM(energy_kwh)
-MAX(measurement_time)
-```
-
-Because new runtime simulation rows use `energy_kwh = NULL`, the KPI layer is a known transition area. It is planned for the `v0.11.1` point-in-time measurement refactor rather than being partially patched in `v0.11.0`.
-
----
+Energy mathematics is intentionally kept out of SQL. Database code selects the necessary raw measurements; the measurement service/aggregation layer performs interpolation, time weighting and trapezoidal integration.
 
 # Simulation Repository Layer
 
@@ -389,23 +318,26 @@ PostgreSQL numeric rated power is converted to Python `float` when creating `Sim
 
 # Derived Interval Aggregation
 
-Derived intervals are **not database entities in `v0.11.0`**.
+Derived intervals remain non-persistent domain results.
 
-The service creates them after persisting raw power points:
+The same aggregation layer is now used by period KPIs:
 
 ```text
-PowerMeasurement list
-→ group by asset
-→ aggregate fixed intervals
-→ validate complete coverage
-→ return PowerIntervalDraft list
+point-in-time PowerMeasurements
+→ choose in-period measurements + supports
+→ interpolate missing boundaries
+→ build adjacent PowerSegments
+→ trapezoidal energy integration
+→ time-weighted average power
+→ coverage ratio
 ```
 
-Energy is calculated through trapezoidal integration. Boundary values can be linearly interpolated from surrounding raw measurements.
+Measured period statistics remain separate from derived values:
 
-`source_measurement_count` counts the raw measurements relevant to the specific interval, not the complete input list.
+- `measurement_count`, measured min and measured max use valid measurements inside the requested period,
+- boundary supports/interpolated points affect only derived average power, energy and coverage.
 
----
+Global KPIs group measurements by `asset_id` before aggregation so no segment is ever built between different assets.
 
 # Database Initialization with Docker
 
@@ -431,13 +363,12 @@ This deliberately deletes and recreates the development database volume.
 
 # Current Database Limitations / Next Refactor
 
-Known intentional limitations at the `v0.11.0` boundary:
+Known intentional limitations after `v0.11.1`:
 
-1. `measurements.interval_minutes` and `measurements.energy_kwh` still exist for compatibility.
-2. `POST /measurements` still creates interval-style rows.
-3. KPI energy SQL still reflects the previous interval model.
-4. `UNIQUE (asset_id, measurement_time)` prevents storing multiple scenario/forecast rows for the same asset/timestamp.
-5. No migration framework is used yet; schema changes currently require controlled rebuilds.
-6. `src/database.py` remains a large legacy data-access module and may be split during later refactoring.
+1. `UNIQUE (asset_id, measurement_time)` prevents storing parallel forecast/scenario values for the same asset/timestamp.
+2. No migration framework is used yet; schema changes currently require controlled clean rebuilds.
+3. `src/database.py` is still a comparatively large legacy data-access module and can be split later if it becomes a concrete development blocker.
+4. KPI support selection is designed for the current PostgreSQL model and data scale; further performance optimization should follow measured need rather than be added pre-emptively.
 
-The first three points are specifically planned for `v0.11.1`.
+The next project focus returns to visible domain functionality, starting with consumer/load simulation rather than additional infrastructure refactoring.
+

@@ -4,23 +4,22 @@
 
 The **Energy Operations Platform** is a backend and data portfolio project for modeling, validating, simulating, analyzing and exposing operational energy data.
 
-It combines PostgreSQL, FastAPI, Pydantic, pytest and Docker Compose with a domain model for technical energy assets. The current backend supports regional assets, reusable asset classifications, measurement APIs, KPI queries, deterministic producer simulation, reusable time-series aggregation and persisted simulation-run tracking.
+It combines PostgreSQL, FastAPI, Pydantic, pytest and Docker Compose with a domain model for technical energy assets. The current backend supports regional assets, point-in-time power measurements, deterministic producer simulation, reusable time-series aggregation, period-based KPIs and persisted simulation-run tracking.
 
 ## Current Version
 
-**`v0.11.0 – Simulation Foundation`**
+**`v0.11.1 – Point-in-Time Measurement Refactor`**
 
 Main additions:
 
-- configurable simulation periods, intervals, modes and random seeds,
-- deterministic point-in-time power simulation,
-- producer profiles for solar, wind, hydro and biomass,
-- a registry that connects asset types with profile, default asset and context factories,
-- reusable interval aggregation with linear interpolation and trapezoidal energy integration,
-- database-backed loading of supported simulation assets,
-- persisted `simulation_runs` with `created`, `running`, `completed` and `failed` states,
-- batch persistence of generated point-in-time power measurements,
-- success, smoke and rollback integration tests against PostgreSQL.
+- made point-in-time active power the canonical raw measurement model,
+- removed `interval_minutes` and persisted `energy_kwh` from `measurements`,
+- aligned measurement POST/read contracts with the new database model,
+- changed global and asset KPI endpoints to explicit `start_time` / `end_time` periods,
+- derive average power and energy on demand from raw power measurements,
+- added coverage-aware KPI calculation with boundary support/interpolation,
+- kept measured count/min/max separate from derived/interpolated values,
+- limited global KPI retrieval to the requested period plus relevant per-asset support measurements.
 
 ## Project Goal
 
@@ -42,17 +41,22 @@ Client / Swagger UI
         v
 FastAPI + Pydantic
         |
-        v
-Existing database / KPI access
-        |
-        v
-PostgreSQL
-  ├── regions
-  ├── asset_types
-  ├── assets
-  ├── simulation_runs
-  ├── measurements
-  └── storage_specs
+        +--------------------------+
+        |                          |
+        v                          v
+Measurement CRUD             KPI endpoints
+        |                          |
+        v                          v
+PostgreSQL measurements   period-aware DB retrieval
+                                   |
+                                   v
+                           measurement service
+                                   |
+                                   v
+                         interval aggregation
+                                   |
+                                   v
+                    avg power / energy / coverage
 
 Internal simulation flow
 ------------------------
@@ -156,27 +160,24 @@ A derived interval contains:
 
 `source_measurement_count` counts only raw measurements relevant to that specific interval. Interpolated support points are derived values and are not counted as source measurements.
 
-## Important `v0.11.0` Measurement Transition
+## Canonical Point-in-Time Measurement Model
 
-The project is deliberately in a short transition between the older interval-based measurement contract and the new point-in-time raw measurement model.
-
-Existing seed/API-created rows may still contain:
+Since `v0.11.1`, one row in `measurements` represents a **point-in-time active-power value**:
 
 ```text
-interval_minutes
-energy_kwh
+measurement_id
+asset_id
+simulation_run_id
+measurement_time
+active_power_kw
+source
+quality_status
+created_at
 ```
 
-New runtime simulation rows persist only raw power data and therefore use:
+The database no longer stores `interval_minutes` or `energy_kwh` on raw measurement rows. Energy is derived for a requested period from the stored power time series, so the same raw data can later be analyzed using different interval sizes.
 
-```text
-interval_minutes = NULL
-energy_kwh = NULL
-```
-
-Read responses accept these nullable values so simulated measurements can be retrieved through the existing API.
-
-The full cleanup is intentionally deferred to **`v0.11.1 – Point-in-Time Measurement Refactor`**, where interval and energy fields will be removed from raw measurement persistence and energy/KPI logic will be derived from power measurements through aggregation.
+`simulation_runs.interval_minutes` remains part of the run configuration because it describes the generated simulation grid, not an individual raw measurement.
 
 ## Current API
 
@@ -200,20 +201,18 @@ The full cleanup is intentionally deferred to **`v0.11.1 – Point-in-Time Measu
 - `POST /measurements`
 - `PATCH /measurements/{measurement_id}`
 
-List endpoints use compact summary contracts. Detail, POST and PATCH endpoints use the complete measurement contract.
-
-For `v0.11.0`, measurement read responses allow `interval_minutes` and `energy_kwh` to be `null`. `POST /measurements` still uses the previous interval-based create contract and therefore requires both values.
+Measurement create/read contracts now use the same point-in-time model and no longer expose raw `interval_minutes` or stored `energy_kwh` fields.
 
 ### KPIs
 
-- `GET /kpis/measurements`
-- `GET /assets/{asset_id}/kpis`
+- `GET /kpis/measurements?start_time=...&end_time=...`
+- `GET /assets/{asset_id}/kpis?start_time=...&end_time=...`
 
-The existing KPI implementation remains based on the pre-`v0.11` interval-energy model and valid-only SQL aggregation. The planned `v0.11.1` refactor will align KPI energy calculation with point-in-time raw measurements.
+KPI energy is derived on demand from the requested power time series. Boundary support measurements may be used for interpolation, while measured count/min/max values remain scoped to real valid measurements inside the requested period.
 
 ### Simulation API
 
-There is **no public simulation REST endpoint in `v0.11.0`**. Simulation is executed through the internal service layer and the developer demo script. A public simulation API is planned only after the measurement-model refactor.
+There is **no public simulation REST endpoint in `v0.11.1`**. Simulation is executed through the internal service layer and developer demo script.
 
 ## Technology Stack
 
@@ -289,30 +288,26 @@ docker compose up --build -d
 | `asset_types` | Reusable roles and technical capability flags |
 | `assets` | Producer, consumer, storage and grid master data |
 | `simulation_runs` | Configuration, lifecycle timestamps, status and generated measurement count for persisted runs |
-| `measurements` | Measurement time series; runtime simulation rows are point-in-time active-power measurements |
+| `measurements` | Canonical point-in-time active-power time series |
 | `storage_specs` | Static battery-storage specifications |
 
-Development seeds contain four German model regions, 13 reusable asset types and 16 assets. Deterministic test seeds provide valid, invalid, estimated and empty-data scenarios.
+Development/test seed data now follows the point-in-time measurement model. Derived energy is calculated through the measurement aggregation/KPI layer rather than stored on measurement rows.
 
 ## Testing
 
-The current source defines **101 test functions**. Parameterization expands them to **128 collected test cases** in this source state.
+The test suite covers the domain-heavy and critical integration paths, including:
 
-Coverage includes:
+- general asset and measurement API behavior,
+- point-in-time measurement create/read/update flows,
+- period-based global and asset KPIs,
+- boundary support selection and interpolation,
+- time-weighted average power and trapezoidal energy integration,
+- coverage and quality handling,
+- deterministic producer simulation,
+- simulation repository/service orchestration,
+- PostgreSQL success/smoke and rollback behavior.
 
-- general API endpoints,
-- asset summary/detail behavior,
-- measurement reads, POST and PATCH,
-- validation and not-found behavior,
-- global and asset-specific KPIs,
-- time-grid behavior,
-- solar, wind, hydro and biomass profiles,
-- deterministic seed behavior,
-- multi-asset simulation,
-- measurement interpolation and interval aggregation,
-- simulation mappers, repository and service orchestration,
-- real PostgreSQL success/smoke integration,
-- real PostgreSQL rollback behavior after a duplicate measurement conflict.
+For this learning project, testing follows an 80/20 approach: complex domain logic and critical persistence flows receive detailed coverage, while repeated framework-standard validation cases are kept intentionally limited.
 
 ## Documentation
 
@@ -366,15 +361,16 @@ Private notes, logs, environments, `.env` files, bytecode and archives are exclu
 
 ## Roadmap
 
-1. **`v0.11.1` – Point-in-Time Measurement Refactor**: remove interval/energy fields from raw measurement persistence and align API/KPI logic with derived interval aggregation.
-2. Public simulation API after the raw measurement contract is stable.
-3. Consumer/load profiles and broader multi-asset simulation.
-4. Storage state and dispatch behavior.
-5. Regional weather simulation and weather-driven generation.
-6. Global and regional energy balance.
-7. Rule-based operational recommendations.
-8. React dashboard with map, charts and live/history views.
-9. Azure deployment after the backend MVP is stable.
+1. Consumer/load profiles and broader producer/consumer simulation.
+2. First global/regional energy-balance calculations.
+3. Storage state and dispatch behavior.
+4. Regional weather simulation and weather-driven generation.
+5. Public simulation API once the internal workflow is stable enough to expose.
+6. Rule-based operational recommendations.
+7. React dashboard with map, charts and live/history views.
+8. Azure deployment after the backend MVP is stable.
+
+Large structural refactors remain secondary unless they solve a concrete development problem.
 
 ## Portfolio Positioning
 
