@@ -312,7 +312,7 @@ def test_kpi_summary_for_all_measurements(
     start_time = datetime.fromisoformat("2026-06-22T08:00:00+02:00")
     end_time = datetime.fromisoformat("2026-06-22T08:30:00+02:00")
 
-    measurements = fetch_measurement_kpi_summary(database_connection)
+    measurements = fetch_measurement_kpi_summary(database_connection, start_time, end_time)
 
     kpi_summary = calculate_kpis_for_all_measurements(
         measurements=measurements,
@@ -365,3 +365,59 @@ def test_kpi_summary_for_all_measurements(
     # Coverage
     assert kpi_summary["coverage_ratio"] == pytest.approx(0.875)
     assert 0.0 <= kpi_summary["coverage_ratio"] <= 1.0
+
+
+@pytest.mark.intermediate
+@pytest.mark.integration
+def test_fetch_measurement_kpi_summary_includes_only_required_support_points(
+    reset_db,
+    database_connection,
+):
+    """Load period measurements plus only the required boundary support points."""
+
+    start_time = datetime.fromisoformat("2026-06-22T08:00:00+02:00")
+    end_time = datetime.fromisoformat("2026-06-22T08:30:00+02:00")
+
+    measurements = fetch_measurement_kpi_summary(
+        database_connection,
+        start_time=start_time,
+        end_time=end_time,
+    )
+
+    measurements_by_asset = {}
+
+    for measurement in measurements:
+        asset_id = measurement["asset_id"]
+
+        if asset_id not in measurements_by_asset:
+            measurements_by_asset[asset_id] = []
+
+        measurements_by_asset[asset_id].append(measurement)
+
+    asset_1_times = [
+        measurement["measurement_time"]
+        for measurement in measurements_by_asset[1]
+    ]
+
+    asset_2_times = [
+        measurement["measurement_time"]
+        for measurement in measurements_by_asset[2]
+    ]
+
+    # Asset 1 has no measurements exactly at 08:00 or 08:30.
+    # Therefore one left and one right support point are required.
+    assert asset_1_times == [
+        datetime.fromisoformat("2026-06-22T07:45:00+02:00"),
+        datetime.fromisoformat("2026-06-22T08:01:00+02:00"),
+        datetime.fromisoformat("2026-06-22T08:15:00+02:00"),
+        datetime.fromisoformat("2026-06-22T08:29:00+02:00"),
+        datetime.fromisoformat("2026-06-22T08:45:00+02:00"),
+    ]
+
+    # Asset 2 already has measurements exactly at both period boundaries.
+    # Therefore no additional support points must be returned.
+    assert asset_2_times == [
+        datetime.fromisoformat("2026-06-22T08:00:00+02:00"),
+        datetime.fromisoformat("2026-06-22T08:15:00+02:00"),
+        datetime.fromisoformat("2026-06-22T08:30:00+02:00"),
+    ]

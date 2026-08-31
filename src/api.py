@@ -529,7 +529,7 @@ def get_measurement_kpi_summary(
     conn = get_connection()
 
     try:
-        measurements = fetch_measurement_kpi_summary(conn)
+        measurements = fetch_measurement_kpi_summary(conn, start_time, end_time)
 
         kpi_summary = calculate_kpis_for_all_measurements(
             measurements=measurements,

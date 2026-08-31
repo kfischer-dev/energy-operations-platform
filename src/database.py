@@ -546,20 +546,87 @@ def map_kpi_source_measurement_row(row):
 # ============================================================
 
 
-def fetch_measurement_kpi_summary(conn):
+def fetch_measurement_kpi_summary(
+    conn,
+    start_time,
+    end_time,
+):
     with conn.cursor() as cursor:
         cursor.execute(
             """
-            SELECT
-                asset_id,
-                measurement_time,
-                active_power_kw,
-                source,
-                quality_status
-            FROM measurements
-            WHERE quality_status = 'valid'
+            WITH left_support AS (
+                SELECT DISTINCT ON (m.asset_id)
+                    m.asset_id,
+                    m.measurement_time,
+                    m.active_power_kw,
+                    m.source,
+                    m.quality_status
+                FROM measurements AS m
+                WHERE m.quality_status = 'valid'
+                AND m.measurement_time < %s
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM measurements AS exact_start
+                    WHERE exact_start.asset_id = m.asset_id
+                        AND exact_start.quality_status = 'valid'
+                        AND exact_start.measurement_time = %s
+                )
+                ORDER BY m.asset_id, m.measurement_time DESC
+            ),
+
+            period_measurements AS (
+                SELECT
+                    asset_id,
+                    measurement_time,
+                    active_power_kw,
+                    source,
+                    quality_status
+                FROM measurements
+                WHERE quality_status = 'valid'
+                  AND measurement_time >= %s
+                  AND measurement_time <= %s
+            ),
+
+            right_support AS (
+                SELECT DISTINCT ON (m.asset_id)
+                    m.asset_id,
+                    m.measurement_time,
+                    m.active_power_kw,
+                    m.source,
+                    m.quality_status
+                FROM measurements AS m
+                WHERE m.quality_status = 'valid'
+                AND m.measurement_time > %s
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM measurements AS exact_end
+                    WHERE exact_end.asset_id = m.asset_id
+                        AND exact_end.quality_status = 'valid'
+                        AND exact_end.measurement_time = %s
+                )
+                ORDER BY m.asset_id, m.measurement_time ASC
+            )
+
+            SELECT * FROM left_support
+
+            UNION ALL
+
+            SELECT * FROM period_measurements
+
+            UNION ALL
+
+            SELECT * FROM right_support
+
             ORDER BY asset_id, measurement_time;
-            """
+            """,
+            (
+                start_time,
+                start_time,
+                start_time,
+                end_time,
+                end_time,
+                end_time,
+            ),
         )
 
         rows = cursor.fetchall()
