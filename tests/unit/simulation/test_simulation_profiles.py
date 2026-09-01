@@ -6,7 +6,12 @@ import pytest
 
 from src.simulation import default_data
 from src.simulation.profiles import (
+    CITY_LOAD_PROFILE,
+    INDUSTRIAL_LOAD_PROFILE,
+    calculate_city_load_kw,
     calculate_daylight_factor,
+    calculate_industrial_load_kw,
+    calculate_load_factor,
     calculate_solar_power_kw,
 )
 
@@ -153,3 +158,106 @@ def test_invalid_sequence_of_sun_times(
             peak_minutes=peak_minutes,
             sunset_minutes=sunset_minutes,
         )
+
+
+@pytest.mark.sim_profiles
+def test_calculate_load_factor():
+
+    time_minutes = (300, 360, 420, 1200)  # 5:00 AM, 6:00 AM, 7:00 AM, 8:00 PM
+
+    city_load_factor = []
+
+    for i in range(len(time_minutes)):
+        city_load_factor.append(
+            calculate_load_factor(
+                profile=CITY_LOAD_PROFILE,
+                time_minutes=time_minutes[i],
+            )
+        )
+
+    assert city_load_factor[0] == pytest.approx(0.28)
+    assert city_load_factor[1] == pytest.approx(0.415)
+    assert city_load_factor[2] == pytest.approx(0.55)
+    assert city_load_factor[3] == pytest.approx(0.9)
+
+    industrial_load_factor = []
+
+    for i in range(len(time_minutes)):
+        industrial_load_factor.append(
+            calculate_load_factor(
+                profile=INDUSTRIAL_LOAD_PROFILE,
+                time_minutes=time_minutes[i],
+            )
+        )
+
+    assert industrial_load_factor[0] == pytest.approx(0.25)
+    assert industrial_load_factor[1] == pytest.approx(0.4)
+    assert industrial_load_factor[2] == pytest.approx(0.625)
+    assert industrial_load_factor[3] == pytest.approx(0.365)
+
+
+@pytest.mark.sim_profiles
+def test_calculate_city_and_industrial_load():
+
+    config = default_data.create_default_simulation_config()
+    random_generator = Random(config.random_seed)
+
+    city_asset = default_data.create_default_city_load_asset()
+    industrial_asset = default_data.create_default_industrial_load_asset()
+
+    city_context_1 = default_data.create_default_city_load_context(
+        config=config,
+        current_time=datetime(2026, 9, 1, 10, 0),
+        random_generator=random_generator,
+    )
+    city_context_2 = replace(
+        default_data.create_default_city_load_context(
+            config=config,
+            current_time=datetime(2026, 9, 1, 10, 0),
+            random_generator=random_generator,
+        ),
+        load_factor=0.5,
+    )
+    industrial_context_1 = default_data.create_default_industrial_load_context(
+        config=config,
+        current_time=datetime(2026, 9, 1, 10, 0),
+        random_generator=random_generator,
+    )
+    industrial_context_2 = replace(
+        default_data.create_default_industrial_load_context(
+            config=config,
+            current_time=datetime(2026, 9, 1, 10, 0),
+            random_generator=random_generator,
+        ),
+        load_factor=0.5,
+    )
+
+    city_load_1 = calculate_city_load_kw(
+        asset=city_asset,
+        context=city_context_1,
+        profile_data={},
+    )
+
+    city_load_2 = calculate_city_load_kw(
+        asset=city_asset,
+        context=city_context_2,
+        profile_data={},
+    )
+
+    industrial_load_1 = calculate_industrial_load_kw(
+        asset=industrial_asset,
+        context=industrial_context_1,
+        profile_data={},
+    )
+
+    industrial_load_2 = calculate_industrial_load_kw(
+        asset=industrial_asset,
+        context=industrial_context_2,
+        profile_data={},
+    )
+
+    assert city_load_2 == pytest.approx(city_load_1 * city_context_2.load_factor)
+
+    assert industrial_load_2 == pytest.approx(
+        industrial_load_1 * industrial_context_2.load_factor
+    )

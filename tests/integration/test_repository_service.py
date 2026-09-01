@@ -402,7 +402,6 @@ def test_kpi_summary_for_all_measurements(
     assert 0.0 <= kpi_summary["coverage_ratio"] <= 1.0
 
 
-@pytest.mark.intermediate
 @pytest.mark.integration
 def test_fetch_measurement_kpi_summary_includes_only_required_support_points(
     reset_db,
