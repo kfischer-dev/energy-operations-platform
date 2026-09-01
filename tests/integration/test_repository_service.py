@@ -38,13 +38,9 @@ def test_load_simulation_assets_returns_supported_database_assets(
     assert "city_load" in loaded_asset_types
     assert "industrial_load" in loaded_asset_types
 
-    city_asset = next(
-        asset for asset in assets
-        if asset.asset_type == "city_load"
-    )
+    city_asset = next(asset for asset in assets if asset.asset_type == "city_load")
     industrial_asset = next(
-        asset for asset in assets
-        if asset.asset_type == "industrial_load"
+        asset for asset in assets if asset.asset_type == "industrial_load"
     )
 
     assert city_asset.asset_role == "consumer"
@@ -155,6 +151,24 @@ def test_execute_simulation_run_and_save_measurements(
     assert "energy_kwh" not in data_get
     assert data_get["active_power_kw"] is not None
     assert data_get["quality_status"] == "valid"
+
+    with conn.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT DISTINCT at.asset_type_name
+            FROM measurements AS m
+            JOIN assets AS a
+                ON a.asset_id = m.asset_id
+            JOIN asset_types AS at
+                ON at.asset_type_id = a.asset_type_id
+            WHERE m.simulation_run_id = %s;
+            """,
+            (simulation_run_id,),
+        )
+        simulated_asset_types = {row[0] for row in cursor.fetchall()}
+
+    assert "city_load" in simulated_asset_types
+    assert "industrial_load" in simulated_asset_types
 
 
 @pytest.mark.failure

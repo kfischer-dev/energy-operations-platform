@@ -117,7 +117,6 @@ def test_simulate_assets_intervals_returns_intervals_for_multiple_assets() -> No
     assert all(isinstance(interval, PowerIntervalDraft) for interval in intervals)
 
     assert all(
-        interval.avg_active_power_kw is None
-        or interval.avg_active_power_kw >= 0
+        interval.avg_active_power_kw is None or interval.avg_active_power_kw >= 0
         for interval in intervals
     )
