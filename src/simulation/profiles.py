@@ -149,11 +149,9 @@ def calculate_city_load_kw(
 ) -> float:
     """Simulate city load for one timestamp."""
 
-    time_minutes = context.current_time.hour * 60 + context.current_time.minute
-
     factor = calculate_load_factor(
-        CITY_LOAD_PROFILE,
-        time_minutes,
+        profile=CITY_LOAD_PROFILE,
+        time_minutes=time_to_minutes(context.current_time.time()),
     )
 
     return asset.rated_power_kw * factor * context.load_factor
@@ -166,11 +164,9 @@ def calculate_industrial_load_kw(
 ) -> float:
     """Simulate industrial load for one timestamp."""
 
-    time_minutes = context.current_time.hour * 60 + context.current_time.minute
-
     factor = calculate_load_factor(
-        INDUSTRIAL_LOAD_PROFILE,
-        time_minutes,
+        profile=INDUSTRIAL_LOAD_PROFILE,
+        time_minutes=time_to_minutes(context.current_time.time()),
     )
 
     return asset.rated_power_kw * factor * context.load_factor
