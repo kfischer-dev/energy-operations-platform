@@ -38,6 +38,18 @@ def test_load_simulation_assets_returns_supported_database_assets(
     assert "city_load" in loaded_asset_types
     assert "industrial_load" in loaded_asset_types
 
+    city_asset = next(
+        asset for asset in assets
+        if asset.asset_type == "city_load"
+    )
+    industrial_asset = next(
+        asset for asset in assets
+        if asset.asset_type == "industrial_load"
+    )
+
+    assert city_asset.asset_role == "consumer"
+    assert industrial_asset.asset_role == "consumer"
+
     solar_asset = next(asset for asset in assets if asset.asset_code == "E-SOLAR-001")
 
     assert solar_asset.asset_type == "solar_park"
