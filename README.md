@@ -4,22 +4,21 @@
 
 The **Energy Operations Platform** is a backend and data portfolio project for modeling, validating, simulating, analyzing and exposing operational energy data.
 
-It combines PostgreSQL, FastAPI, Pydantic, pytest and Docker Compose with a domain model for technical energy assets. The current backend supports regional assets, point-in-time power measurements, deterministic producer simulation, reusable time-series aggregation, period-based KPIs and persisted simulation-run tracking.
+It combines PostgreSQL, FastAPI, Pydantic, pytest and Docker Compose with a domain model for technical energy assets. The current backend supports regional assets, point-in-time power measurements, deterministic producer and consumer simulation, reusable time-series aggregation, period-based KPIs and persisted simulation-run tracking.
 
 ## Current Version
 
-**`v0.11.1 – Point-in-Time Measurement Refactor`**
+**`v0.12.0 – Consumer Load Simulation`**
 
 Main additions:
 
-- made point-in-time active power the canonical raw measurement model,
-- removed `interval_minutes` and persisted `energy_kwh` from `measurements`,
-- aligned measurement POST/read contracts with the new database model,
-- changed global and asset KPI endpoints to explicit `start_time` / `end_time` periods,
-- derive average power and energy on demand from raw power measurements,
-- added coverage-aware KPI calculation with boundary support/interpolation,
-- kept measured count/min/max separate from derived/interpolated values,
-- limited global KPI retrieval to the requested period plus relevant per-asset support measurements.
+- added `city_load` and `industrial_load` consumer profiles,
+- modeled daily consumer demand with piecewise-linear load-factor interpolation,
+- reused the existing simulation engine and profile registry for producers and consumers,
+- kept consumer `active_power_kw` positive; `asset_role` will determine production/consumption semantics in the later balance layer,
+- added default consumer assets and simulation contexts with configurable `load_factor`,
+- extended mixed-asset simulation and PostgreSQL integration coverage to include both consumer types,
+- retained the canonical point-in-time measurement model and period-based KPI derivation introduced in `v0.11.1`.
 
 ## Project Goal
 
@@ -31,7 +30,7 @@ The project demonstrates practical backend and data engineering with visible ene
 - deterministic simulation and analytics logic,
 - automated unit, API, repository, service and integration testing,
 - reproducible local startup with Docker Compose,
-- later demand simulation, storage behavior, weather influence, energy balance and recommendations.
+- energy-balance analytics and a frontend-ready API as the next backend steps, followed by a React/TypeScript dashboard; storage, weather, recommendations and cloud deployment remain post-MVP work.
 
 ## Architecture
 
@@ -85,14 +84,16 @@ PowerIntervalDraft               <- derived in memory, not persisted
 
 ## Simulation Model
 
-`v0.11.0` introduces a producer-focused simulation foundation.
+`v0.12.0` extends the existing simulation foundation with consumer load profiles while keeping one shared engine and registry.
 
-Supported asset types:
+Supported runtime asset types:
 
 - `solar_park`
 - `wind_park`
 - `hydro_power_plant`
 - `biomass_power_plant`
+- `city_load`
+- `industrial_load`
 
 A simulation run uses `SimulationConfig` with:
 
@@ -124,6 +125,14 @@ Incomplete remainder time after the last complete interval is ignored.
 - **Biomass:** stable default factor of `0.85`.
 - Non-online assets currently return `0.0 kW`.
 - Generated power is validated to remain between `0` and the asset rated power.
+
+### Consumer profiles
+
+- **City load:** piecewise-linear daily profile with low night demand, morning rise, daytime demand and a clear evening peak.
+- **Industrial load:** piecewise-linear daily profile with night base load, production ramp-up, a high daytime plateau and an evening drop.
+- Consumer power is calculated as `rated_power_kw × profile_factor × context.load_factor`.
+- Consumer `active_power_kw` remains non-negative; role-aware subtraction is intentionally deferred to the Energy Balance layer.
+- The same generic engine validates producer and consumer output against `0 <= active_power_kw <= rated_power_kw`.
 
 ## Measurement Aggregation
 
@@ -212,7 +221,7 @@ KPI energy is derived on demand from the requested power time series. Boundary s
 
 ### Simulation API
 
-There is **no public simulation REST endpoint in `v0.11.1`**. Simulation is executed through the internal service layer and developer demo script.
+There is **no public simulation REST endpoint in `v0.12.0`**. Simulation is executed through the internal service layer and developer demo script.
 
 ## Technology Stack
 
@@ -303,7 +312,8 @@ The test suite covers the domain-heavy and critical integration paths, including
 - boundary support selection and interpolation,
 - time-weighted average power and trapezoidal energy integration,
 - coverage and quality handling,
-- deterministic producer simulation,
+- deterministic producer and consumer simulation,
+- mixed producer/consumer simulation through the shared registry and engine,
 - simulation repository/service orchestration,
 - PostgreSQL success/smoke and rollback behavior.
 
@@ -361,14 +371,11 @@ Private notes, logs, environments, `.env` files, bytecode and archives are exclu
 
 ## Roadmap
 
-1. Consumer/load profiles and broader producer/consumer simulation.
-2. First global/regional energy-balance calculations.
-3. Storage state and dispatch behavior.
-4. Regional weather simulation and weather-driven generation.
-5. Public simulation API once the internal workflow is stable enough to expose.
-6. Rule-based operational recommendations.
-7. React dashboard with map, charts and live/history views.
-8. Azure deployment after the backend MVP is stable.
+1. Energy Balance: combine producer and consumer power/energy into production, consumption and net balance.
+2. Frontend-ready backend: balance series, dashboard contracts and CORS, followed by backend feature freeze.
+3. React + TypeScript + Vite dashboard with KPI cards, balance chart and asset overview.
+4. Full-stack portfolio polish, architecture diagram, screenshots and `v1.0.0`.
+5. Post-MVP: weather-driven generation, storage/SoC, recommendations, monitoring and Azure deployment.
 
 Large structural refactors remain secondary unless they solve a concrete development problem.
 

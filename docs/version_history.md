@@ -8,7 +8,8 @@ The project uses small, explainable versions so the GitHub history shows how the
 
 | Version | Status | Summary |
 |---|---|---|
-| `v0.11.1` | current | Canonical point-in-time measurement model with period-based KPI derivation from raw power measurements |
+| `v0.11.1` | completed | Canonical point-in-time measurement model with period-based KPI derivation from raw power measurements |
+| `v0.12.0` | current | Consumer load simulation with `city_load` and `industrial_load` on the shared simulation engine |
 
 ## Version Timeline
 
@@ -43,7 +44,8 @@ The project uses small, explainable versions so the GitHub history shows how the
 | `v0.9.2` | completed | PostgreSQL health check and delayed API startup | Reliable service readiness |
 | `v0.10.0` | completed | Energy-domain database, API and test migration | Domain modeling, schema evolution, API contracts and energy analytics |
 | `v0.11.0` | completed | Deterministic producer simulation, point-in-time persistence, interval aggregation and run lifecycle | Simulation architecture, seeded randomness, time-series integration, repositories/services and transactional failure handling |
-| `v0.11.1` | current | Canonical point-in-time measurements and period-based KPI derivation | Time-series modeling, boundary-aware SQL, interpolation and trapezoidal integration |
+| `v0.11.1` | completed | Canonical point-in-time measurements and period-based KPI derivation | Time-series modeling, boundary-aware SQL, interpolation and trapezoidal integration |
+| `v0.12.0` | current | City and industrial consumer load profiles integrated into the existing simulation engine and persistence flow | Load-profile modeling, interpolation, mixed producer/consumer simulation and registry reuse |
 
 ---
 
@@ -368,6 +370,61 @@ Tests were updated for the new measurement and KPI contracts, with detailed cove
 
 ---
 
+# v0.12.0 — Consumer Load Simulation
+
+## Consumer profiles
+
+Added two runtime consumer asset types to the existing simulation registry:
+
+```text
+city_load
+industrial_load
+```
+
+`city_load` models low night demand, a morning rise, daytime demand and a clear evening peak. `industrial_load` models night base load, production ramp-up, a high daytime plateau and an evening decline.
+
+Both use piecewise-linear interpolation between daily load-factor support points.
+
+## Shared simulation engine
+
+No separate consumer engine was introduced. Producer and consumer assets use the same:
+
+```text
+SimulationAsset
+SimulationContext
+SIMULATION_PROFILE_REGISTRY
+simulate_asset_power_grid()
+simulate_assets_power_grid()
+```
+
+Consumer power is calculated as:
+
+```text
+rated_power_kw × profile_factor × context.load_factor
+```
+
+Raw `active_power_kw` remains positive for consumers. `asset_role = consumer` will determine subtraction later in the Energy Balance layer.
+
+## Default data and registry
+
+Added default city/industrial assets and contexts, then registered both consumer types through `SimulationProfileDefinition` with their power-profile, asset-factory and context-factory functions.
+
+## Mixed producer/consumer verification
+
+Unit and integration coverage now verifies:
+
+- consumer load-factor interpolation,
+- representative city and industrial load behavior,
+- `load_factor` scaling,
+- mixed producer/consumer simulation through the generic engine,
+- loading `city_load` and `industrial_load` from the test database,
+- `asset_role = consumer`,
+- persistence of both consumer types within a completed simulation run.
+
+No database schema or public REST endpoint was added for this release.
+
+---
+
 # Documentation Split
 
 | Document | Role |
@@ -386,14 +443,11 @@ Tests were updated for the new measurement and KPI contracts, with detailed cove
 
 | Planned block | Focus |
 |---|---|
-| consumer simulation | city/industrial load profiles and broader mixed-asset simulation |
-| energy-balance block | combine producer and consumer power into global/regional balance |
-| storage block | state of charge and dispatch behavior |
-| weather block | regional weather time series and weather-driven generation |
-| later simulation patch | public simulation endpoint after internal workflows are stable |
-| recommendation block | rule-based operational actions |
-| frontend phase | React dashboard with map, KPIs, charts and live/history views |
-| cloud phase | Azure deployment after the backend MVP is stable |
+| energy-balance block (`v0.13`) | combine producer and consumer power/energy into production, consumption and net balance; add summary and series outputs |
+| frontend-ready backend (`v0.14`) | CORS and only the API contracts required by the dashboard, then backend feature freeze |
+| frontend phase (`v0.15`–`v0.17`) | React/TypeScript/Vite dashboard, API integration, charts, asset overview and portfolio polish |
+| `v1.0.0` | first complete Full-Stack portfolio MVP with demo, screenshots, architecture diagram and setup |
+| post-MVP | weather, storage/SoC, recommendations, monitoring and Azure/cloud deployment |
 
 Large structural cleanup remains secondary unless it solves a concrete project problem.
 

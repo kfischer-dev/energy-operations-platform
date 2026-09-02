@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document describes the automated test approach of the Energy Operations Platform in `v0.11.1`.
+This document describes the automated test approach of the Energy Operations Platform in `v0.12.0`.
 
 The strategy keeps strong coverage around domain-heavy logic and critical persistence paths while following an 80/20 learning-project rule: tests should prevent realistic regressions or clarify complex behavior, not duplicate framework-standard validation on every layer.
 
@@ -182,7 +182,7 @@ Key semantic rule:
 N complete intervals → N + 1 power grid points
 ```
 
-## Producer profiles
+## Simulation profiles
 
 ### Solar
 
@@ -209,6 +209,16 @@ Coverage includes:
 ### Hydro / biomass
 
 Tests verify deterministic scaling from configured context factors.
+
+### Consumer profiles
+
+`city_load` and `industrial_load` coverage is intentionally focused on the new domain behavior rather than exhaustive hourly cases. Tests verify:
+
+- piecewise-linear load-factor interpolation at exact and intermediate times,
+- characteristic city/industrial daily behavior through representative values,
+- `context.load_factor` scaling,
+- positive power semantics for consumers,
+- reuse of the generic engine and rated-power bounds.
 
 ## Generic simulation behavior
 
@@ -328,7 +338,7 @@ PostgreSQL
 → SimulationAsset objects
 ```
 
-Unsupported types such as `battery_storage` are not loaded for the current producer engine.
+Unsupported types such as `battery_storage` are not loaded by the current simulation registry. The supported set now includes producer profiles plus `city_load` and `industrial_load`.
 
 ## Smoke / success path
 
@@ -351,7 +361,7 @@ The test executes a real simulation and verifies:
 - `energy_kwh = null`,
 - quality status is valid.
 
-This is the critical `v0.11.0` cross-layer contract test.
+This remains the critical cross-layer simulation contract test. In `v0.12.0` it additionally verifies that `city_load` and `industrial_load` are loaded as consumers and that their generated measurements are present in the persisted mixed simulation run.
 
 ## Real failure / rollback path
 
@@ -495,10 +505,10 @@ Before tagging a release:
 6. inspect git status and release diff
 ```
 
-`v0.11.1` requires the point-in-time measurement/KPI paths plus the existing simulation success-smoke and PostgreSQL rollback paths to remain green.
+`v0.12.0` requires the point-in-time measurement/KPI paths plus consumer-profile tests, mixed producer/consumer simulation, the simulation success-smoke path and PostgreSQL rollback path to remain green.
 
 ---
 
 # Known Test-Architecture Improvement
 
-A later cleanup can move database setup fixtures closer to integration/API tests so truly pure simulation and aggregation tests can run without any database-session initialization. That is a structural improvement, not a blocker for `v0.11.1`.
+A later cleanup can move database setup fixtures closer to integration/API tests so truly pure simulation and aggregation tests can run without any database-session initialization. That is a structural improvement, not a blocker for `v0.12.0`.

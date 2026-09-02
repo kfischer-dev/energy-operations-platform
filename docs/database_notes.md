@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document describes the PostgreSQL implementation, Python database access and simulation persistence behavior of the Energy Operations Platform in `v0.11.1`.
+This document describes the PostgreSQL implementation, Python database access and simulation persistence behavior of the Energy Operations Platform in `v0.12.0`.
 
 Related documents:
 
@@ -339,6 +339,32 @@ Measured period statistics remain separate from derived values:
 
 Global KPIs group measurements by `asset_id` before aggregation so no segment is ever built between different assets.
 
+# `v0.12.0` Consumer Simulation Persistence
+
+No new table is required for consumer simulation. The existing schema already represents consumer asset types through `asset_types.asset_role = consumer`.
+
+The simulation service now loads registry-supported producer and consumer assets, including:
+
+```text
+city_load
+industrial_load
+```
+
+Generated consumer rows use the same canonical measurement contract as producer rows:
+
+```text
+asset_id
+simulation_run_id
+measurement_time
+active_power_kw >= 0
+source = simulation
+quality_status = valid
+```
+
+The database therefore stores physical power magnitude consistently. Later Energy Balance logic will join/group by asset role and calculate `production - consumption`; it must not rely on negative raw consumer measurements.
+
+---
+
 # Database Initialization with Docker
 
 For a new volume, Compose mounts:
@@ -363,12 +389,12 @@ This deliberately deletes and recreates the development database volume.
 
 # Current Database Limitations / Next Refactor
 
-Known intentional limitations after `v0.11.1`:
+Known intentional limitations after `v0.12.0`:
 
 1. `UNIQUE (asset_id, measurement_time)` prevents storing parallel forecast/scenario values for the same asset/timestamp.
 2. No migration framework is used yet; schema changes currently require controlled clean rebuilds.
 3. `src/database.py` is still a comparatively large legacy data-access module and can be split later if it becomes a concrete development blocker.
 4. KPI support selection is designed for the current PostgreSQL model and data scale; further performance optimization should follow measured need rather than be added pre-emptively.
 
-The next project focus returns to visible domain functionality, starting with consumer/load simulation rather than additional infrastructure refactoring.
+Consumer/load simulation is now integrated without a schema change: `city_load` and `industrial_load` already exist as consumer asset types and their positive point-in-time power measurements are stored in the same `measurements` table as producer output. The next database-facing domain block is Energy Balance, which should derive production and consumption by `asset_role` rather than changing raw measurement sign semantics.
 

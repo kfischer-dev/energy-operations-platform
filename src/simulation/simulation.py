@@ -209,7 +209,7 @@ def run_default_simulation(asset_type: str) -> None:
     measurements = simulate_asset_power_grid(config, asset)
 
     print(f"\n--- {asset.asset_code} ({asset.asset_type}) ---")
-    print(f"{'Time':<8} {'Power [kW]':>12} {'Load [%]':>10}")
+    print(f"{'Time':<8} {'Power [kW]':>12} {'Rated [%]':>10}")
     print("-" * 34)
 
     for measurement in measurements:

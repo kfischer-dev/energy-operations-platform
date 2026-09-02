@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document describes the public REST API contract of the Energy Operations Platform for `v0.11.1`.
+This document describes the public REST API contract of the Energy Operations Platform for `v0.12.0`.
 
 Interactive OpenAPI documentation is available at:
 
@@ -33,7 +33,7 @@ energy_kwh
 
 Energy is derived by period-based KPI/aggregation logic rather than persisted redundantly. `simulation_runs.interval_minutes` remains part of simulation configuration.
 
-There is no public simulation endpoint in `v0.11.1`.
+There is no public simulation endpoint in `v0.12.0`.
 
 ---
 
@@ -299,7 +299,7 @@ Behavior:
 
 ---
 
-# Simulation Service in `v0.11.1`
+# Simulation Service in `v0.12.0`
 
 Simulation is **not exposed as a REST endpoint** yet.
 
@@ -310,8 +310,8 @@ create simulation_run
 → commit run metadata
 → mark running
 → commit status
-→ load registry-supported database assets
-→ simulate point-in-time PowerMeasurements
+→ load registry-supported database assets, including `city_load` and `industrial_load`
+→ simulate producer and consumer point-in-time PowerMeasurements through the shared registry/engine
 → batch insert measurements
 → derive PowerIntervalDrafts in memory
 → validate complete intervals
@@ -329,7 +329,7 @@ simulation or insert error
 → re-raise original exception
 ```
 
-The integration suite verifies both paths against PostgreSQL.
+The integration suite verifies both paths against PostgreSQL and confirms that both supported consumer asset types are loaded and persisted in mixed simulation runs.
 
 ---
 
@@ -357,4 +357,4 @@ Public API models are defined in:
 src/schemas.py
 ```
 
-`src/simulation/schemas.py` currently contains `SimulationRunResponse`, but no endpoint uses it in `v0.11.1`. It is preparation for a later public simulation API and must not be interpreted as an already exposed REST resource.
+`src/simulation/schemas.py` currently contains `SimulationRunResponse`, but no endpoint uses it in `v0.12.0`. It is preparation for a later public simulation API and must not be interpreted as an already exposed REST resource.

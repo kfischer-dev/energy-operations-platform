@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document is the authoritative field and domain reference for the Energy Operations Platform in `v0.11.0`.
+This document is the authoritative field and domain reference for the Energy Operations Platform in `v0.12.0`.
 
 It covers:
 
@@ -10,7 +10,8 @@ It covers:
 - public API models,
 - internal measurement/aggregation models,
 - internal simulation models,
-- the temporary measurement compatibility state introduced by `v0.11.0`.
+- the canonical point-in-time measurement model from `v0.11.1`,
+- producer and consumer simulation semantics introduced through `v0.12.0`.
 
 ---
 
@@ -91,14 +92,18 @@ ev_charging_park
 data_center
 ```
 
-Only four producer types are registered for runtime simulation in `v0.11.0`:
+Six asset types are registered for runtime simulation in `v0.12.0`:
 
 ```text
 solar_park
 wind_park
 hydro_power_plant
 biomass_power_plant
+city_load
+industrial_load
 ```
+
+`city_load` and `industrial_load` use `asset_role = consumer`. Their raw `active_power_kw` values remain positive; production-versus-consumption sign handling belongs to the later Energy Balance layer.
 
 ---
 
@@ -120,7 +125,7 @@ biomass_power_plant
 | `region_id` | integer | FK to `regions` |
 | `created_at` | timestamp with time zone | Creation timestamp |
 
-`rated_power_kw` represents the technical upper power reference used by the simulation engine. Generated producer power is validated against it.
+`rated_power_kw` represents the technical upper power reference used by the simulation engine. Generated producer and consumer power is validated against it.
 
 ---
 
@@ -223,7 +228,7 @@ Energy and interval-average power are derived from a sequence of raw power measu
 | `max_state_of_charge_percent` | numeric | `0..100` and greater than minimum |
 | `created_at` | timestamp with time zone | Creation timestamp |
 
-Dynamic state of charge is not yet persisted or simulated in `v0.11.0`.
+Dynamic state of charge is not yet persisted or simulated in `v0.12.0`; storage behavior remains post-MVP work.
 
 ---
 
@@ -520,7 +525,7 @@ state_of_charge_percent_by_asset
 generated_measurement_count
 ```
 
-It is not yet the central state mechanism of the `v0.11.0` service flow.
+It is not yet the central state mechanism of the current service flow.
 
 ---
 
@@ -534,7 +539,7 @@ default_asset_factory
 context_factory
 ```
 
-Registered in `v0.11.0`:
+Registered in `v0.12.0`:
 
 | Asset type | Default behavior |
 |---|---|
@@ -542,8 +547,10 @@ Registered in `v0.11.0`:
 | `wind_park` | Seeded random variation around factor `0.85` |
 | `hydro_power_plant` | Stable factor `0.90` |
 | `biomass_power_plant` | Stable factor `0.85` |
+| `city_load` | Piecewise-linear daily city demand profile, scaled by `load_factor` |
+| `industrial_load` | Piecewise-linear daily industrial profile with base load / production plateau, scaled by `load_factor` |
 
-Only registered asset types are loaded by `load_simulation_assets()`.
+Only registered asset types are loaded by `load_simulation_assets()`. The shared simulation engine does not branch on producer versus consumer role; it resolves behavior by `asset_type` through the registry.
 
 ---
 
@@ -559,3 +566,17 @@ The point-in-time cleanup planned after `v0.11.0` is now complete:
 
 Future schema additions should preserve this distinction between **raw measured values** and **derived analytical results**.
 
+---
+
+# `v0.12.0` Consumer Simulation Contract
+
+Consumer simulation reuses the existing `SimulationAsset`, `SimulationContext`, profile registry and engine.
+
+Key semantics:
+
+- `city_load` and `industrial_load` are registered runtime asset types with `asset_role = consumer`,
+- daily load profiles are represented as time/load-factor support points and interpolated linearly between points,
+- simulated consumer power is `rated_power_kw × profile_factor × context.load_factor`,
+- raw consumer `active_power_kw` stays non-negative and is persisted like producer power,
+- `asset_role` is intentionally not converted into a negative raw measurement; production/consumption sign semantics are deferred to the Energy Balance layer,
+- the shared engine enforces the same `0 <= active_power_kw <= rated_power_kw` contract for all registered asset types.

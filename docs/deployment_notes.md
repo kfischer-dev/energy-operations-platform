@@ -2,9 +2,9 @@
 
 ## Purpose
 
-This document describes the local containerized environment and developer execution paths of the Energy Operations Platform in `v0.11.1`.
+This document describes the local containerized environment and developer execution paths of the Energy Operations Platform in `v0.12.0`.
 
-The Docker foundation was established in `v0.9.x`. `v0.11.1` keeps the same container architecture while changing the `measurements` schema to canonical point-in-time power rows.
+The Docker foundation was established in `v0.9.x`. `v0.12.0` keeps the same container architecture and point-in-time measurement schema; the release extends simulation behavior with consumer profiles and does not require a new service or table.
 
 Related documentation:
 
@@ -391,9 +391,9 @@ Because `measurements` has a unique `(asset_id, measurement_time)` constraint, r
 
 # Next Deployment Steps
 
-1. Keep the current local stack stable while new domain features are added.
-2. Add CI test/build validation before cloud deployment.
-3. Introduce a migration strategy when preserving real environments/data across schema versions becomes necessary.
-4. Add a portfolio architecture diagram and release/demo workflow.
-5. Add production-oriented configuration only after the backend domain contract is stable.
+1. Keep the current API + PostgreSQL Compose stack stable through the Energy Balance and frontend-ready backend blocks.
+2. Add the React/TypeScript frontend to the local Full-Stack start for the `v1.0.0` portfolio MVP.
+3. Add a portfolio architecture diagram, screenshots and a clear release/demo workflow.
+4. Introduce a migration strategy when preserving real environments/data across schema versions becomes necessary.
+5. Add CI, production hardening and cloud-oriented configuration after the first Full-Stack MVP unless a concrete deployment need appears earlier.
 
