@@ -9,6 +9,16 @@ BalanceQualityStatus = Literal[
     "invalid",
 ]
 
+AssetRole = Literal["producer", "consumer", "storage", "grid"]
+
+
+@dataclass(frozen=True)
+class BalanceAsset:
+    """Asset metadata required by balance calculations."""
+
+    asset_role: AssetRole
+    asset_type: str
+
 
 @dataclass(frozen=True)
 class BalanceInterval:
