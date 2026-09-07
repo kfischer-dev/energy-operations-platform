@@ -124,13 +124,34 @@ def calculate_balance_interval(
     )
 
 
-# def calculate_balance_series(
-#     intervals: list[PowerIntervalDraft],
-#     assets: dict[int, BalanceAsset],
-# ) -> list[BalanceInterval]:
-#     """Calculate balance intervals for a series of power intervals."""
+def calculate_balance_series(
+    intervals: list[PowerIntervalDraft],
+    assets: dict[int, BalanceAsset],
+) -> list[BalanceInterval]:
+    """Calculate balance intervals for a series of power intervals."""
 
-#     return [calculate_balance_interval([interval], assets) for interval in intervals]
+    grouped_intervals = defaultdict(list)
+
+    for interval in intervals:
+        interval_key = (
+            interval.interval_start,
+            interval.interval_end,
+        )
+        grouped_intervals[interval_key].append(interval)
+
+    balance_series = []
+
+    for interval_key in sorted(grouped_intervals):
+        grouped_interval = grouped_intervals[interval_key]
+
+        balance = calculate_balance_interval(
+            grouped_interval,
+            assets,
+        )
+
+        balance_series.append(balance)
+
+    return balance_series
 
 
 def calculate_energy_mix(

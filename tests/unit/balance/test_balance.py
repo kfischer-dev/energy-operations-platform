@@ -5,6 +5,7 @@ import pytest
 
 from src.balance.balance import (
     calculate_balance_interval,
+    calculate_balance_series,
     calculate_energy_mix,
 )
 from src.balance.models import BalanceAsset
@@ -326,3 +327,85 @@ def test_calculate_energy_mix_groups_producers_over_time_by_asset_type(assets):
         15_000.0 / 42_000.0 * 100
     )
     assert wind.asset_count == 1
+
+
+@pytest.mark.balance
+def test_calculate_balance_series_groups_and_sorts_time_intervals(assets):
+    second_interval_start = INTERVAL_END
+    second_interval_end = second_interval_start + timedelta(minutes=15)
+
+    intervals = [
+        # Input intentionally not sorted chronologically
+
+        # Second interval: 10:15–10:30
+        create_interval(
+            4,
+            72_000.0,
+            interval_start=second_interval_start,
+            interval_end=second_interval_end,
+        ),  # consumer: 18,000 kWh
+        create_interval(
+            1,
+            44_000.0,
+            interval_start=second_interval_start,
+            interval_end=second_interval_end,
+        ),  # producer: 11,000 kWh
+
+        # First interval: 10:00–10:15
+        create_interval(
+            3,
+            60_000.0,
+        ),  # producer: 15,000 kWh
+        create_interval(
+            4,
+            80_000.0,
+        ),  # consumer: 20,000 kWh
+
+        # Second interval
+        create_interval(
+            3,
+            64_000.0,
+            interval_start=second_interval_start,
+            interval_end=second_interval_end,
+        ),  # producer: 16,000 kWh
+
+        # First interval
+        create_interval(
+            1,
+            40_000.0,
+        ),  # producer: 10,000 kWh
+    ]
+
+    balance_series = calculate_balance_series(
+        intervals,
+        assets,
+    )
+
+    assert len(balance_series) == 2
+
+    first_balance = balance_series[0]
+    second_balance = balance_series[1]
+
+    # First interval: 10:00–10:15
+    assert first_balance.interval_start == INTERVAL_START
+    assert first_balance.interval_end == INTERVAL_END
+
+    assert first_balance.avg_production_power_kw == 100_000.0
+    assert first_balance.avg_consumption_power_kw == 80_000.0
+    assert first_balance.avg_net_power_kw == 20_000.0
+
+    assert first_balance.production_energy_kwh == 25_000.0
+    assert first_balance.consumption_energy_kwh == 20_000.0
+    assert first_balance.net_energy_kwh == 5_000.0
+
+    # Second interval: 10:15–10:30
+    assert second_balance.interval_start == second_interval_start
+    assert second_balance.interval_end == second_interval_end
+
+    assert second_balance.avg_production_power_kw == 108_000.0
+    assert second_balance.avg_consumption_power_kw == 72_000.0
+    assert second_balance.avg_net_power_kw == 36_000.0
+
+    assert second_balance.production_energy_kwh == 27_000.0
+    assert second_balance.consumption_energy_kwh == 18_000.0
+    assert second_balance.net_energy_kwh == 9_000.0
