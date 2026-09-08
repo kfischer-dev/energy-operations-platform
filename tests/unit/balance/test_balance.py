@@ -8,9 +8,10 @@ import pytest
 from src.balance.balance import (
     calculate_balance_interval,
     calculate_balance_series,
+    calculate_balance_summary,
     calculate_energy_mix,
 )
-from src.balance.models import BalanceAsset
+from src.balance.models import BalanceAsset, BalanceInterval
 from src.measurements.models import PowerIntervalDraft
 
 
@@ -415,3 +416,49 @@ def test_calculate_balance_series_groups_and_sorts_time_intervals(assets):
     assert second_balance.production_energy_kwh == 27_000.0
     assert second_balance.consumption_energy_kwh == 18_000.0
     assert second_balance.net_energy_kwh == 9_000.0
+
+
+@pytest.mark.balance
+def test_calculate_balance_summary():
+    balance_interval_1 = BalanceInterval(
+        interval_start=INTERVAL_START,
+        interval_end=INTERVAL_END,
+        avg_production_power_kw=100_000.0,
+        avg_consumption_power_kw=80_000.0,
+        avg_net_power_kw=20_000.0,
+        production_energy_kwh=25_000.0,
+        consumption_energy_kwh=20_000.0,
+        net_energy_kwh=5_000.0,
+        quality_status="valid",
+    )
+    balance_interval_2 = BalanceInterval(
+        interval_start=INTERVAL_END,
+        interval_end=INTERVAL_END + timedelta(minutes=15),
+        avg_production_power_kw=108_000.0,
+        avg_consumption_power_kw=72_000.0,
+        avg_net_power_kw=36_000.0,
+        production_energy_kwh=27_000.0,
+        consumption_energy_kwh=18_000.0,
+        net_energy_kwh=9_000.0,
+        quality_status="incomplete",
+    )
+
+    balance_series = [balance_interval_1, balance_interval_2]
+
+    summary = calculate_balance_summary(balance_series)
+
+    assert summary.start_time == INTERVAL_START
+    assert summary.end_time == INTERVAL_END + timedelta(minutes=15)
+    assert summary.total_production_energy_kwh == 52_000.0
+    assert summary.total_consumption_energy_kwh == 38_000.0
+    assert summary.total_net_energy_kwh == 14_000.0
+    assert summary.quality_status == "incomplete"
+
+
+@pytest.mark.balance
+def test_calculate_balance_summary_rejects_empty_series():
+    with pytest.raises(
+        ValueError,
+        match="Balance series must not be empty",
+    ):
+        calculate_balance_summary([])

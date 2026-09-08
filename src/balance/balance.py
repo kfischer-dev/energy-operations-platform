@@ -1,12 +1,14 @@
 """Core calculations for portfolio energy balance and energy mix."""
 
 from collections import defaultdict
+from collections.abc import Sequence
 from typing import Literal
 
 from src.balance.models import (
     BalanceAsset,
     BalanceInterval,
     BalanceQualityStatus,
+    BalanceSummary,
     EnergyMix,
     EnergyMixContribution,
 )
@@ -33,7 +35,7 @@ def _get_asset(asset_id: int, assets: dict[int, BalanceAsset]) -> BalanceAsset:
 
 
 def _combined_quality_status(
-    intervals: list[PowerIntervalDraft],
+    intervals: Sequence[PowerIntervalDraft | BalanceInterval],
 ) -> BalanceQualityStatus:
     """Return the worst quality status across the supplied intervals."""
 
@@ -164,6 +166,34 @@ def calculate_balance_series(
         balance_series.append(balance)
 
     return balance_series
+
+
+def calculate_balance_summary(
+    balance_series: list[BalanceInterval],
+) -> BalanceSummary:
+    """Calculate energy totals and quality for a balance series."""
+
+    if not balance_series:
+        raise ValueError("Balance series must not be empty.")
+
+    start_time = min(interval.interval_start for interval in balance_series)
+    end_time = max(interval.interval_end for interval in balance_series)
+    
+    total_production_energy_kwh = sum(interval.production_energy_kwh for interval in balance_series)
+    total_consumption_energy_kwh = sum(interval.consumption_energy_kwh for interval in balance_series)
+    total_net_energy_kwh = total_production_energy_kwh - total_consumption_energy_kwh
+
+    quality_status = _combined_quality_status(balance_series)
+
+    return BalanceSummary(
+        start_time=start_time,
+        end_time=end_time,
+        total_production_energy_kwh=total_production_energy_kwh,
+        total_consumption_energy_kwh=total_consumption_energy_kwh,
+        total_net_energy_kwh=total_net_energy_kwh,
+        quality_status=quality_status,
+    )
+
 
 
 def calculate_energy_mix(
