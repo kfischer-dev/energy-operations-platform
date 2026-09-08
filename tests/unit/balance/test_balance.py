@@ -14,7 +14,6 @@ from src.balance.balance import (
 from src.balance.models import BalanceAsset, BalanceInterval
 from src.measurements.models import PowerIntervalDraft
 
-
 INTERVAL_START = datetime(2026, 9, 7, 10, 0)
 INTERVAL_END = INTERVAL_START + timedelta(minutes=15)
 
@@ -276,19 +275,16 @@ def test_calculate_energy_mix_groups_producers_over_time_by_asset_type(assets):
             interval_start=second_interval_start,
             interval_end=second_interval_end,
         ),  # 12,000 kWh
-
         # Solar asset 2
         create_interval(
             2,
             20_000.0,
         ),  # 5,000 kWh
-
         # Wind asset
         create_interval(
             3,
             60_000.0,
         ),  # 15,000 kWh
-
         # Consumer -> must not be part of producer mix
         create_interval(
             4,
@@ -324,15 +320,11 @@ def test_calculate_energy_mix_groups_producers_over_time_by_asset_type(assets):
     )
 
     assert solar.energy_kwh == 27_000.0
-    assert solar.share_percent == pytest.approx(
-        27_000.0 / 42_000.0 * 100
-    )
+    assert solar.share_percent == pytest.approx(27_000.0 / 42_000.0 * 100)
     assert solar.asset_count == 2
 
     assert wind.energy_kwh == 15_000.0
-    assert wind.share_percent == pytest.approx(
-        15_000.0 / 42_000.0 * 100
-    )
+    assert wind.share_percent == pytest.approx(15_000.0 / 42_000.0 * 100)
     assert wind.asset_count == 1
 
 
@@ -343,7 +335,6 @@ def test_calculate_balance_series_groups_and_sorts_time_intervals(assets):
 
     intervals = [
         # Input intentionally not sorted chronologically
-
         # Second interval: 10:15–10:30
         create_interval(
             4,
@@ -357,7 +348,6 @@ def test_calculate_balance_series_groups_and_sorts_time_intervals(assets):
             interval_start=second_interval_start,
             interval_end=second_interval_end,
         ),  # producer: 11,000 kWh
-
         # First interval: 10:00–10:15
         create_interval(
             3,
@@ -367,7 +357,6 @@ def test_calculate_balance_series_groups_and_sorts_time_intervals(assets):
             4,
             80_000.0,
         ),  # consumer: 20,000 kWh
-
         # Second interval
         create_interval(
             3,
@@ -375,7 +364,6 @@ def test_calculate_balance_series_groups_and_sorts_time_intervals(assets):
             interval_start=second_interval_start,
             interval_end=second_interval_end,
         ),  # producer: 16,000 kWh
-
         # First interval
         create_interval(
             1,

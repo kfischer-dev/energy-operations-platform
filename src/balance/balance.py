@@ -178,9 +178,13 @@ def calculate_balance_summary(
 
     start_time = min(interval.interval_start for interval in balance_series)
     end_time = max(interval.interval_end for interval in balance_series)
-    
-    total_production_energy_kwh = sum(interval.production_energy_kwh for interval in balance_series)
-    total_consumption_energy_kwh = sum(interval.consumption_energy_kwh for interval in balance_series)
+
+    total_production_energy_kwh = sum(
+        interval.production_energy_kwh for interval in balance_series
+    )
+    total_consumption_energy_kwh = sum(
+        interval.consumption_energy_kwh for interval in balance_series
+    )
     total_net_energy_kwh = total_production_energy_kwh - total_consumption_energy_kwh
 
     quality_status = _combined_quality_status(balance_series)
@@ -193,7 +197,6 @@ def calculate_balance_summary(
         total_net_energy_kwh=total_net_energy_kwh,
         quality_status=quality_status,
     )
-
 
 
 def calculate_energy_mix(
@@ -210,34 +213,23 @@ def calculate_energy_mix(
     ]
 
     if not relevant_intervals:
-        raise ValueError(
-            f"No intervals available for asset role '{asset_role}'."
-        )
+        raise ValueError(f"No intervals available for asset role '{asset_role}'.")
 
     for interval in relevant_intervals:
         if interval.energy_kwh is None:
-            raise ValueError(
-                f"Missing energy data for asset {interval.asset_id}."
-            )
+            raise ValueError(f"Missing energy data for asset {interval.asset_id}.")
 
     grouped_intervals = _group_intervals_by_asset_type(relevant_intervals, assets)
 
-    total_energy_kwh = sum(
-        interval.energy_kwh for interval in relevant_intervals
-    )
+    total_energy_kwh = sum(interval.energy_kwh for interval in relevant_intervals)
 
     contributions = []
     for asset_type, type_intervals in grouped_intervals.items():
-
         energy_kwh = sum(interval.energy_kwh for interval in type_intervals)
         share_percent = (
-            energy_kwh / total_energy_kwh * 100
-            if total_energy_kwh > 0
-            else 0.0
+            energy_kwh / total_energy_kwh * 100 if total_energy_kwh > 0 else 0.0
         )
-        asset_count = len(
-            {interval.asset_id for interval in type_intervals}
-        )
+        asset_count = len({interval.asset_id for interval in type_intervals})
 
         contributions.append(
             EnergyMixContribution(
@@ -248,15 +240,9 @@ def calculate_energy_mix(
             )
         )
 
-    start_time = min(
-        interval.interval_start
-        for interval in relevant_intervals
-    )
+    start_time = min(interval.interval_start for interval in relevant_intervals)
 
-    end_time = max(
-        interval.interval_end
-        for interval in relevant_intervals
-    )
+    end_time = max(interval.interval_end for interval in relevant_intervals)
     return EnergyMix(
         start_time=start_time,
         end_time=end_time,
