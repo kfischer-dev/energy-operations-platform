@@ -1,3 +1,5 @@
+"""Core calculations for portfolio energy balance and energy mix."""
+
 from collections import defaultdict
 from typing import Literal
 
@@ -12,6 +14,8 @@ from src.measurements.models import PowerIntervalDraft
 
 
 def _validate_interval_bounds(intervals: list[PowerIntervalDraft]) -> None:
+    """Ensure all intervals belong to exactly the same time window."""
+
     interval_bounds = {
         (interval.interval_start, interval.interval_end) for interval in intervals
     }
@@ -20,6 +24,8 @@ def _validate_interval_bounds(intervals: list[PowerIntervalDraft]) -> None:
 
 
 def _get_asset(asset_id: int, assets: dict[int, BalanceAsset]) -> BalanceAsset:
+    """Return balance metadata for an asset or raise a domain-level error."""
+
     try:
         return assets[asset_id]
     except KeyError as error:
@@ -29,7 +35,8 @@ def _get_asset(asset_id: int, assets: dict[int, BalanceAsset]) -> BalanceAsset:
 def _combined_quality_status(
     intervals: list[PowerIntervalDraft],
 ) -> BalanceQualityStatus:
-    
+    """Return the worst quality status across the supplied intervals."""
+
     priority = {
         "valid": 0,
         "estimated": 1,
@@ -61,7 +68,10 @@ def _group_intervals_by_asset_type(
 def calculate_balance_interval(
     intervals: list[PowerIntervalDraft], assets: dict[int, BalanceAsset]
 ) -> BalanceInterval:
-    """Calculate production, consumption, and net values for one time interval."""
+    """Calculate production, consumption, and net values for one time window.
+
+    Storage and grid assets are intentionally excluded from the v0.13 balance.
+    """
 
     _validate_interval_bounds(intervals)
 
@@ -70,6 +80,7 @@ def calculate_balance_interval(
     avg_consumption_power_kw = 0.0
     consumption_energy_kwh = 0.0
 
+    # Each asset may contribute at most one interval to a time window.
     checked_asset_ids = set()
     relevant_intervals = []
 
@@ -83,7 +94,7 @@ def calculate_balance_interval(
 
         role = _get_asset(interval.asset_id, assets).asset_role
         if role in ("storage", "grid"):
-            # Storage and grid roles are not included in production/consumption calculations
+            # These roles are outside the current production/consumption balance.
             continue
         elif role not in ("producer", "consumer"):
             raise ValueError(f"Asset role '{role}' is not supported by the balance.")
@@ -128,7 +139,7 @@ def calculate_balance_series(
     intervals: list[PowerIntervalDraft],
     assets: dict[int, BalanceAsset],
 ) -> list[BalanceInterval]:
-    """Calculate balance intervals for a series of power intervals."""
+    """Group intervals by time window and return a chronological balance series."""
 
     grouped_intervals = defaultdict(list)
 
@@ -141,6 +152,7 @@ def calculate_balance_series(
 
     balance_series = []
 
+    # Tuple keys sort by start time first and end time second.
     for interval_key in sorted(grouped_intervals):
         grouped_interval = grouped_intervals[interval_key]
 
@@ -159,7 +171,7 @@ def calculate_energy_mix(
     assets: dict[int, BalanceAsset],
     asset_role: Literal["producer", "consumer"],
 ) -> EnergyMix:
-    """Calculate power and energy contributions grouped by asset type."""
+    """Calculate period energy contributions by asset type for one asset role."""
 
     relevant_intervals = [
         interval
@@ -177,7 +189,7 @@ def calculate_energy_mix(
             raise ValueError(
                 f"Missing energy data for asset {interval.asset_id}."
             )
-    
+
     grouped_intervals = _group_intervals_by_asset_type(relevant_intervals, assets)
 
     total_energy_kwh = sum(

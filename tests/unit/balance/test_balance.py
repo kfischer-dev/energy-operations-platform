@@ -1,3 +1,5 @@
+"""Tests for balance interval, series, and energy mix calculations."""
+
 from dataclasses import replace
 from datetime import datetime, timedelta
 
@@ -24,6 +26,8 @@ def create_interval(
     interval_end: datetime = INTERVAL_END,
     quality_status: str = "valid",
 ) -> PowerIntervalDraft:
+    """Create an interval with energy derived from average power and duration."""
+
     interval_hours = (interval_end - interval_start).total_seconds() / 3600
     energy_kwh = avg_power_kw * interval_hours
 
@@ -43,6 +47,8 @@ def create_interval(
 
 @pytest.fixture
 def assets() -> dict[int, BalanceAsset]:
+    """Provide representative producer, consumer, storage, and grid metadata."""
+
     return {
         1: BalanceAsset(
             asset_role="producer",

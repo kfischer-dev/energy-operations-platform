@@ -1,3 +1,5 @@
+"""Domain models for portfolio energy balance calculations."""
+
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Literal
@@ -22,6 +24,8 @@ class BalanceAsset:
 
 @dataclass(frozen=True)
 class BalanceInterval:
+    """Aggregated production, consumption, and net values for one time window."""
+
     interval_start: datetime
     interval_end: datetime
 
@@ -38,6 +42,8 @@ class BalanceInterval:
 
 @dataclass(frozen=True)
 class BalanceSummary:
+    """Energy totals and overall quality for a requested analysis period."""
+
     start_time: datetime
     end_time: datetime
 
@@ -50,6 +56,8 @@ class BalanceSummary:
 
 @dataclass(frozen=True)
 class EnergyMixContribution:
+    """Energy contribution of one asset type within an energy mix."""
+
     asset_type: str
     energy_kwh: float
     share_percent: float
@@ -58,6 +66,8 @@ class EnergyMixContribution:
 
 @dataclass(frozen=True)
 class EnergyMix:
+    """Energy distribution by asset type for one role over a time period."""
+
     start_time: datetime
     end_time: datetime
 
