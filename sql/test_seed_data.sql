@@ -147,3 +147,43 @@ VALUES
 INSERT INTO storage_specs(asset_id, energy_capacity_kwh, max_charge_power_kw, max_discharge_power_kw, charge_efficiency_percent, discharge_efficiency_percent, min_state_of_charge_percent, max_state_of_charge_percent)
 VALUES
     (4,80000.00,30000.00,30000.00,95.00,95.00,10.00,90.00);
+
+
+-- ============================================================
+-- Balance test window: 10:00–10:30
+-- Clean valid measurements for producer + consumer aggregation
+-- ============================================================
+
+INSERT INTO measurements (
+    asset_id,
+    simulation_run_id,
+    measurement_time,
+    active_power_kw,
+    source,
+    quality_status
+)
+VALUES
+    -- Asset 1: Wind - producer
+    (1, 1, '2026-06-22 10:00:00+02', 78000.0, 'simulation', 'valid'),
+    (1, 1, '2026-06-22 10:15:00+02', 81000.0, 'simulation', 'valid'),
+    (1, 1, '2026-06-22 10:30:00+02', 79000.0, 'simulation', 'valid'),
+
+    -- Asset 2: City load - consumer
+    (2, 1, '2026-06-22 10:00:00+02', 145000.0, 'simulation', 'valid'),
+    (2, 1, '2026-06-22 10:15:00+02', 148000.0, 'simulation', 'valid'),
+    (2, 1, '2026-06-22 10:30:00+02', 151000.0, 'simulation', 'valid'),
+
+    -- Asset 3: Hydro - producer
+    (3, 1, '2026-06-22 10:00:00+02', 70000.0, 'simulation', 'valid'),
+    (3, 1, '2026-06-22 10:15:00+02', 71000.0, 'simulation', 'valid'),
+    (3, 1, '2026-06-22 10:30:00+02', 72000.0, 'simulation', 'valid'),
+
+    -- Asset 5: Industrial load - consumer
+    (5, 1, '2026-06-22 10:00:00+02', 98000.0, 'simulation', 'valid'),
+    (5, 1, '2026-06-22 10:15:00+02', 101000.0, 'simulation', 'valid'),
+    (5, 1, '2026-06-22 10:30:00+02', 103000.0, 'simulation', 'valid'),
+
+    -- Asset 6: Solar - producer
+    (6, 1, '2026-06-22 10:00:00+02', 32000.0, 'simulation', 'valid'),
+    (6, 1, '2026-06-22 10:15:00+02', 35000.0, 'simulation', 'valid'),
+    (6, 1, '2026-06-22 10:30:00+02', 38000.0, 'simulation', 'valid');
