@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document describes the public REST API contract of the Energy Operations Platform for `v0.12.0`.
+This document describes the public REST API contract of the Energy Operations Platform for `v0.13.0`.
 
 Interactive OpenAPI documentation is available at:
 
@@ -33,7 +33,7 @@ energy_kwh
 
 Energy is derived by period-based KPI/aggregation logic rather than persisted redundantly. `simulation_runs.interval_minutes` remains part of simulation configuration.
 
-There is no public simulation endpoint in `v0.12.0`.
+There is no public simulation endpoint in `v0.13.0`.
 
 ---
 
@@ -297,9 +297,131 @@ Behavior:
 - existing asset without usable measurements → zero count/coverage and nullable derived values
 - one valid in-period point can define measured min/max/count but cannot define energy by itself
 
+
 ---
 
-# Simulation Service in `v0.12.0`
+# Balance Endpoints
+
+`v0.13.0` adds portfolio-level production/consumption analytics on top of the existing point-in-time measurement aggregation layer.
+
+Common query parameters:
+
+| Parameter | Type | Rules | Meaning |
+|---|---|---|---|
+| `start_time` | ISO-8601 datetime | required | Start of requested analysis period |
+| `end_time` | ISO-8601 datetime | required, `> start_time` | End of requested analysis period |
+| `interval_minutes` | integer enum | `15`, `30`, `60`; default `15` | Fixed interval used to derive per-asset power/energy |
+
+The requested period must be exactly divisible by `interval_minutes`. Invalid time ordering or a non-divisible period returns `422 Unprocessable Entity`.
+
+Balance source data is loaded through `src/balance/repository.py`. Only assets with `asset_role IN ('producer', 'consumer')` and valid in-period measurements participate. The nearest valid left/right measurements are included as boundary supports when available.
+
+Raw power sign semantics remain unchanged:
+
+```text
+producer active_power_kw >= 0
+consumer active_power_kw >= 0
+net = production - consumption
+```
+
+Storage and grid assets are intentionally ignored by the `v0.13.0` production/consumption balance.
+
+## `GET /balance`
+
+Returns a period `BalanceSummaryResponse`.
+
+Fields:
+
+```text
+start_time
+end_time
+total_production_energy_kwh
+total_consumption_energy_kwh
+total_net_energy_kwh
+quality_status
+```
+
+Example:
+
+```json
+{
+  "start_time": "2026-06-22T10:00:00+02:00",
+  "end_time": "2026-06-22T10:30:00+02:00",
+  "total_production_energy_kwh": 92875.0,
+  "total_consumption_energy_kwh": 124375.0,
+  "total_net_energy_kwh": -31500.0,
+  "quality_status": "valid"
+}
+```
+
+`total_net_energy_kwh` is calculated as:
+
+```text
+total_production_energy_kwh - total_consumption_energy_kwh
+```
+
+## `GET /balance/series`
+
+Returns a chronological list of `BalanceIntervalResponse` objects.
+
+Fields per interval:
+
+```text
+interval_start
+interval_end
+avg_production_power_kw
+avg_consumption_power_kw
+avg_net_power_kw
+production_energy_kwh
+consumption_energy_kwh
+net_energy_kwh
+quality_status
+```
+
+Net values use:
+
+```text
+avg_net_power_kw = avg_production_power_kw - avg_consumption_power_kw
+net_energy_kwh = production_energy_kwh - consumption_energy_kwh
+```
+
+The domain and public response contracts use the same quality states: `valid`, `incomplete`, `estimated` and `invalid`. This allows partial-coverage balance intervals to be serialized without changing their domain status.
+
+## `GET /balance/energy-mix`
+
+Returns period energy distribution by technical `asset_type` for one requested role.
+
+Additional query parameter:
+
+| Parameter | Type | Rules |
+|---|---|---|
+| `asset_role` | string | required: `producer` or `consumer` |
+
+Response fields:
+
+```text
+start_time
+end_time
+asset_role
+total_energy_kwh
+contributions
+quality_status
+```
+
+Each contribution contains:
+
+```text
+asset_type
+energy_kwh
+share_percent
+asset_count
+```
+
+`share_percent` is calculated from period energy and rounded to two decimals only at API serialization. `asset_count` counts unique assets of that type even when the same asset contributes to multiple intervals.
+
+---
+
+# Simulation Service in `v0.13.0`
 
 Simulation is **not exposed as a REST endpoint** yet.
 
@@ -357,4 +479,6 @@ Public API models are defined in:
 src/schemas.py
 ```
 
-`src/simulation/schemas.py` currently contains `SimulationRunResponse`, but no endpoint uses it in `v0.12.0`. It is preparation for a later public simulation API and must not be interpreted as an already exposed REST resource.
+`v0.13.0` adds `BalanceSummaryResponse`, `BalanceIntervalResponse`, `EnergyMixContributionResponse` and `EnergyMixResponse`. Internal balance dataclasses remain in `src/balance/models.py`.
+
+`src/simulation/schemas.py` currently contains `SimulationRunResponse`, but no endpoint uses it in `v0.13.0`. It is preparation for a later public simulation API and must not be interpreted as an already exposed REST resource.

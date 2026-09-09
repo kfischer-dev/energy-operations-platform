@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document describes the PostgreSQL implementation, Python database access and simulation persistence behavior of the Energy Operations Platform in `v0.12.0`.
+This document describes the PostgreSQL implementation, Python database access, simulation persistence and balance-source retrieval of the Energy Operations Platform in `v0.13.0`.
 
 Related documents:
 
@@ -365,6 +365,54 @@ The database therefore stores physical power magnitude consistently. Later Energ
 
 ---
 
+
+# `v0.13.0` Balance Repository and Data Flow
+
+`src/balance/repository.py` adds `fetch_balance_measurements()` for portfolio balance analytics.
+
+The query deliberately keeps energy mathematics outside SQL. PostgreSQL is responsible only for selecting the required raw point-in-time measurements.
+
+Source selection:
+
+```text
+1. identify assets with asset_role IN ('producer', 'consumer')
+2. require at least one valid measurement inside the requested period
+3. load the latest valid measurement before start_time per relevant asset
+4. load all valid in-period measurements
+5. load the earliest valid measurement after end_time per relevant asset
+6. order by asset_id, measurement_time
+```
+
+The query uses PostgreSQL `DISTINCT ON (asset_id)` for the nearest left/right support rows.
+
+Returned fields:
+
+```text
+asset_id
+measurement_time
+active_power_kw
+source
+quality_status
+```
+
+The service then performs:
+
+```text
+DB measurement dictionaries
+→ PowerMeasurement mapping
+→ group by asset_id
+→ aggregate_measurements_for_intervals()
+→ PowerIntervalDraft values per asset
+→ calculate_balance_series()
+→ calculate_balance_summary() / calculate_energy_mix()
+```
+
+Asset role/type metadata is loaded through the existing `fetch_asset_summaries()` function and reduced to `BalanceAsset` objects. No new database table or persisted balance result was introduced.
+
+Balance and energy-mix values remain derived, in-memory analytics. This keeps the canonical persistence model unchanged: PostgreSQL stores raw point-in-time power; energy and portfolio balance are calculated on demand.
+
+---
+
 # Database Initialization with Docker
 
 For a new volume, Compose mounts:
@@ -389,12 +437,12 @@ This deliberately deletes and recreates the development database volume.
 
 # Current Database Limitations / Next Refactor
 
-Known intentional limitations after `v0.12.0`:
+Known intentional limitations after `v0.13.0`:
 
 1. `UNIQUE (asset_id, measurement_time)` prevents storing parallel forecast/scenario values for the same asset/timestamp.
 2. No migration framework is used yet; schema changes currently require controlled clean rebuilds.
 3. `src/database.py` is still a comparatively large legacy data-access module and can be split later if it becomes a concrete development blocker.
 4. KPI support selection is designed for the current PostgreSQL model and data scale; further performance optimization should follow measured need rather than be added pre-emptively.
 
-Consumer/load simulation is now integrated without a schema change: `city_load` and `industrial_load` already exist as consumer asset types and their positive point-in-time power measurements are stored in the same `measurements` table as producer output. The next database-facing domain block is Energy Balance, which should derive production and consumption by `asset_role` rather than changing raw measurement sign semantics.
+Consumer/load simulation and Energy Balance are now integrated without a schema change. `city_load` and `industrial_load` store positive point-in-time power in the same `measurements` table as producer output; balance queries derive production and consumption by `asset_role`. Balance summaries, series and energy mix are not persisted. The next backend-facing work is frontend contract/CORS polish rather than a new database domain block.
 

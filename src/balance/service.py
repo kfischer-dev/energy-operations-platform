@@ -7,10 +7,13 @@ from src.balance.balance import (
     calculate_balance_summary,
     calculate_energy_mix,
 )
-from src.balance.models import BalanceAsset, BalanceSummary, EnergyMix
-from src.measurements.measurement_aggregation import (
-    aggregate_measurements_for_intervals,
+from src.balance.models import (
+    BalanceAsset,
+    BalanceInterval,
+    BalanceSummary,
+    EnergyMix,
 )
+from src.measurements.measurement_aggregation import aggregate_measurements_for_intervals
 from src.measurements.models import PowerMeasurement
 from src.measurements.service import map_measurements_to_power_measurements
 
@@ -70,7 +73,7 @@ def build_balance_series(
     start_time: datetime,
     end_time: datetime,
     interval_minutes: int = 15,
-) -> list[dict]:
+) -> list[BalanceInterval]:
 
     if end_time <= start_time:
         raise ValueError("End time must be after start time.")
@@ -93,7 +96,7 @@ def build_balance_series(
 
 
 def build_balance_summary(
-    balance_series: list[dict],
+    balance_series: list[BalanceInterval],
 ) -> BalanceSummary:
     return calculate_balance_summary(balance_series)
 

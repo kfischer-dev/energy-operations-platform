@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document describes the automated test approach of the Energy Operations Platform in `v0.12.0`.
+This document describes the automated test approach of the Energy Operations Platform in `v0.13.0`.
 
 The strategy keeps strong coverage around domain-heavy logic and critical persistence paths while following an 80/20 learning-project rule: tests should prevent realistic regressions or clarify complex behavior, not duplicate framework-standard validation on every layer.
 
@@ -13,24 +13,35 @@ Current focus areas include:
 - interpolation and trapezoidal integration,
 - asset/global period KPI semantics,
 - deterministic simulation,
-- PostgreSQL success and rollback integration.
+- PostgreSQL success and rollback integration,
+- balance interval/series/summary calculations,
+- balance service orchestration and PostgreSQL-backed balance analytics,
+- balance summary/series/energy-mix API contracts.
 
 # Test Structure
 
 ```text
 tests/
 ├── conftest.py
+├── factories.py
 ├── test_general.py
+├── api/
+│   └── test_balance_api.py
 ├── integration/
+│   ├── test_balance_integration.py
 │   └── test_repository_service.py
 └── unit/
     ├── analytics/
     │   └── test_kpis.py
     ├── assets/
     │   └── test_assets.py
+    ├── balance/
+    │   ├── test_balance.py
+    │   └── test_balance_service.py
     ├── measurements/
     │   ├── test_measurement_aggregation.py
-    │   └── test_measurements.py
+    │   ├── test_measurements.py
+    │   └── test_service.py
     └── simulation/
         ├── test_engine.py
         ├── test_mappers.py
@@ -156,6 +167,62 @@ KPI tests now use explicit `start_time` / `end_time` periods and verify the sema
 - global KPIs group by asset before combining results.
 
 Repository integration tests also cover boundary-aware source retrieval, including exact-boundary behavior and global per-asset support selection.
+
+---
+
+
+# Balance Test Coverage
+
+`v0.13.0` adds focused coverage across domain, service, PostgreSQL integration and API layers.
+
+## Domain calculations
+
+`tests/unit/balance/test_balance.py` verifies the rules that are easiest to get wrong:
+
+- producer and consumer values are summed by role,
+- negative net balance is valid,
+- storage and grid intervals are excluded from both values and quality aggregation,
+- the worst relevant quality status propagates,
+- duplicate asset intervals inside one window are rejected,
+- missing power/energy values are rejected,
+- mismatched interval bounds are rejected,
+- missing balance asset metadata is rejected,
+- energy mix groups period energy by `asset_type`, counts unique assets and calculates shares,
+- balance series groups by time window and returns chronological results,
+- balance summary aggregates period energy totals and quality,
+- empty summary input is rejected.
+
+## Balance service
+
+`tests/unit/balance/test_balance_service.py` exercises the real in-memory orchestration without database mocking:
+
+```text
+DB-shaped measurement dictionaries
+→ PowerMeasurement
+→ group by asset
+→ interval aggregation
+→ balance series
+→ balance summary
+```
+
+It also checks rejection of a requested period that is not divisible by the selected interval length.
+
+## PostgreSQL balance smoke/integration
+
+`tests/integration/test_balance_integration.py` loads real test-seed measurements through `fetch_balance_measurements()` and verifies concrete summary totals. A second smoke test verifies producer energy-mix totals and per-type contributions from PostgreSQL-backed data.
+
+## Balance API
+
+`tests/api/test_balance_api.py` covers representative HTTP contracts for:
+
+- `GET /balance`,
+- `GET /balance/series`,
+- invalid time ordering,
+- `GET /balance/energy-mix`.
+
+The API tests use concrete deterministic values from the dedicated test database rather than repeating all lower-layer edge cases.
+
+The balance response schemas support the same four quality states as the domain: `valid`, `incomplete`, `estimated` and `invalid`. A dedicated API regression test for an `incomplete` response is optional future coverage if a compact deterministic seed scenario is added; it is not required for the `v0.13.0` release.
 
 ---
 
@@ -416,6 +483,8 @@ Configured in `pytest.ini`:
 | `service` | service-focused tests |
 | `smoke` | primary success path |
 | `failure` | expected application failure and rollback path |
+| `balance` | balance domain/service/integration cases |
+| `api` | API endpoint contract cases |
 
 Important: the `unit` marker is not currently attached to every file under `tests/unit/`. Use the folder path when you want the full organizational unit tree.
 
@@ -471,6 +540,18 @@ KPI:
 py -m pytest -m kpi -v
 ```
 
+Balance:
+
+```bash
+py -m pytest -m balance -v
+```
+
+API:
+
+```bash
+py -m pytest -m api -v
+```
+
 POST / PATCH:
 
 ```bash
@@ -505,10 +586,10 @@ Before tagging a release:
 6. inspect git status and release diff
 ```
 
-`v0.12.0` requires the point-in-time measurement/KPI paths plus consumer-profile tests, mixed producer/consumer simulation, the simulation success-smoke path and PostgreSQL rollback path to remain green.
+`v0.13.0` requires the existing point-in-time measurement/KPI and mixed producer/consumer simulation paths to remain green, plus the balance domain/service tests, PostgreSQL balance smoke tests and representative balance API contracts.
 
 ---
 
 # Known Test-Architecture Improvement
 
-A later cleanup can move database setup fixtures closer to integration/API tests so truly pure simulation and aggregation tests can run without any database-session initialization. That is a structural improvement, not a blocker for `v0.12.0`.
+A later cleanup can move database setup fixtures closer to integration/API tests so truly pure simulation and aggregation tests can run without any database-session initialization. That is a structural improvement, not a blocker for `v0.13.0`.

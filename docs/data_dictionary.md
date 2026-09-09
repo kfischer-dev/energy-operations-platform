@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document is the authoritative field and domain reference for the Energy Operations Platform in `v0.12.0`.
+This document is the authoritative field and domain reference for the Energy Operations Platform in `v0.13.0`.
 
 It covers:
 
@@ -11,7 +11,8 @@ It covers:
 - internal measurement/aggregation models,
 - internal simulation models,
 - the canonical point-in-time measurement model from `v0.11.1`,
-- producer and consumer simulation semantics introduced through `v0.12.0`.
+- producer and consumer simulation semantics introduced through `v0.12.0`,
+- balance, balance-series and energy-mix contracts introduced through `v0.13.0`.
 
 ---
 
@@ -92,7 +93,7 @@ ev_charging_park
 data_center
 ```
 
-Six asset types are registered for runtime simulation in `v0.12.0`:
+Six asset types are registered for runtime simulation in `v0.13.0`:
 
 ```text
 solar_park
@@ -103,7 +104,7 @@ city_load
 industrial_load
 ```
 
-`city_load` and `industrial_load` use `asset_role = consumer`. Their raw `active_power_kw` values remain positive; production-versus-consumption sign handling belongs to the later Energy Balance layer.
+`city_load` and `industrial_load` use `asset_role = consumer`. Their raw `active_power_kw` values remain positive; `v0.13.0` applies production-versus-consumption sign handling only in the Balance layer.
 
 ---
 
@@ -228,7 +229,7 @@ Energy and interval-average power are derived from a sequence of raw power measu
 | `max_state_of_charge_percent` | numeric | `0..100` and greater than minimum |
 | `created_at` | timestamp with time zone | Creation timestamp |
 
-Dynamic state of charge is not yet persisted or simulated in `v0.12.0`; storage behavior remains post-MVP work.
+Dynamic state of charge is not yet persisted or simulated in `v0.13.0`; storage behavior remains post-MVP work.
 
 ---
 
@@ -338,6 +339,68 @@ coverage_ratio
 
 Boundary supports can contribute to derived fields without changing measured count/min/max.
 
+## Balance response models
+
+### `BalanceSummaryResponse`
+
+```text
+start_time
+end_time
+total_production_energy_kwh
+total_consumption_energy_kwh
+total_net_energy_kwh
+quality_status
+```
+
+### `BalanceIntervalResponse`
+
+```text
+interval_start
+interval_end
+avg_production_power_kw
+avg_consumption_power_kw
+avg_net_power_kw
+production_energy_kwh
+consumption_energy_kwh
+net_energy_kwh
+quality_status
+```
+
+### `EnergyMixContributionResponse`
+
+```text
+asset_type
+energy_kwh
+share_percent
+asset_count
+```
+
+`share_percent` is serialized with two decimal places. The underlying domain value is not rounded.
+
+### `EnergyMixResponse`
+
+```text
+start_time
+end_time
+asset_role
+total_energy_kwh
+contributions
+quality_status
+```
+
+`asset_role` is limited to `producer` or `consumer`.
+
+The internal balance quality contract includes:
+
+```text
+valid
+incomplete
+estimated
+invalid
+```
+
+`BalanceSummaryResponse`, `BalanceIntervalResponse` and `EnergyMixResponse` expose the same four quality values as the internal balance domain.
+
 # Internal Measurement Models
 
 Defined in `src/measurements/models.py`.
@@ -441,6 +504,80 @@ source_measurement_count = 2
 
 If interval boundaries must be interpolated, the surrounding raw measurements are counted, but the generated interpolated points are not.
 
+
+---
+
+# Internal Balance Models
+
+Defined in `src/balance/models.py`.
+
+## `BalanceAsset`
+
+Minimal metadata needed by balance calculations:
+
+```text
+asset_role
+asset_type
+```
+
+The balance layer intentionally does not depend on `SimulationAsset`; it works with database-backed measurements regardless of how they were created.
+
+## `BalanceInterval`
+
+Represents one common time window after per-asset measurement aggregation:
+
+```text
+interval_start
+interval_end
+avg_production_power_kw
+avg_consumption_power_kw
+avg_net_power_kw
+production_energy_kwh
+consumption_energy_kwh
+net_energy_kwh
+quality_status
+```
+
+Producer and consumer values are summed as positive magnitudes. Net values are derived as production minus consumption. Storage and grid roles are excluded in `v0.13.0`.
+
+## `BalanceSummary`
+
+Period totals derived from a chronological balance series:
+
+```text
+start_time
+end_time
+total_production_energy_kwh
+total_consumption_energy_kwh
+total_net_energy_kwh
+quality_status
+```
+
+The summary intentionally contains energy totals only; interval power belongs to the series contract.
+
+## `EnergyMixContribution`
+
+```text
+asset_type
+energy_kwh
+share_percent
+asset_count
+```
+
+## `EnergyMix`
+
+```text
+start_time
+end_time
+asset_role
+total_energy_kwh
+contributions
+quality_status
+```
+
+Energy mix is period-based and grouped by `asset_type`. `asset_count` is the number of unique contributing assets of that type.
+
+
 ---
 
 # Internal Simulation Models
@@ -539,7 +676,7 @@ default_asset_factory
 context_factory
 ```
 
-Registered in `v0.12.0`:
+Registered since `v0.12.0` and unchanged in `v0.13.0`:
 
 | Asset type | Default behavior |
 |---|---|
@@ -580,3 +717,25 @@ Key semantics:
 - raw consumer `active_power_kw` stays non-negative and is persisted like producer power,
 - `asset_role` is intentionally not converted into a negative raw measurement; production/consumption sign semantics are deferred to the Energy Balance layer,
 - the shared engine enforces the same `0 <= active_power_kw <= rated_power_kw` contract for all registered asset types.
+
+---
+
+# `v0.13.0` Energy Balance Contract
+
+`v0.13.0` builds portfolio analytics on top of the existing point-in-time measurement and interval-aggregation contracts.
+
+Key semantics:
+
+- each asset is aggregated independently before portfolio values are combined,
+- producer and consumer raw power stays non-negative,
+- production and consumption are grouped by `BalanceAsset.asset_role`,
+- `avg_net_power_kw = avg_production_power_kw - avg_consumption_power_kw`,
+- `net_energy_kwh = production_energy_kwh - consumption_energy_kwh`,
+- negative net values are valid and represent consumption greater than production,
+- storage and grid roles are intentionally ignored for this first balance version,
+- duplicate asset intervals inside the same time window are rejected,
+- missing power/energy values for relevant producer/consumer intervals are rejected,
+- balance-series results are grouped by `(interval_start, interval_end)` and returned chronologically,
+- period summary totals are derived from the completed series,
+- energy mix groups period energy by `asset_type` for either producer or consumer role.
+

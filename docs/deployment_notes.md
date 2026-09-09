@@ -2,9 +2,9 @@
 
 ## Purpose
 
-This document describes the local containerized environment and developer execution paths of the Energy Operations Platform in `v0.12.0`.
+This document describes the local containerized environment and developer execution paths of the Energy Operations Platform in `v0.13.0`.
 
-The Docker foundation was established in `v0.9.x`. `v0.12.0` keeps the same container architecture and point-in-time measurement schema; the release extends simulation behavior with consumer profiles and does not require a new service or table.
+The Docker foundation was established in `v0.9.x`. `v0.13.0` keeps the same container architecture and point-in-time measurement schema; Energy Balance and energy-mix analytics are derived through the existing API + PostgreSQL stack and require no new container or database table.
 
 Related documentation:
 
@@ -39,7 +39,8 @@ Current capabilities:
 - persistent PostgreSQL data through `db_data`,
 - host API access on port `8000`,
 - optional host database access on port `5433`,
-- simulation-run and raw-power persistence supported by the same database.
+- simulation-run and raw-power persistence supported by the same database,
+- balance summary, balance series and energy-mix endpoints served by the existing FastAPI container.
 
 ---
 
@@ -176,6 +177,9 @@ http://127.0.0.1:8000/docs
 http://127.0.0.1:8000/assets
 http://127.0.0.1:8000/measurements
 http://127.0.0.1:8000/kpis/measurements
+http://127.0.0.1:8000/balance
+http://127.0.0.1:8000/balance/series
+http://127.0.0.1:8000/balance/energy-mix
 ```
 
 ---
@@ -342,6 +346,8 @@ Key release paths:
 py -m pytest -m integration -v
 py -m pytest -m smoke -v
 py -m pytest -m failure -v
+py -m pytest -m balance -v
+py -m pytest -m api -v
 py -m ruff check src tests scripts
 ```
 
@@ -375,6 +381,14 @@ Because `measurements` has a unique `(asset_id, measurement_time)` constraint, r
 
 ---
 
+# Balance API in the Current Stack
+
+`v0.13.0` does not change deployment topology. The three balance endpoints run inside the existing FastAPI service and read the existing PostgreSQL `assets`, `asset_types` and `measurements` tables.
+
+The balance API therefore requires no extra environment variables, persistent volume or service. For manual testing, use Swagger at `/docs` and supply ISO-8601 `start_time` / `end_time` values plus a supported interval (`15`, `30`, `60`).
+
+---
+
 # Current Docker / Deployment Limitations
 
 - No production image hardening.
@@ -391,7 +405,7 @@ Because `measurements` has a unique `(asset_id, measurement_time)` constraint, r
 
 # Next Deployment Steps
 
-1. Keep the current API + PostgreSQL Compose stack stable through the Energy Balance and frontend-ready backend blocks.
+1. Keep the current API + PostgreSQL Compose stack stable through the frontend-ready backend/CORS block.
 2. Add the React/TypeScript frontend to the local Full-Stack start for the `v1.0.0` portfolio MVP.
 3. Add a portfolio architecture diagram, screenshots and a clear release/demo workflow.
 4. Introduce a migration strategy when preserving real environments/data across schema versions becomes necessary.

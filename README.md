@@ -4,21 +4,22 @@
 
 The **Energy Operations Platform** is a backend and data portfolio project for modeling, validating, simulating, analyzing and exposing operational energy data.
 
-It combines PostgreSQL, FastAPI, Pydantic, pytest and Docker Compose with a domain model for technical energy assets. The current backend supports regional assets, point-in-time power measurements, deterministic producer and consumer simulation, reusable time-series aggregation, period-based KPIs and persisted simulation-run tracking.
+It combines PostgreSQL, FastAPI, Pydantic, pytest and Docker Compose with a domain model for technical energy assets. The current backend supports regional assets, point-in-time power measurements, deterministic producer and consumer simulation, reusable time-series aggregation, period-based KPIs, persisted simulation-run tracking, portfolio energy balance analytics and period energy-mix analysis.
 
 ## Current Version
 
-**`v0.12.0 – Consumer Load Simulation`**
+**`v0.13.0 – Energy Balance`**
 
 Main additions:
 
-- added `city_load` and `industrial_load` consumer profiles,
-- modeled daily consumer demand with piecewise-linear load-factor interpolation,
-- reused the existing simulation engine and profile registry for producers and consumers,
-- kept consumer `active_power_kw` positive; `asset_role` will determine production/consumption semantics in the later balance layer,
-- added default consumer assets and simulation contexts with configurable `load_factor`,
-- extended mixed-asset simulation and PostgreSQL integration coverage to include both consumer types,
-- retained the canonical point-in-time measurement model and period-based KPI derivation introduced in `v0.11.1`.
+- added a dedicated `src/balance` domain/service/repository layer,
+- combined producer and consumer intervals into production, consumption and net power/energy,
+- added chronological balance-series aggregation and period balance summaries,
+- added producer/consumer energy-mix analysis grouped by `asset_type`, including energy share and asset count,
+- added boundary-aware PostgreSQL retrieval for balance calculations using only relevant producer/consumer assets and valid source measurements,
+- exposed `GET /balance`, `GET /balance/series` and `GET /balance/energy-mix`,
+- added Pydantic response contracts with aligned `valid` / `incomplete` / `estimated` / `invalid` balance-quality values plus unit, service, PostgreSQL smoke/integration and API coverage,
+- kept raw producer and consumer `active_power_kw` non-negative; role semantics are applied only in the balance layer.
 
 ## Project Goal
 
@@ -30,7 +31,7 @@ The project demonstrates practical backend and data engineering with visible ene
 - deterministic simulation and analytics logic,
 - automated unit, API, repository, service and integration testing,
 - reproducible local startup with Docker Compose,
-- energy-balance analytics and a frontend-ready API as the next backend steps, followed by a React/TypeScript dashboard; storage, weather, recommendations and cloud deployment remain post-MVP work.
+- portfolio energy-balance and energy-mix analytics exposed through REST, with frontend-ready API/CORS work next, followed by a React/TypeScript dashboard; storage, weather, recommendations and cloud deployment remain post-MVP work.
 
 ## Architecture
 
@@ -56,6 +57,14 @@ PostgreSQL measurements   period-aware DB retrieval
                                    |
                                    v
                     avg power / energy / coverage
+                                   |
+                                   v
+                         balance service/domain
+                                   |
+                     +-------------+-------------+
+                     |             |             |
+                     v             v             v
+              balance summary  balance series  energy mix
 
 Internal simulation flow
 ------------------------
@@ -84,7 +93,7 @@ PowerIntervalDraft               <- derived in memory, not persisted
 
 ## Simulation Model
 
-`v0.12.0` extends the existing simulation foundation with consumer load profiles while keeping one shared engine and registry.
+Consumer profiles introduced in `v0.12.0` remain part of the shared simulation foundation in `v0.13.0`; producer and consumer assets continue to use one engine and registry.
 
 Supported runtime asset types:
 
@@ -131,7 +140,7 @@ Incomplete remainder time after the last complete interval is ignored.
 - **City load:** piecewise-linear daily profile with low night demand, morning rise, daytime demand and a clear evening peak.
 - **Industrial load:** piecewise-linear daily profile with night base load, production ramp-up, a high daytime plateau and an evening drop.
 - Consumer power is calculated as `rated_power_kw × profile_factor × context.load_factor`.
-- Consumer `active_power_kw` remains non-negative; role-aware subtraction is intentionally deferred to the Energy Balance layer.
+- Consumer `active_power_kw` remains non-negative; `v0.13.0` applies producer/consumer role semantics only in the Energy Balance layer.
 - The same generic engine validates producer and consumer output against `0 <= active_power_kw <= rated_power_kw`.
 
 ## Measurement Aggregation
@@ -219,9 +228,19 @@ Measurement create/read contracts now use the same point-in-time model and no lo
 
 KPI energy is derived on demand from the requested power time series. Boundary support measurements may be used for interpolation, while measured count/min/max values remain scoped to real valid measurements inside the requested period.
 
+### Balance
+
+- `GET /balance?start_time=...&end_time=...&interval_minutes=15`
+- `GET /balance/series?start_time=...&end_time=...&interval_minutes=15`
+- `GET /balance/energy-mix?start_time=...&end_time=...&asset_role=producer&interval_minutes=15`
+
+Balance endpoints load valid producer/consumer point-in-time measurements plus nearest boundary supports, derive per-asset intervals, and then combine them by `asset_role`. Production and consumption remain positive magnitudes; net values are calculated as `production - consumption`. Storage and grid roles are intentionally excluded from the `v0.13.0` balance.
+
+The public balance interval sizes are `15`, `30` and `60` minutes. The requested period must be divisible by the selected interval length. Energy-mix results group period energy by `asset_type`; `share_percent` is rounded to two decimals at the API serialization boundary.
+
 ### Simulation API
 
-There is **no public simulation REST endpoint in `v0.12.0`**. Simulation is executed through the internal service layer and developer demo script.
+There is **no public simulation REST endpoint in `v0.13.0`**. Simulation is executed through the internal service layer and developer demo script.
 
 ## Technology Stack
 
@@ -231,6 +250,7 @@ There is **no public simulation REST endpoint in `v0.12.0`**. Simulation is exec
 | Database | PostgreSQL 18, psycopg 3 |
 | Simulation | dataclasses, seeded `Random`, profile registry, time-grid generation |
 | Aggregation | interpolation, time-weighted average power, trapezoidal integration |
+| Balance | role-aware production/consumption aggregation, chronological series, period summary, energy mix |
 | Testing | pytest, FastAPI TestClient, dedicated test database |
 | Quality | Ruff, pytest markers, deterministic seeds and rollback tests |
 | Deployment | Docker, Docker Compose, PostgreSQL health check, named volume |
@@ -315,7 +335,11 @@ The test suite covers the domain-heavy and critical integration paths, including
 - deterministic producer and consumer simulation,
 - mixed producer/consumer simulation through the shared registry and engine,
 - simulation repository/service orchestration,
-- PostgreSQL success/smoke and rollback behavior.
+- PostgreSQL success/smoke and rollback behavior,
+- balance interval/series/summary domain logic, including negative net balance and quality propagation,
+- balance service orchestration from DB-shaped measurements to derived intervals,
+- PostgreSQL-backed balance summary and energy-mix smoke paths,
+- API contracts for balance summary, balance series and energy mix.
 
 For this learning project, testing follows an 80/20 approach: complex domain logic and critical persistence flows receive detailed coverage, while repeated framework-standard validation cases are kept intentionally limited.
 
@@ -342,6 +366,11 @@ energy-operations-platform/
 │   ├── measurements/
 │   │   ├── measurement_aggregation.py
 │   │   └── models.py
+│   ├── balance/
+│   │   ├── balance.py
+│   │   ├── models.py
+│   │   ├── repository.py
+│   │   └── service.py
 │   └── simulation/
 │       ├── default_data.py
 │       ├── engine.py
@@ -355,8 +384,12 @@ energy-operations-platform/
 │       ├── simulation.py
 │       └── time_grid.py
 ├── tests/
+│   ├── api/
+│   │   └── test_balance_api.py
 │   ├── integration/
+│   │   └── test_balance_integration.py
 │   └── unit/
+│       └── balance/
 ├── compose.yaml
 ├── Dockerfile
 ├── pytest.ini
@@ -371,11 +404,10 @@ Private notes, logs, environments, `.env` files, bytecode and archives are exclu
 
 ## Roadmap
 
-1. Energy Balance: combine producer and consumer power/energy into production, consumption and net balance.
-2. Frontend-ready backend: balance series, dashboard contracts and CORS, followed by backend feature freeze.
-3. React + TypeScript + Vite dashboard with KPI cards, balance chart and asset overview.
-4. Full-stack portfolio polish, architecture diagram, screenshots and `v1.0.0`.
-5. Post-MVP: weather-driven generation, storage/SoC, recommendations, monitoring and Azure deployment.
+1. Frontend-ready backend: finalize dashboard-facing contracts, add CORS and freeze backend features for the MVP.
+2. React + TypeScript + Vite dashboard with KPI cards, production/consumption/net balance chart and asset overview.
+3. Full-stack portfolio polish, architecture diagram, screenshots and `v1.0.0`.
+4. Post-MVP: weather-driven generation, storage/SoC, recommendations, monitoring and Azure deployment.
 
 Large structural refactors remain secondary unless they solve a concrete development problem.
 

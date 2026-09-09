@@ -9,7 +9,8 @@ The project uses small, explainable versions so the GitHub history shows how the
 | Version | Status | Summary |
 |---|---|---|
 | `v0.11.1` | completed | Canonical point-in-time measurement model with period-based KPI derivation from raw power measurements |
-| `v0.12.0` | current | Consumer load simulation with `city_load` and `industrial_load` on the shared simulation engine |
+| `v0.12.0` | completed | Consumer load simulation with `city_load` and `industrial_load` on the shared simulation engine |
+| `v0.13.0` | completed | Portfolio Energy Balance with summary, chronological series and producer/consumer energy mix exposed through FastAPI |
 
 ## Version Timeline
 
@@ -45,7 +46,8 @@ The project uses small, explainable versions so the GitHub history shows how the
 | `v0.10.0` | completed | Energy-domain database, API and test migration | Domain modeling, schema evolution, API contracts and energy analytics |
 | `v0.11.0` | completed | Deterministic producer simulation, point-in-time persistence, interval aggregation and run lifecycle | Simulation architecture, seeded randomness, time-series integration, repositories/services and transactional failure handling |
 | `v0.11.1` | completed | Canonical point-in-time measurements and period-based KPI derivation | Time-series modeling, boundary-aware SQL, interpolation and trapezoidal integration |
-| `v0.12.0` | current | City and industrial consumer load profiles integrated into the existing simulation engine and persistence flow | Load-profile modeling, interpolation, mixed producer/consumer simulation and registry reuse |
+| `v0.12.0` | completed | City and industrial consumer load profiles integrated into the existing simulation engine and persistence flow | Load-profile modeling, interpolation, mixed producer/consumer simulation and registry reuse |
+| `v0.13.0` | completed | Production/consumption/net balance, period summary, chronological series and energy mix with DB/API integration | Role-aware portfolio analytics, service orchestration, API contracts and frontend-oriented time-series outputs |
 
 ---
 
@@ -423,6 +425,121 @@ Unit and integration coverage now verifies:
 
 No database schema or public REST endpoint was added for this release.
 
+
+---
+
+# v0.13.0 — Energy Balance
+
+## Balance domain
+
+Added `src/balance` with dedicated domain models and calculation functions:
+
+```text
+BalanceAsset
+BalanceInterval
+BalanceSummary
+EnergyMixContribution
+EnergyMix
+```
+
+The balance layer deliberately depends on measurement intervals and asset metadata rather than simulation objects, so it works for measurements regardless of their source.
+
+For each common time window:
+
+```text
+production = sum(producer values)
+consumption = sum(consumer values)
+net = production - consumption
+```
+
+Both power and energy follow the same sign convention. Negative net values are valid and represent net consumption.
+
+Storage and grid roles are intentionally excluded from the first balance version.
+
+## Balance series and summary
+
+`calculate_balance_series()` groups `PowerIntervalDraft` values by `(interval_start, interval_end)`, calls the interval calculation for each window and returns results chronologically.
+
+`calculate_balance_summary()` aggregates a completed series into period totals:
+
+```text
+total_production_energy_kwh
+total_consumption_energy_kwh
+total_net_energy_kwh
+quality_status
+```
+
+The summary intentionally does not add period-average power values.
+
+## Energy mix
+
+`calculate_energy_mix()` groups period energy by `asset_type` for either `producer` or `consumer` role.
+
+Each contribution exposes:
+
+```text
+asset_type
+energy_kwh
+share_percent
+asset_count
+```
+
+The domain keeps the full floating-point share; API serialization rounds `share_percent` to two decimals.
+
+## PostgreSQL and service integration
+
+Added `fetch_balance_measurements()` to select only relevant producer/consumer assets with valid in-period measurements plus nearest valid boundary supports.
+
+The balance service reuses the existing measurement mapper and `aggregate_measurements_for_intervals()`:
+
+```text
+PostgreSQL raw measurements
+→ PowerMeasurement
+→ per-asset PowerIntervalDraft
+→ BalanceInterval series
+→ BalanceSummary / EnergyMix
+```
+
+No new table or persisted balance result was introduced.
+
+## Public API
+
+Added:
+
+```text
+GET /balance
+GET /balance/series
+GET /balance/energy-mix
+```
+
+Balance summary and series support interval values `15`, `30` and `60` minutes. Energy mix additionally requires `asset_role = producer|consumer`.
+
+The application version is set to `0.13.0`.
+
+## Test coverage
+
+New coverage includes:
+
+- balance interval role aggregation,
+- negative net values,
+- storage/grid exclusion,
+- quality propagation,
+- duplicate/missing-data guards,
+- multi-window balance series,
+- balance summary,
+- period energy mix,
+- service orchestration,
+- real PostgreSQL balance summary smoke test,
+- real PostgreSQL producer energy-mix smoke test,
+- API summary/series/validation/energy-mix contracts.
+
+## Release status
+
+The `v0.13.0` implementation is complete. The public balance response contracts are aligned with the internal quality model and support `valid`, `incomplete`, `estimated` and `invalid`. Service annotations for the balance series/summary flow also reflect the actual `BalanceInterval` domain objects.
+
+The release scope is intentionally closed at this point: summary, chronological series and producer/consumer energy mix are available through the API, backed by the existing PostgreSQL point-in-time measurement model and shared interval aggregation. Further backend changes move to the frontend-ready `v0.14` block.
+
+
 ---
 
 # Documentation Split
@@ -443,7 +560,6 @@ No database schema or public REST endpoint was added for this release.
 
 | Planned block | Focus |
 |---|---|
-| energy-balance block (`v0.13`) | combine producer and consumer power/energy into production, consumption and net balance; add summary and series outputs |
 | frontend-ready backend (`v0.14`) | CORS and only the API contracts required by the dashboard, then backend feature freeze |
 | frontend phase (`v0.15`–`v0.17`) | React/TypeScript/Vite dashboard, API integration, charts, asset overview and portfolio polish |
 | `v1.0.0` | first complete Full-Stack portfolio MVP with demo, screenshots, architecture diagram and setup |

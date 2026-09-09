@@ -116,7 +116,7 @@ class BalanceSummaryResponse(BaseModel):
     total_consumption_energy_kwh: float
     total_net_energy_kwh: float
 
-    quality_status: Literal["valid", "invalid", "estimated"]
+    quality_status: Literal["valid", "incomplete", "invalid", "estimated"]
 
 
 class BalanceIntervalResponse(BaseModel):
@@ -130,7 +130,7 @@ class BalanceIntervalResponse(BaseModel):
     consumption_energy_kwh: float
     net_energy_kwh: float
 
-    quality_status: Literal["valid", "invalid", "estimated"]
+    quality_status: Literal["valid", "incomplete", "invalid", "estimated"]
 
 
 class EnergyMixContributionResponse(BaseModel):
