@@ -2,7 +2,7 @@ from datetime import datetime
 
 import pytest
 
-from src.balance.service import build_balance_summary, build_balance_series
+from src.balance.service import build_balance_series, build_balance_summary
 
 
 @pytest.mark.balance
