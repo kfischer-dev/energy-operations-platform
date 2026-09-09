@@ -77,3 +77,12 @@ class EnergyMix:
     contributions: tuple[EnergyMixContribution, ...]
 
     quality_status: BalanceQualityStatus
+
+
+@dataclass(frozen=True)
+class EnergyMixItem:
+    """Energy contribution of one asset type within an energy mix for a specific role."""
+
+    asset_type: str
+    energy_kwh: float
+    share_percent: float
