@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Literal
 
 from src.balance.balance import (
-    calculate_balance_series, 
+    calculate_balance_series,
     calculate_balance_summary,
     calculate_energy_mix,
 )
@@ -96,6 +96,7 @@ def build_balance_summary(
     balance_series: list[dict],
 ) -> BalanceSummary:
     return calculate_balance_summary(balance_series)
+
 
 def build_energy_mix(
     measurements: list[dict],

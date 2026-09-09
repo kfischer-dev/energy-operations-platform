@@ -3,7 +3,11 @@ from datetime import datetime
 import pytest
 
 from src.balance.repository import fetch_balance_measurements
-from src.balance.service import build_balance_series, build_balance_summary
+from src.balance.service import (
+    build_balance_series,
+    build_balance_summary,
+    build_energy_mix,
+)
 from src.database import fetch_asset_summaries
 
 
@@ -42,3 +46,40 @@ def test_build_balance_summary_from_db_measurements(
         balance_summary.total_production_energy_kwh
         - balance_summary.total_consumption_energy_kwh
     )
+
+
+@pytest.mark.smoke
+@pytest.mark.balance
+def test_build_energy_mix_from_db_measurements(
+    reset_db,
+    database_connection,
+):
+    start_time = datetime.fromisoformat("2026-06-22T10:00:00+02:00")
+    end_time = datetime.fromisoformat("2026-06-22T10:30:00+02:00")
+
+    measurements = fetch_balance_measurements(
+        database_connection,
+        start_time=start_time,
+        end_time=end_time,
+    )
+
+    database_assets = fetch_asset_summaries(database_connection)
+
+    energy_mix = build_energy_mix(
+        measurements=measurements,
+        database_assets=database_assets,
+        start_time=start_time,
+        end_time=end_time,
+        asset_role="producer",
+        interval_minutes=15,
+    )
+
+    assert energy_mix.total_energy_kwh == pytest.approx(92_875.0)
+    assert energy_mix.asset_role == "producer"
+    assert energy_mix.quality_status == "valid"
+
+    contributions = {item.asset_type: item for item in energy_mix.contributions}
+
+    assert contributions["wind_park"].energy_kwh == pytest.approx(39_875.0)
+    assert contributions["hydro_power_plant"].energy_kwh == pytest.approx(35_500.0)
+    assert contributions["solar_park"].energy_kwh == pytest.approx(17_500.0)

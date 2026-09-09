@@ -102,6 +102,4 @@ def test_get_balance_rejects_invalid_time_period(client):
     )
 
     assert response.status_code == 422
-    assert response.json() == {
-        "detail": "end_time must be after start_time"
-    }
+    assert response.json() == {"detail": "end_time must be after start_time"}
