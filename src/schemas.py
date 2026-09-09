@@ -106,3 +106,28 @@ class MeasurementKPIsResponse(KPIResponseBase):
 class AssetKPIsResponse(KPIResponseBase):
     asset_id: int = Field(..., ge=1)
     asset_name: str
+
+
+class BalanceSummaryResponse(BaseModel):
+    start_time: datetime
+    end_time: datetime
+
+    total_production_energy_kwh: float
+    total_consumption_energy_kwh: float
+    total_net_energy_kwh: float
+    
+    quality_status: Literal["valid", "invalid", "estimated"]
+
+
+class BalanceIntervalResponse(BaseModel):
+    interval_start: datetime
+    interval_end: datetime
+    avg_production_power_kw: float
+    avg_consumption_power_kw: float
+    avg_net_power_kw: float
+
+    production_energy_kwh: float
+    consumption_energy_kwh: float
+    net_energy_kwh: float
+
+    quality_status: Literal["valid", "invalid", "estimated"]
