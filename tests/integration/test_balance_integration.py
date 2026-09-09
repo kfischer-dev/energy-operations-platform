@@ -3,7 +3,7 @@ from datetime import datetime
 import pytest
 
 from src.balance.repository import fetch_balance_measurements
-from src.balance.service import build_balance_summary, build_balance_series
+from src.balance.service import build_balance_series, build_balance_summary
 from src.database import fetch_asset_summaries
 
 
@@ -15,7 +15,6 @@ def test_build_balance_summary_from_db_measurements(
 ):
     start_time = datetime.fromisoformat("2026-06-22T10:00:00+02:00")
     end_time = datetime.fromisoformat("2026-06-22T10:30:00+02:00")
-    interval_minutes = 15
 
     measurements = fetch_balance_measurements(
         conn=database_connection,

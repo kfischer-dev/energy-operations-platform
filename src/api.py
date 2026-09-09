@@ -6,7 +6,7 @@ from fastapi import FastAPI, HTTPException, Path, Query, status
 
 from src.balance.repository import fetch_balance_measurements
 from src.balance.service import (
-    build_balance_series, 
+    build_balance_series,
     build_balance_summary,
 )
 from src.database import (
@@ -30,13 +30,13 @@ from src.schemas import (
     AssetKPIsResponse,
     AssetResponse,
     AssetSummaryResponse,
+    BalanceIntervalResponse,
+    BalanceSummaryResponse,
     MeasurementCreate,
     MeasurementKPIsResponse,
     MeasurementQualityUpdate,
     MeasurementResponse,
     MeasurementSummaryResponse,
-    BalanceSummaryResponse,
-    BalanceIntervalResponse,
 )
 
 configure_logging()
@@ -48,7 +48,7 @@ app = FastAPI(
         "REST API for accessing energy asset and measurement data. "
         "This API is part of the Energy Operations Platform portfolio project."
     ),
-    version="0.12.0",
+    version="0.13.0",
     openapi_tags=[
         {
             "name": "General",
@@ -65,6 +65,12 @@ app = FastAPI(
         {
             "name": "KPIs",
             "description": "Endpoints for accessing KPI data.",
+        },
+        {
+            "name": "Balance",
+            "description": (
+                "Endpoints for production, consumption, and net energy balance data."
+            ),
         },
     ],
 )
@@ -639,10 +645,12 @@ def get_asset_kpi_summary(
 # GET balance Endpoints
 # ============================================================
 
+
 class BalanceIntervalMinutes(IntEnum):
     MINUTES_15 = 15
     MINUTES_30 = 30
     MINUTES_60 = 60
+
 
 @app.get(
     "/balance",
@@ -673,13 +681,23 @@ def get_balance_summary(
     """Get balance summary for a given time period."""
 
     logger.info("=" * 60)
-    logger.info(f"GET /balance request received.")
-    logger.info(f"Request parameters - start_time: {start_time}, end_time: {end_time}, interval_minutes: {interval_minutes}")
+    logger.info("GET /balance request received.")
+    logger.info(
+        f"Request parameters - start_time: {start_time}, end_time: {end_time}, interval_minutes: {interval_minutes}"
+    )
 
     if end_time <= start_time:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="end_time must be after start_time",
+        )
+
+    period_minutes = (end_time - start_time).total_seconds() / 60
+
+    if period_minutes % interval_minutes != 0:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Balance period must be divisible by interval_minutes.",
         )
 
     conn = get_connection()
@@ -720,11 +738,98 @@ def get_balance_summary(
 
         balance_summary = build_balance_summary(balance_series)
 
-        logger.info(
-            f"Built balance summary for the requested period."
-        )
+        logger.info("Built balance summary for the requested period.")
 
         return balance_summary
+
+    finally:
+        conn.close()
+        logger.info("Database connection closed.")
+        logger.info("=" * 60)
+
+
+@app.get(
+    "/balance/series",
+    response_model=list[BalanceIntervalResponse],
+    status_code=status.HTTP_200_OK,
+    tags=["Balance"],
+    summary="Get balance series",
+    description="Get balance series for a given time period.",
+)
+def get_balance_series(
+    start_time: datetime = Query(
+        ...,
+        description="Start time for the balance series period.",
+    ),
+    end_time: datetime = Query(
+        ...,
+        description="End time for the balance series period.",
+    ),
+    interval_minutes: BalanceIntervalMinutes = Query(
+        BalanceIntervalMinutes.MINUTES_15,
+        description="Interval duration in minutes for the balance series.",
+    ),
+):
+    """Get balance series for a given time period."""
+    logger.info("=" * 60)
+    logger.info("GET /balance/series request received.")
+    logger.info(
+        f"Request parameters - start_time: {start_time}, end_time: {end_time}, interval_minutes: {interval_minutes}"
+    )
+
+    if end_time <= start_time:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="end_time must be after start_time",
+        )
+
+    period_minutes = (end_time - start_time).total_seconds() / 60
+
+    if period_minutes % interval_minutes != 0:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Balance period must be divisible by interval_minutes.",
+        )
+
+    conn = get_connection()
+
+    try:
+        measurements = fetch_balance_measurements(
+            conn=conn,
+            start_time=start_time,
+            end_time=end_time,
+        )
+
+        if not measurements:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail=(
+                    "No valid balance data is available for the requested period. "
+                    "Choose a time range containing valid producer and consumer measurements."
+                ),
+            )
+
+        logger.info(
+            f"Fetched {len(measurements)} balance measurements from the database."
+        )
+
+        database_assets = fetch_asset_summaries(conn)
+
+        logger.info(
+            f"Fetched {len(database_assets)} asset summaries from the database."
+        )
+
+        balance_series = build_balance_series(
+            measurements=measurements,
+            database_assets=database_assets,
+            start_time=start_time,
+            end_time=end_time,
+            interval_minutes=interval_minutes,
+        )
+
+        logger.info("Built balance series for the requested period.")
+
+        return balance_series
 
     finally:
         conn.close()

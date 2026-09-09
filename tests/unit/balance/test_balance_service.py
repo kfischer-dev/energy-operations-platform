@@ -2,7 +2,7 @@ from datetime import datetime
 
 import pytest
 
-from src.balance.service import build_balance_summary
+from src.balance.service import build_balance_summary, build_balance_series
 
 
 @pytest.mark.balance
@@ -70,13 +70,15 @@ def test_build_balance_summary_from_measurements():
         },
     ]
 
-    summary = build_balance_summary(
+    balance_series = build_balance_series(
         measurements=measurements,
         database_assets=database_assets,
         start_time=start_time,
         end_time=end_time,
         interval_minutes=15,
     )
+
+    summary = build_balance_summary(balance_series)
 
     assert summary.start_time == start_time
     assert summary.end_time == end_time
@@ -98,9 +100,11 @@ def test_build_balance_summary_rejects_non_divisible_period():
         match="Balance period must be divisible by interval_minutes",
     ):
         build_balance_summary(
-            measurements=[],
-            database_assets=[],
-            start_time=start_time,
-            end_time=end_time,
-            interval_minutes=15,
+            build_balance_series(
+                measurements=[],
+                database_assets=[],
+                start_time=start_time,
+                end_time=end_time,
+                interval_minutes=15,
+            )
         )

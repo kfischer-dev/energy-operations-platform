@@ -115,7 +115,7 @@ class BalanceSummaryResponse(BaseModel):
     total_production_energy_kwh: float
     total_consumption_energy_kwh: float
     total_net_energy_kwh: float
-    
+
     quality_status: Literal["valid", "invalid", "estimated"]
 
 
