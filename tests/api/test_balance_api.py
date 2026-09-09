@@ -85,3 +85,23 @@ def test_get_balance_series(client):
     assert second_interval["net_energy_kwh"] == pytest.approx(-15_875.0)
 
     assert second_interval["quality_status"] == "valid"
+
+
+@pytest.mark.api
+@pytest.mark.balance
+def test_get_balance_rejects_invalid_time_period(client):
+    """Check that the balance endpoint rejects an invalid time period."""
+
+    response = client.get(
+        "/balance",
+        params={
+            "start_time": "2026-06-22T10:30:00+02:00",
+            "end_time": "2026-06-22T10:00:00+02:00",
+            "interval_minutes": 15,
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json() == {
+        "detail": "end_time must be after start_time"
+    }
