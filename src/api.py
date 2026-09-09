@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime
 from enum import IntEnum
+from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Path, Query, status
 
@@ -8,6 +9,7 @@ from src.balance.repository import fetch_balance_measurements
 from src.balance.service import (
     build_balance_series,
     build_balance_summary,
+    build_energy_mix,
 )
 from src.database import (
     create_measurement,
@@ -32,6 +34,7 @@ from src.schemas import (
     AssetSummaryResponse,
     BalanceIntervalResponse,
     BalanceSummaryResponse,
+    EnergyMixResponse,
     MeasurementCreate,
     MeasurementKPIsResponse,
     MeasurementQualityUpdate,
@@ -830,6 +833,99 @@ def get_balance_series(
         logger.info("Built balance series for the requested period.")
 
         return balance_series
+
+    finally:
+        conn.close()
+        logger.info("Database connection closed.")
+        logger.info("=" * 60)
+
+
+@app.get(
+    "/balance/energy-mix",
+    response_model=EnergyMixResponse,
+    status_code=status.HTTP_200_OK,
+    tags=["Balance"],
+    summary="Get energy mix",
+    description="Get the energy mix for a given time period.",
+)
+def get_energy_mix(
+    start_time: datetime = Query(
+        ...,
+        description="Start time of the requested period.",
+    ),
+    end_time: datetime = Query(
+        ...,
+        description="End time of the requested period.",
+    ),
+    asset_role: Literal["producer", "consumer"] = Query(
+        ...,
+        description="Role of the assets to include in the energy mix.",
+    ),
+    interval_minutes: BalanceIntervalMinutes = Query(
+        BalanceIntervalMinutes.MINUTES_15,
+        description="Interval duration in minutes for the energy mix.",
+    ),
+):
+    """Get the energy mix for a given time period and asset role."""
+    logger.info("=" * 60)
+    logger.info("GET /balance/energy-mix request received.")
+    logger.info(
+        f"Request parameters - start_time: {start_time}, end_time: {end_time}, asset_role: {asset_role}"
+    )
+
+    if end_time <= start_time:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="end_time must be after start_time",
+        )
+
+    period_minutes = (end_time - start_time).total_seconds() / 60
+
+    if period_minutes % interval_minutes != 0:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Balance period must be divisible by interval_minutes.",
+        )
+
+    conn = get_connection()
+
+    try:
+        measurements = fetch_balance_measurements(
+            conn=conn,
+            start_time=start_time,
+            end_time=end_time,
+        )
+
+        if not measurements:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail=(
+                    "No valid energy mix data is available for the requested period."
+                ),
+            )
+
+        logger.info(
+            f"Fetched {len(measurements)} balance measurements from the database."
+        )
+
+        database_assets = fetch_asset_summaries(conn)
+
+        logger.info(
+            f"Fetched {len(database_assets)} asset summaries from the database."
+        )
+
+        energy_mix = build_energy_mix(
+            measurements=measurements,
+            database_assets=database_assets,
+            start_time=start_time,
+            end_time=end_time,
+            asset_role=asset_role,
+            interval_minutes=interval_minutes,
+        )
+
+        logger.info("Built energy mix for the requested period and asset role.")
+
+        return energy_mix
 
     finally:
         conn.close()

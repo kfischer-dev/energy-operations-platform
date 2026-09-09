@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_serializer
 
 
 class AssetResponse(BaseModel):
@@ -131,3 +131,23 @@ class BalanceIntervalResponse(BaseModel):
     net_energy_kwh: float
 
     quality_status: Literal["valid", "invalid", "estimated"]
+
+
+class EnergyMixContributionResponse(BaseModel):
+    asset_type: str
+    energy_kwh: float
+    share_percent: float
+    asset_count: int
+
+    @field_serializer("share_percent")
+    def serialize_share_percent(self, value: float) -> float:
+        return round(value, 2)
+
+
+class EnergyMixResponse(BaseModel):
+    start_time: datetime
+    end_time: datetime
+    asset_role: Literal["producer", "consumer"]
+    total_energy_kwh: float
+    contributions: list[EnergyMixContributionResponse]
+    quality_status: Literal["valid", "incomplete", "estimated", "invalid"]

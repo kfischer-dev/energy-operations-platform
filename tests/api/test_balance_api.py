@@ -103,3 +103,36 @@ def test_get_balance_rejects_invalid_time_period(client):
 
     assert response.status_code == 422
     assert response.json() == {"detail": "end_time must be after start_time"}
+
+
+@pytest.mark.api
+@pytest.mark.balance
+def test_get_energy_mix(client):
+    response = client.get(
+        "/balance/energy-mix",
+        params={
+            "start_time": "2026-06-22T10:00:00+02:00",
+            "end_time": "2026-06-22T10:30:00+02:00",
+            "asset_role": "producer",
+            "interval_minutes": 15,
+        },
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["asset_role"] == "producer"
+    assert data["total_energy_kwh"] == pytest.approx(92_875.0)
+    assert data["quality_status"] == "valid"
+
+    contributions = {
+        contribution["asset_type"]: contribution
+        for contribution in data["contributions"]
+    }
+
+    assert contributions["wind_park"]["energy_kwh"] == pytest.approx(39_875.0)
+    assert contributions["hydro_power_plant"]["energy_kwh"] == pytest.approx(35_500.0)
+    assert contributions["solar_park"]["energy_kwh"] == pytest.approx(17_500.0)
+
+    assert contributions["wind_park"]["share_percent"] == pytest.approx(42.93)
