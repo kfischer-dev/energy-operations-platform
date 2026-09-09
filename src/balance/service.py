@@ -34,21 +34,21 @@ def _create_power_measurement_dict(
     return power_measurement_dict
 
 
-def build_balance_summary(
+def build_balance_series(
     measurements: list[dict],
     database_assets: list[dict],
     start_time: datetime,
     end_time: datetime,
     interval_minutes: int = 15,  # Default interval in minutes
-) -> BalanceSummary:
+) -> list[dict]:
+
+    if end_time <= start_time:
+        raise ValueError("End time must be after start time.")
 
     period_minutes = (end_time - start_time).total_seconds() / 60
 
     if period_minutes % interval_minutes != 0:
         raise ValueError("Balance period must be divisible by interval_minutes.")
-
-    if end_time <= start_time:
-        raise ValueError("End time must be after start time.")
 
     balance_assets = _convert_database_assets_to_balance_assets(database_assets)
 
@@ -74,8 +74,10 @@ def build_balance_summary(
         balance_assets,
     )
 
-    balance_summary = calculate_balance_summary(
-        balance_series,
-    )
+    return balance_series
 
-    return balance_summary
+
+def build_balance_summary(
+    balance_series: list[dict],
+) -> BalanceSummary:
+    return calculate_balance_summary(balance_series)

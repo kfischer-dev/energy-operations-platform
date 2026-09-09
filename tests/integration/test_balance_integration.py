@@ -3,7 +3,7 @@ from datetime import datetime
 import pytest
 
 from src.balance.repository import fetch_balance_measurements
-from src.balance.service import build_balance_summary
+from src.balance.service import build_balance_summary, build_balance_series
 from src.database import fetch_asset_summaries
 
 
@@ -25,13 +25,15 @@ def test_build_balance_summary_from_db_measurements(
 
     database_assets = fetch_asset_summaries(database_connection)
 
-    balance_summary = build_balance_summary(
+    balance_series = build_balance_series(
         measurements=measurements,
         database_assets=database_assets,
         start_time=start_time,
         end_time=end_time,
-        interval_minutes=interval_minutes,
+        interval_minutes=15,
     )
+
+    balance_summary = build_balance_summary(balance_series)
 
     assert balance_summary.total_production_energy_kwh == pytest.approx(92_875.0)
     assert balance_summary.total_consumption_energy_kwh == pytest.approx(124_375.0)
