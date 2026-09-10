@@ -171,7 +171,7 @@ class EnergyMixResponse(BaseModel):
     total_energy_kwh: float
 
     contributions: list[EnergyMixContributionResponse]
-    
+
     quality_status: Literal["valid", "incomplete", "estimated", "invalid"]
 
     @field_serializer("total_energy_kwh")
