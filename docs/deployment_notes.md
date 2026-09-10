@@ -2,9 +2,9 @@
 
 ## Purpose
 
-This document describes the local containerized environment and developer execution paths of the Energy Operations Platform in `v0.13.0`.
+This document describes the local containerized environment and developer execution paths of the Energy Operations Platform in `v0.14.0`.
 
-The Docker foundation was established in `v0.9.x`. `v0.13.0` keeps the same container architecture and point-in-time measurement schema; Energy Balance and energy-mix analytics are derived through the existing API + PostgreSQL stack and require no new container or database table.
+The Docker foundation was established in `v0.9.x`. `v0.14.0` keeps the same API + PostgreSQL container architecture and point-in-time measurement schema. This release adds browser-facing CORS configuration and a dashboard-oriented development seed; it does not add a frontend container yet.
 
 Related documentation:
 
@@ -232,6 +232,8 @@ docker compose up --build -d
 
 Use it deliberately after schema/seed changes and for release-candidate clean rebuilds.
 
+`v0.14.0` significantly expands `sql/seed_data.sql` for the frontend demo. Existing named volumes will not automatically receive these rows because PostgreSQL initialization scripts run only for a new data directory. Use the clean rebuild above when switching an existing development environment to the new demo seed.
+
 `v0.11.1` removes the former `measurements.interval_minutes` and `measurements.energy_kwh` columns, so moving a local `v0.11.0` development volume to this version requires this clean rebuild while the project still uses SQL initialization instead of migrations.
 
 ---
@@ -383,9 +385,22 @@ Because `measurements` has a unique `(asset_id, measurement_time)` constraint, r
 
 # Balance API in the Current Stack
 
-`v0.13.0` does not change deployment topology. The three balance endpoints run inside the existing FastAPI service and read the existing PostgreSQL `assets`, `asset_types` and `measurements` tables.
+The three balance endpoints run inside the existing FastAPI service and read the existing PostgreSQL `assets`, `asset_types` and `measurements` tables. The balance API requires no extra environment variables, persistent volume or service. For manual testing, use Swagger at `/docs` and supply ISO-8601 `start_time` / `end_time` values plus a supported interval (`15`, `30`, `60`).
 
-The balance API therefore requires no extra environment variables, persistent volume or service. For manual testing, use Swagger at `/docs` and supply ISO-8601 `start_time` / `end_time` values plus a supported interval (`15`, `30`, `60`).
+---
+
+# Browser / Frontend CORS in `v0.14.0`
+
+The planned React/Vite development client runs on a different origin from FastAPI:
+
+```text
+React/Vite dev origin: http://localhost:5173
+FastAPI API:            http://localhost:8000 (or 127.0.0.1:8000)
+```
+
+`src/api.py` therefore registers `CORSMiddleware` with `http://localhost:5173` as the explicit allowed origin. `allow_credentials` is `False`; methods and headers are enabled for the local development client. This is intentionally narrower than wildcard origin access.
+
+The React application itself is not yet part of Compose. Full-stack Compose integration is deferred to the frontend/portfolio-polish phase.
 
 ---
 
@@ -405,9 +420,9 @@ The balance API therefore requires no extra environment variables, persistent vo
 
 # Next Deployment Steps
 
-1. Keep the current API + PostgreSQL Compose stack stable through the frontend-ready backend/CORS block.
-2. Add the React/TypeScript frontend to the local Full-Stack start for the `v1.0.0` portfolio MVP.
-3. Add a portfolio architecture diagram, screenshots and a clear release/demo workflow.
-4. Introduce a migration strategy when preserving real environments/data across schema versions becomes necessary.
-5. Add CI, production hardening and cloud-oriented configuration after the first Full-Stack MVP unless a concrete deployment need appears earlier.
+1. Keep the backend API + PostgreSQL contract frozen unless React exposes a concrete blocker or bug.
+2. Start the React/TypeScript/Vite frontend against the `v0.14.0` API and deterministic 24-hour demo dataset.
+3. Add the frontend to the local Full-Stack start for the `v1.0.0` portfolio MVP.
+4. Add a portfolio architecture diagram, screenshots and a clear release/demo workflow.
+5. Introduce migrations, CI, production hardening and cloud-oriented configuration after the first Full-Stack MVP unless a concrete need appears earlier.
 

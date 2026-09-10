@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document describes the public REST API contract of the Energy Operations Platform for `v0.13.0`.
+This document describes the public REST API contract of the Energy Operations Platform for `v0.14.0`.
 
 Interactive OpenAPI documentation is available at:
 
@@ -20,6 +20,16 @@ http://127.0.0.1:8000
 
 All request and response bodies use JSON. Date-time values are serialized as ISO 8601 timestamps.
 
+## Frontend Development / CORS
+
+`v0.14.0` enables browser access from the local React/Vite development origin:
+
+```text
+http://localhost:5173
+```
+
+FastAPI uses `CORSMiddleware` with credentials disabled. The configured local origin is explicit rather than wildcard-based; methods and headers are allowed for the development client. The frontend is not yet part of Docker Compose in this release.
+
 ## `v0.11.1` Measurement Model
 
 `v0.11.1` makes point-in-time active power the canonical public measurement contract.
@@ -33,7 +43,7 @@ energy_kwh
 
 Energy is derived by period-based KPI/aggregation logic rather than persisted redundantly. `simulation_runs.interval_minutes` remains part of simulation configuration.
 
-There is no public simulation endpoint in `v0.13.0`.
+There is no public simulation endpoint in `v0.14.0`.
 
 ---
 
@@ -302,7 +312,7 @@ Behavior:
 
 # Balance Endpoints
 
-`v0.13.0` adds portfolio-level production/consumption analytics on top of the existing point-in-time measurement aggregation layer.
+`v0.13.0` introduced portfolio-level production/consumption analytics on top of the existing point-in-time measurement aggregation layer. `v0.14.0` keeps those public contracts stable for frontend integration.
 
 Common query parameters:
 
@@ -324,7 +334,7 @@ consumer active_power_kw >= 0
 net = production - consumption
 ```
 
-Storage and grid assets are intentionally ignored by the `v0.13.0` production/consumption balance.
+Storage and grid assets remain intentionally ignored by the current production/consumption balance.
 
 ## `GET /balance`
 
@@ -421,7 +431,7 @@ asset_count
 
 ---
 
-# Simulation Service in `v0.13.0`
+# Simulation Service in `v0.14.0`
 
 Simulation is **not exposed as a REST endpoint** yet.
 
@@ -479,6 +489,20 @@ Public API models are defined in:
 src/schemas.py
 ```
 
-`v0.13.0` adds `BalanceSummaryResponse`, `BalanceIntervalResponse`, `EnergyMixContributionResponse` and `EnergyMixResponse`. Internal balance dataclasses remain in `src/balance/models.py`.
+`v0.13.0` introduced `BalanceSummaryResponse`, `BalanceIntervalResponse`, `EnergyMixContributionResponse` and `EnergyMixResponse`. `v0.14.0` keeps these frontend-facing contracts unchanged. Internal balance dataclasses remain in `src/balance/models.py`.
 
-`src/simulation/schemas.py` currently contains `SimulationRunResponse`, but no endpoint uses it in `v0.13.0`. It is preparation for a later public simulation API and must not be interpreted as an already exposed REST resource.
+`src/simulation/schemas.py` currently contains `SimulationRunResponse`, but no endpoint uses it in `v0.14.0`. It is preparation for a later public simulation API and must not be interpreted as an already exposed REST resource.
+
+---
+
+# Frontend Demo Period
+
+The development seed in `v0.14.0` is designed for a deterministic first dashboard view. Recommended queries use:
+
+```text
+start_time = 2026-09-01T00:00:00+02:00
+end_time = 2026-09-02T00:00:00+02:00
+interval_minutes = 15
+```
+
+The demo seed contains 97 point-in-time measurements per participating producer/consumer asset across the inclusive 24-hour grid. Storage/grid assets remain visible through asset endpoints but do not contribute balance time-series demo measurements.

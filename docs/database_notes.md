@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document describes the PostgreSQL implementation, Python database access, simulation persistence and balance-source retrieval of the Energy Operations Platform in `v0.13.0`.
+This document describes the PostgreSQL implementation, Python database access, simulation persistence and balance-source retrieval of the Energy Operations Platform in `v0.14.0`.
 
 Related documents:
 
@@ -151,9 +151,19 @@ Energy is derived from the power time series through the reusable aggregation la
 
 # Development Seed
 
-`sql/seed_data.sql` creates the current energy-domain master data, one completed historical simulation run and deterministic point-in-time power measurements.
+`sql/seed_data.sql` creates the current energy-domain master data plus a deterministic frontend demo dataset. It contains one completed historical simulation run covering `2026-09-01T00:00:00+02:00` through `2026-09-02T00:00:00+02:00` at a 15-minute simulation grid.
 
-The seeded run retains its own `interval_minutes` configuration, while measurement rows themselves are interval-independent.
+The demo uses `generate_series()` to create 97 point-in-time timestamps per participating asset, including both period boundaries. Thirteen producer/consumer assets receive measurements, resulting in `1261` rows (`13 × 97`). Storage and grid assets remain present as master data but intentionally have no frontend balance time-series measurements.
+
+Producer and consumer assets use deterministic but visually distinct daily profiles so balance series, energy mix, KPI cards and asset views have meaningful demo data. All seeded demo measurements use `source = simulation` and `quality_status = valid`. The seeded run retains its own `interval_minutes` configuration, while measurement rows themselves are interval-independent.
+
+Recommended frontend demo query period:
+
+```text
+start_time = 2026-09-01T00:00:00+02:00
+end_time = 2026-09-02T00:00:00+02:00
+interval_minutes = 15
+```
 
 # Test Seed
 
@@ -437,12 +447,12 @@ This deliberately deletes and recreates the development database volume.
 
 # Current Database Limitations / Next Refactor
 
-Known intentional limitations after `v0.13.0`:
+Known intentional limitations after `v0.14.0`:
 
 1. `UNIQUE (asset_id, measurement_time)` prevents storing parallel forecast/scenario values for the same asset/timestamp.
 2. No migration framework is used yet; schema changes currently require controlled clean rebuilds.
 3. `src/database.py` is still a comparatively large legacy data-access module and can be split later if it becomes a concrete development blocker.
 4. KPI support selection is designed for the current PostgreSQL model and data scale; further performance optimization should follow measured need rather than be added pre-emptively.
 
-Consumer/load simulation and Energy Balance are now integrated without a schema change. `city_load` and `industrial_load` store positive point-in-time power in the same `measurements` table as producer output; balance queries derive production and consumption by `asset_role`. Balance summaries, series and energy mix are not persisted. The next backend-facing work is frontend contract/CORS polish rather than a new database domain block.
+Consumer/load simulation and Energy Balance remain integrated without a schema change. `city_load` and `industrial_load` store positive point-in-time power in the same `measurements` table as producer output; balance queries derive production and consumption by `asset_role`. Balance summaries, series and energy mix are not persisted. `v0.14.0` changes only development data/readiness for the frontend; no new database domain block is planned before `v1.0.0`. Backend work is now frozen except for concrete frontend blockers or bugs.
 

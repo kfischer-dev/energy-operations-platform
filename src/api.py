@@ -52,7 +52,7 @@ app = FastAPI(
         "REST API for accessing energy asset and measurement data. "
         "This API is part of the Energy Operations Platform portfolio project."
     ),
-    version="0.13.0",
+    version="0.14.0",
     openapi_tags=[
         {
             "name": "General",

@@ -8,18 +8,17 @@ It combines PostgreSQL, FastAPI, Pydantic, pytest and Docker Compose with a doma
 
 ## Current Version
 
-**`v0.13.0 – Energy Balance`**
+**`v0.14.0 – Frontend-ready API`**
 
 Main additions:
 
-- added a dedicated `src/balance` domain/service/repository layer,
-- combined producer and consumer intervals into production, consumption and net power/energy,
-- added chronological balance-series aggregation and period balance summaries,
-- added producer/consumer energy-mix analysis grouped by `asset_type`, including energy share and asset count,
-- added boundary-aware PostgreSQL retrieval for balance calculations using only relevant producer/consumer assets and valid source measurements,
-- exposed `GET /balance`, `GET /balance/series` and `GET /balance/energy-mix`,
-- added Pydantic response contracts with aligned `valid` / `incomplete` / `estimated` / `invalid` balance-quality values plus unit, service, PostgreSQL smoke/integration and API coverage,
-- kept raw producer and consumer `active_power_kw` non-negative; role semantics are applied only in the balance layer.
+- added explicit CORS support for the local React/Vite development origin `http://localhost:5173`,
+- kept credentials disabled and limited the allowed origin instead of using a wildcard origin,
+- added a focused CORS preflight regression test,
+- aligned the Energy Mix endpoint with the existing `Balance` OpenAPI tag,
+- expanded `sql/seed_data.sql` into a deterministic 24-hour frontend demo dataset with 15-minute point-in-time measurements,
+- seeded 13 producer/consumer assets with 97 points each (`1261` measurements) while keeping storage/grid assets available as master data,
+- stabilized the existing balance, KPI and asset contracts for the frontend and reached the planned backend feature freeze for the v1.0 MVP.
 
 ## Project Goal
 
@@ -31,7 +30,7 @@ The project demonstrates practical backend and data engineering with visible ene
 - deterministic simulation and analytics logic,
 - automated unit, API, repository, service and integration testing,
 - reproducible local startup with Docker Compose,
-- portfolio energy-balance and energy-mix analytics exposed through REST, with frontend-ready API/CORS work next, followed by a React/TypeScript dashboard; storage, weather, recommendations and cloud deployment remain post-MVP work.
+- portfolio energy-balance and energy-mix analytics exposed through REST, now browser-accessible for the local React/Vite client; React/TypeScript dashboard work is next, while storage, weather, recommendations and cloud deployment remain post-MVP work.
 
 ## Architecture
 
@@ -93,7 +92,7 @@ PowerIntervalDraft               <- derived in memory, not persisted
 
 ## Simulation Model
 
-Consumer profiles introduced in `v0.12.0` remain part of the shared simulation foundation in `v0.13.0`; producer and consumer assets continue to use one engine and registry.
+Consumer profiles introduced in `v0.12.0` remain part of the shared simulation foundation through `v0.14.0`; producer and consumer assets continue to use one engine and registry.
 
 Supported runtime asset types:
 
@@ -140,7 +139,7 @@ Incomplete remainder time after the last complete interval is ignored.
 - **City load:** piecewise-linear daily profile with low night demand, morning rise, daytime demand and a clear evening peak.
 - **Industrial load:** piecewise-linear daily profile with night base load, production ramp-up, a high daytime plateau and an evening drop.
 - Consumer power is calculated as `rated_power_kw × profile_factor × context.load_factor`.
-- Consumer `active_power_kw` remains non-negative; `v0.13.0` applies producer/consumer role semantics only in the Energy Balance layer.
+- Consumer `active_power_kw` remains non-negative; producer/consumer role semantics are applied only in the Energy Balance layer introduced in `v0.13.0`.
 - The same generic engine validates producer and consumer output against `0 <= active_power_kw <= rated_power_kw`.
 
 ## Measurement Aggregation
@@ -234,13 +233,17 @@ KPI energy is derived on demand from the requested power time series. Boundary s
 - `GET /balance/series?start_time=...&end_time=...&interval_minutes=15`
 - `GET /balance/energy-mix?start_time=...&end_time=...&asset_role=producer&interval_minutes=15`
 
-Balance endpoints load valid producer/consumer point-in-time measurements plus nearest boundary supports, derive per-asset intervals, and then combine them by `asset_role`. Production and consumption remain positive magnitudes; net values are calculated as `production - consumption`. Storage and grid roles are intentionally excluded from the `v0.13.0` balance.
+Balance endpoints load valid producer/consumer point-in-time measurements plus nearest boundary supports, derive per-asset intervals, and then combine them by `asset_role`. Production and consumption remain positive magnitudes; net values are calculated as `production - consumption`. Storage and grid roles are intentionally excluded from the balance model introduced in `v0.13.0`.
 
 The public balance interval sizes are `15`, `30` and `60` minutes. The requested period must be divisible by the selected interval length. Energy-mix results group period energy by `asset_type`; `share_percent` is rounded to two decimals at the API serialization boundary.
 
+### Frontend development / CORS
+
+`v0.14.0` allows browser requests from the local Vite development origin `http://localhost:5173`. Credentials are disabled; methods and headers are allowed for the local development contract. The API remains available on port `8000`.
+
 ### Simulation API
 
-There is **no public simulation REST endpoint in `v0.13.0`**. Simulation is executed through the internal service layer and developer demo script.
+There is **no public simulation REST endpoint in `v0.14.0`**. Simulation is executed through the internal service layer and developer demo script.
 
 ## Technology Stack
 
@@ -320,7 +323,7 @@ docker compose up --build -d
 | `measurements` | Canonical point-in-time active-power time series |
 | `storage_specs` | Static battery-storage specifications |
 
-Development/test seed data now follows the point-in-time measurement model. Derived energy is calculated through the measurement aggregation/KPI layer rather than stored on measurement rows.
+Development/test seed data follows the point-in-time measurement model. In `v0.14.0`, the development seed provides one deterministic 24-hour frontend demo period from `2026-09-01T00:00:00+02:00` to `2026-09-02T00:00:00+02:00` at 15-minute resolution. Thirteen producer/consumer assets receive 97 points each (`1261` measurements); storage and grid assets remain available in `/assets` without balance time-series demo data. Derived energy is calculated through the measurement aggregation/KPI layer rather than stored on measurement rows.
 
 ## Testing
 
@@ -339,7 +342,8 @@ The test suite covers the domain-heavy and critical integration paths, including
 - balance interval/series/summary domain logic, including negative net balance and quality propagation,
 - balance service orchestration from DB-shaped measurements to derived intervals,
 - PostgreSQL-backed balance summary and energy-mix smoke paths,
-- API contracts for balance summary, balance series and energy mix.
+- API contracts for balance summary, balance series and energy mix,
+- CORS preflight behavior for the local React/Vite development origin.
 
 For this learning project, testing follows an 80/20 approach: complex domain logic and critical persistence flows receive detailed coverage, while repeated framework-standard validation cases are kept intentionally limited.
 
@@ -385,7 +389,8 @@ energy-operations-platform/
 │       └── time_grid.py
 ├── tests/
 │   ├── api/
-│   │   └── test_balance_api.py
+│   │   ├── test_balance_api.py
+│   │   └── test_cors.py
 │   ├── integration/
 │   │   └── test_balance_integration.py
 │   └── unit/
@@ -404,8 +409,8 @@ Private notes, logs, environments, `.env` files, bytecode and archives are exclu
 
 ## Roadmap
 
-1. Frontend-ready backend: finalize dashboard-facing contracts, add CORS and freeze backend features for the MVP.
-2. React + TypeScript + Vite dashboard with KPI cards, production/consumption/net balance chart and asset overview.
+1. React + TypeScript + Vite frontend foundation with typed API integration and loading/error states.
+2. Dashboard with KPI cards, production/consumption/net balance chart, energy mix and asset overview.
 3. Full-stack portfolio polish, architecture diagram, screenshots and `v1.0.0`.
 4. Post-MVP: weather-driven generation, storage/SoC, recommendations, monitoring and Azure deployment.
 

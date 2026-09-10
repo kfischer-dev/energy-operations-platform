@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document describes the automated test approach of the Energy Operations Platform in `v0.13.0`.
+This document describes the automated test approach of the Energy Operations Platform in `v0.14.0`.
 
 The strategy keeps strong coverage around domain-heavy logic and critical persistence paths while following an 80/20 learning-project rule: tests should prevent realistic regressions or clarify complex behavior, not duplicate framework-standard validation on every layer.
 
@@ -16,7 +16,8 @@ Current focus areas include:
 - PostgreSQL success and rollback integration,
 - balance interval/series/summary calculations,
 - balance service orchestration and PostgreSQL-backed balance analytics,
-- balance summary/series/energy-mix API contracts.
+- balance summary/series/energy-mix API contracts,
+- CORS preflight behavior for the local React/Vite origin.
 
 # Test Structure
 
@@ -222,7 +223,25 @@ It also checks rejection of a requested period that is not divisible by the sele
 
 The API tests use concrete deterministic values from the dedicated test database rather than repeating all lower-layer edge cases.
 
-The balance response schemas support the same four quality states as the domain: `valid`, `incomplete`, `estimated` and `invalid`. A dedicated API regression test for an `incomplete` response is optional future coverage if a compact deterministic seed scenario is added; it is not required for the `v0.13.0` release.
+The balance response schemas support the same four quality states as the domain: `valid`, `incomplete`, `estimated` and `invalid`. A dedicated API regression test for an `incomplete` response remains optional future coverage; it is not required for the `v0.14.0` release.
+
+---
+
+# CORS Test Coverage
+
+`v0.14.0` adds `tests/api/test_cors.py` as one focused browser-integration regression test. It sends an `OPTIONS` preflight request with `Origin: http://localhost:5173` and `Access-Control-Request-Method: GET`, then verifies the successful response and `Access-Control-Allow-Origin` / allowed-method headers.
+
+The test is intentionally narrow: FastAPI/Starlette middleware internals are not re-tested. The project only verifies its configured frontend contract. The new pytest marker is:
+
+```text
+cors
+```
+
+Targeted run:
+
+```bash
+py -m pytest -m cors -v
+```
 
 ---
 
@@ -586,10 +605,10 @@ Before tagging a release:
 6. inspect git status and release diff
 ```
 
-`v0.13.0` requires the existing point-in-time measurement/KPI and mixed producer/consumer simulation paths to remain green, plus the balance domain/service tests, PostgreSQL balance smoke tests and representative balance API contracts.
+`v0.14.0` requires the existing point-in-time measurement/KPI, mixed producer/consumer simulation and balance paths to remain green, plus the focused CORS preflight contract. Because the development seed changed substantially, the release check also includes a Docker clean rebuild so the 24-hour frontend demo dataset is actually initialized.
 
 ---
 
 # Known Test-Architecture Improvement
 
-A later cleanup can move database setup fixtures closer to integration/API tests so truly pure simulation and aggregation tests can run without any database-session initialization. That is a structural improvement, not a blocker for `v0.13.0`.
+A later cleanup can move database setup fixtures closer to integration/API tests so truly pure simulation and aggregation tests can run without any database-session initialization. That is a structural improvement, not a blocker for `v0.14.0`.

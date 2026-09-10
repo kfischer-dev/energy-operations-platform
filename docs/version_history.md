@@ -11,6 +11,7 @@ The project uses small, explainable versions so the GitHub history shows how the
 | `v0.11.1` | completed | Canonical point-in-time measurement model with period-based KPI derivation from raw power measurements |
 | `v0.12.0` | completed | Consumer load simulation with `city_load` and `industrial_load` on the shared simulation engine |
 | `v0.13.0` | completed | Portfolio Energy Balance with summary, chronological series and producer/consumer energy mix exposed through FastAPI |
+| `v0.14.0` | completed | Frontend-ready API with explicit CORS, deterministic 24-hour dashboard seed and backend feature freeze |
 
 ## Version Timeline
 
@@ -48,6 +49,7 @@ The project uses small, explainable versions so the GitHub history shows how the
 | `v0.11.1` | completed | Canonical point-in-time measurements and period-based KPI derivation | Time-series modeling, boundary-aware SQL, interpolation and trapezoidal integration |
 | `v0.12.0` | completed | City and industrial consumer load profiles integrated into the existing simulation engine and persistence flow | Load-profile modeling, interpolation, mixed producer/consumer simulation and registry reuse |
 | `v0.13.0` | completed | Production/consumption/net balance, period summary, chronological series and energy mix with DB/API integration | Role-aware portfolio analytics, service orchestration, API contracts and frontend-oriented time-series outputs |
+| `v0.14.0` | completed | Explicit local CORS contract, focused preflight test and deterministic 24-hour frontend demo seed | Browser/API integration, CORS security basics, demo-data design and contract stabilization |
 
 ---
 
@@ -542,6 +544,50 @@ The release scope is intentionally closed at this point: summary, chronological 
 
 ---
 
+# v0.14.0 — Frontend-ready API and Demo Seed
+
+## Frontend access / CORS
+
+FastAPI now registers `CORSMiddleware` for the explicit local Vite development origin:
+
+```text
+http://localhost:5173
+```
+
+Credentials remain disabled. Methods and headers are allowed for the local development client. The configuration intentionally avoids a wildcard allowed origin so the browser/API boundary stays explicit and understandable.
+
+## Frontend demo dataset
+
+`sql/seed_data.sql` now provides one deterministic 24-hour dashboard period:
+
+```text
+start_time = 2026-09-01T00:00:00+02:00
+end_time = 2026-09-02T00:00:00+02:00
+interval_minutes = 15
+```
+
+The seed creates 97 point-in-time values for each of 13 producer/consumer assets, for `1261` measurements in the completed historical run. Producer and consumer curves are deliberately distinct enough to make balance-series, energy-mix and KPI visualizations meaningful. Storage/grid assets remain available as asset master data but are not part of the demo balance time series.
+
+No database schema change is required; the demo continues to use the canonical point-in-time `measurements` contract.
+
+## API polish and compatibility
+
+The Energy Mix endpoint now uses the same `Balance` OpenAPI tag as the other balance endpoints. Existing balance, KPI and asset response contracts remain stable so the frontend can consume them without a new dashboard-specific aggregation endpoint.
+
+The FastAPI application metadata is set to `0.14.0`.
+
+## Test coverage
+
+Added a focused CORS preflight test for `http://localhost:5173`. Existing balance/API/integration coverage remains the regression base. A clean Docker rebuild is part of the release check because PostgreSQL initialization scripts only load the expanded frontend seed into a new data directory.
+
+## Release status / backend feature freeze
+
+`v0.14.0` completes the planned frontend-ready backend block. The backend now exposes the data required for KPI cards, production/consumption/net charts, energy mix and asset views, and the browser client has an explicit local CORS contract.
+
+Until `v1.0.0`, backend scope is frozen except for real bugs or concrete blockers discovered while integrating React. The next implementation focus is the React/TypeScript/Vite frontend and visible dashboard value rather than additional backend domain features.
+
+---
+
 # Documentation Split
 
 | Document | Role |
@@ -560,8 +606,8 @@ The release scope is intentionally closed at this point: summary, chronological 
 
 | Planned block | Focus |
 |---|---|
-| frontend-ready backend (`v0.14`) | CORS and only the API contracts required by the dashboard, then backend feature freeze |
-| frontend phase (`v0.15`–`v0.17`) | React/TypeScript/Vite dashboard, API integration, charts, asset overview and portfolio polish |
+| frontend foundation (`v0.15`) | React/TypeScript/Vite basics, typed API access, loading/error handling and first live backend integration |
+| dashboard / portfolio phase (`v0.16`–`v0.17`) | KPI cards, balance chart, energy mix, asset overview, Full-Stack integration and portfolio polish |
 | `v1.0.0` | first complete Full-Stack portfolio MVP with demo, screenshots, architecture diagram and setup |
 | post-MVP | weather, storage/SoC, recommendations, monitoring and Azure/cloud deployment |
 

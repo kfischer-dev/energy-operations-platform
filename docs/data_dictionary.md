@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document is the authoritative field and domain reference for the Energy Operations Platform in `v0.13.0`.
+This document is the authoritative field and domain reference for the Energy Operations Platform in `v0.14.0`.
 
 It covers:
 
@@ -12,7 +12,8 @@ It covers:
 - internal simulation models,
 - the canonical point-in-time measurement model from `v0.11.1`,
 - producer and consumer simulation semantics introduced through `v0.12.0`,
-- balance, balance-series and energy-mix contracts introduced through `v0.13.0`.
+- balance, balance-series and energy-mix contracts introduced through `v0.13.0`,
+- frontend integration contract stabilization and deterministic demo seeding introduced in `v0.14.0` without changing the underlying database or domain fields.
 
 ---
 
@@ -93,7 +94,7 @@ ev_charging_park
 data_center
 ```
 
-Six asset types are registered for runtime simulation in `v0.13.0`:
+Six asset types are registered for runtime simulation in the current `v0.14.0` codebase:
 
 ```text
 solar_park
@@ -104,7 +105,7 @@ city_load
 industrial_load
 ```
 
-`city_load` and `industrial_load` use `asset_role = consumer`. Their raw `active_power_kw` values remain positive; `v0.13.0` applies production-versus-consumption sign handling only in the Balance layer.
+`city_load` and `industrial_load` use `asset_role = consumer`. Their raw `active_power_kw` values remain positive; production-versus-consumption sign handling is applied only in the Balance layer.
 
 ---
 
@@ -229,7 +230,7 @@ Energy and interval-average power are derived from a sequence of raw power measu
 | `max_state_of_charge_percent` | numeric | `0..100` and greater than minimum |
 | `created_at` | timestamp with time zone | Creation timestamp |
 
-Dynamic state of charge is not yet persisted or simulated in `v0.13.0`; storage behavior remains post-MVP work.
+Dynamic state of charge is not yet persisted or simulated in `v0.14.0`; storage behavior remains post-MVP work.
 
 ---
 
@@ -538,7 +539,7 @@ net_energy_kwh
 quality_status
 ```
 
-Producer and consumer values are summed as positive magnitudes. Net values are derived as production minus consumption. Storage and grid roles are excluded in `v0.13.0`.
+Producer and consumer values are summed as positive magnitudes. Net values are derived as production minus consumption. Storage and grid roles remain excluded from the current balance model.
 
 ## `BalanceSummary`
 
@@ -676,7 +677,7 @@ default_asset_factory
 context_factory
 ```
 
-Registered since `v0.12.0` and unchanged in `v0.13.0`:
+Registered since `v0.12.0` and unchanged through `v0.14.0`:
 
 | Asset type | Default behavior |
 |---|---|
@@ -738,4 +739,15 @@ Key semantics:
 - balance-series results are grouped by `(interval_start, interval_end)` and returned chronologically,
 - period summary totals are derived from the completed series,
 - energy mix groups period energy by `asset_type` for either producer or consumer role.
+
+## `v0.14.0` Frontend Demo Data Contract
+
+`v0.14.0` does not add database columns or new domain fields. The development seed is expanded so the existing public contracts have a coherent dashboard dataset:
+
+- demo period: `2026-09-01T00:00:00+02:00` to `2026-09-02T00:00:00+02:00`,
+- resolution: 15-minute point-in-time measurements, including both period boundaries (`97` points per participating asset),
+- participating time-series assets: `13` producer/consumer assets (`1261` measurements total),
+- storage and grid assets remain master data and are intentionally not seeded with balance time-series measurements,
+- all demo measurements use `source = simulation` and `quality_status = valid`,
+- energy, average power, balance and energy-mix values continue to be derived from the same point-in-time measurement contract.
 
