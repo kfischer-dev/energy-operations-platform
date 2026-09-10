@@ -4,6 +4,7 @@ from enum import IntEnum
 from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Path, Query, status
+from fastapi.middleware.cors import CORSMiddleware
 
 from src.balance.repository import fetch_balance_measurements
 from src.balance.service import (
@@ -76,6 +77,19 @@ app = FastAPI(
             ),
         },
     ],
+)
+
+allowed_origins = [
+    "http://localhost:5173"
+]
+
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # ============================================================
