@@ -56,109 +56,189 @@ VALUES
     ('W-IND-001','Industrial Load Ruhr','North Rhine-Westphalia',200000,'online',51.480000,7.200000,10,4),
     ('W-DC-001','Data Center Düsseldorf','North Rhine-Westphalia',80000,'online',51.227741,6.773456,13,4);
 
+-- ============================================================
+-- Frontend demo data
+-- ============================================================
+-- Purpose:
+-- - one complete 24-hour demo period for the React dashboard
+-- - 15-minute point-in-time measurements (97 points per asset)
+-- - deterministic but visually distinct producer/consumer profiles
+-- - enough data for balance series, energy mix and KPI cards
+--
+-- Recommended frontend demo period:
+--   start_time = 2026-09-01T00:00:00+02:00
+--   end_time   = 2026-09-02T00:00:00+02:00
+--   interval_minutes = 15
+--
+-- The seed intentionally focuses the time-series data on producer and
+-- consumer assets. Storage/grid assets remain available in /assets but
+-- are not part of the production/consumption balance.
+-- ============================================================
 
-INSERT INTO simulation_runs(simulation_mode, start_time, end_time, interval_minutes, random_seed, status, generated_measurement_count, created_at, started_at, completed_at)
-VALUES
-    ('historical', '2026-06-22 08:00:00+02', '2026-06-22 09:00:00+02', 15, 42, 'completed', 64, '2026-06-22 07:59:00+02', '2026-06-22 08:00:00+02', '2026-06-22 09:00:00+02');
+INSERT INTO simulation_runs(
+    simulation_mode,
+    start_time,
+    end_time,
+    interval_minutes,
+    random_seed,
+    status,
+    generated_measurement_count,
+    created_at,
+    started_at,
+    completed_at
+)
+VALUES (
+    'historical',
+    '2026-09-01 00:00:00+02',
+    '2026-09-02 00:00:00+02',
+    15,
+    42,
+    'completed',
+    1261,
+    '2026-08-31 23:59:00+02',
+    '2026-09-01 00:00:00+02',
+    '2026-09-02 00:00:00+02'
+);
 
+WITH demo_points AS (
+    SELECT
+        measurement_time,
+        EXTRACT(HOUR FROM measurement_time)
+            + EXTRACT(MINUTE FROM measurement_time) / 60.0 AS hour_of_day
+    FROM generate_series(
+        '2026-09-01 00:00:00+02'::timestamptz,
+        '2026-09-02 00:00:00+02'::timestamptz,
+        interval '15 minutes'
+    ) AS measurement_time
+),
+demo_assets AS (
+    SELECT asset_id, asset_code
+    FROM assets
+    WHERE asset_code IN (
+        'N-WIND-001',
+        'N-SOLAR-001',
+        'N-CITY-001',
+        'S-HYDRO-001',
+        'S-SOLAR-001',
+        'S-IND-001',
+        'E-SOLAR-001',
+        'E-BIO-001',
+        'E-RES-001',
+        'W-GAS-001',
+        'W-WIND-001',
+        'W-IND-001',
+        'W-DC-001'
+    )
+),
+demo_values AS (
+    SELECT
+        a.asset_id,
+        a.asset_code,
+        p.measurement_time,
+        p.hour_of_day,
+        CASE a.asset_code
+            -- Producers -----------------------------------------------------
+            WHEN 'N-WIND-001' THEN
+                81000
+                + 9000 * SIN(2 * PI() * p.hour_of_day / 24.0)
+                + 4500 * SIN(2 * PI() * p.hour_of_day / 6.0)
 
-INSERT INTO measurements(asset_id, simulation_run_id, measurement_time, active_power_kw, source, quality_status)
-VALUES
-    -- North: North Sea Wind Park
-    (1,1,'2026-06-22 08:00:00+02',80000,'simulation','valid'),
-    (1,1,'2026-06-22 08:15:00+02',84000,'simulation','valid'),
-    (1,1,'2026-06-22 08:30:00+02',79000,'simulation','valid'),
-    (1,1,'2026-06-22 08:45:00+02',86000,'simulation','valid'),
+            WHEN 'W-WIND-001' THEN
+                39000
+                + 6500 * SIN(2 * PI() * (p.hour_of_day + 2.0) / 24.0)
+                + 3000 * SIN(2 * PI() * p.hour_of_day / 8.0)
 
-    -- North: Solar Park Schleswig-Holstein
-    (2,1,'2026-06-22 08:00:00+02',12000,'simulation','valid'),
-    (2,1,'2026-06-22 08:15:00+02',15000,'simulation','valid'),
-    (2,1,'2026-06-22 08:30:00+02',18500,'simulation','valid'),
-    (2,1,'2026-06-22 08:45:00+02',22000,'simulation','valid'),
+            WHEN 'N-SOLAR-001' THEN
+                CASE
+                    WHEN p.hour_of_day BETWEEN 6 AND 20
+                    THEN 34000 * SIN(PI() * (p.hour_of_day - 6) / 14.0)
+                    ELSE 0
+                END
 
-    -- North: City Load Hamburg
-    (3,1,'2026-06-22 08:00:00+02',138000,'simulation','valid'),
-    (3,1,'2026-06-22 08:15:00+02',143000,'simulation','valid'),
-    (3,1,'2026-06-22 08:30:00+02',149000,'simulation','valid'),
-    (3,1,'2026-06-22 08:45:00+02',153000,'simulation','valid'),
+            WHEN 'S-SOLAR-001' THEN
+                CASE
+                    WHEN p.hour_of_day BETWEEN 6 AND 20
+                    THEN 31500 * SIN(PI() * (p.hour_of_day - 6) / 14.0)
+                    ELSE 0
+                END
 
-    -- North: Substation Hamburg, regional import
-    (4,1,'2026-06-22 08:00:00+02',46000,'simulation','valid'),
-    (4,1,'2026-06-22 08:15:00+02',44000,'simulation','valid'),
-    (4,1,'2026-06-22 08:30:00+02',51500,'simulation','valid'),
-    (4,1,'2026-06-22 08:45:00+02',45000,'simulation','valid'),
+            WHEN 'E-SOLAR-001' THEN
+                CASE
+                    WHEN p.hour_of_day BETWEEN 6 AND 20
+                    THEN 44500 * SIN(PI() * (p.hour_of_day - 6) / 14.0)
+                    ELSE 0
+                END
 
-    -- South: Hydro Power Plant Black Forest
-    (5,1,'2026-06-22 08:00:00+02',68000,'simulation','valid'),
-    (5,1,'2026-06-22 08:15:00+02',69000,'simulation','valid'),
-    (5,1,'2026-06-22 08:30:00+02',71000,'simulation','valid'),
-    (5,1,'2026-06-22 08:45:00+02',70000,'simulation','valid'),
+            WHEN 'S-HYDRO-001' THEN
+                70000 + 1800 * SIN(2 * PI() * (p.hour_of_day - 4.0) / 24.0)
 
-    -- South: Solar Park Ulm
-    (6,1,'2026-06-22 08:00:00+02',12000,'simulation','valid'),
-    (6,1,'2026-06-22 08:15:00+02',16000,'simulation','valid'),
-    (6,1,'2026-06-22 08:30:00+02',20000,'simulation','valid'),
-    (6,1,'2026-06-22 08:45:00+02',24000,'simulation','valid'),
+            WHEN 'E-BIO-001' THEN
+                42000 + 900 * SIN(2 * PI() * p.hour_of_day / 12.0)
 
-    -- South: Battery Storage Stuttgart, discharging
-    (7,1,'2026-06-22 08:00:00+02',15000,'simulation','valid'),
-    (7,1,'2026-06-22 08:15:00+02',12000,'simulation','valid'),
-    (7,1,'2026-06-22 08:30:00+02',8000,'simulation','valid'),
-    (7,1,'2026-06-22 08:45:00+02',5000,'simulation','valid'),
+            WHEN 'W-GAS-001' THEN
+                CASE
+                    WHEN p.hour_of_day < 6 THEN 70000
+                    WHEN p.hour_of_day < 9 THEN 70000 + (p.hour_of_day - 6) * 15000
+                    WHEN p.hour_of_day < 17 THEN 115000
+                    WHEN p.hour_of_day < 21 THEN 115000 + (p.hour_of_day - 17) * 5000
+                    ELSE 135000 - (p.hour_of_day - 21) * 18000
+                END
 
-    -- South: Industrial Load Stuttgart
-    (8,1,'2026-06-22 08:00:00+02',92000,'simulation','valid'),
-    (8,1,'2026-06-22 08:15:00+02',97000,'simulation','valid'),
-    (8,1,'2026-06-22 08:30:00+02',102000,'simulation','valid'),
-    (8,1,'2026-06-22 08:45:00+02',105000,'simulation','valid'),
+            -- Consumers -----------------------------------------------------
+            WHEN 'N-CITY-001' THEN
+                72000
+                + 43000 * EXP(-POWER((p.hour_of_day - 8.0) / 2.3, 2))
+                + 70000 * EXP(-POWER((p.hour_of_day - 19.0) / 2.8, 2))
+                + 18000 * EXP(-POWER((p.hour_of_day - 13.0) / 4.5, 2))
 
-    -- East: Solar Park Brandenburg
-    (9,1,'2026-06-22 08:00:00+02',18000,'simulation','valid'),
-    (9,1,'2026-06-22 08:15:00+02',22500,'simulation','valid'),
-    (9,1,'2026-06-22 08:30:00+02',27000,'simulation','valid'),
-    (9,1,'2026-06-22 08:45:00+02',32000,'simulation','valid'),
+            WHEN 'S-IND-001' THEN
+                CASE
+                    WHEN p.hour_of_day < 6 THEN 50000
+                    WHEN p.hour_of_day < 8 THEN 50000 + (p.hour_of_day - 6) * 26000
+                    WHEN p.hour_of_day < 17 THEN 102000 + 4000 * SIN(2 * PI() * (p.hour_of_day - 8) / 9.0)
+                    WHEN p.hour_of_day < 20 THEN 102000 - (p.hour_of_day - 17) * 17000
+                    ELSE 51000
+                END
 
-    -- East: Biomass Power Plant Brandenburg
-    (10,1,'2026-06-22 08:00:00+02',42000,'simulation','valid'),
-    (10,1,'2026-06-22 08:15:00+02',42500,'simulation','valid'),
-    (10,1,'2026-06-22 08:30:00+02',43000,'simulation','valid'),
-    (10,1,'2026-06-22 08:45:00+02',42800,'simulation','valid'),
+            WHEN 'W-IND-001' THEN
+                CASE
+                    WHEN p.hour_of_day < 6 THEN 76000
+                    WHEN p.hour_of_day < 8 THEN 76000 + (p.hour_of_day - 6) * 40000
+                    WHEN p.hour_of_day < 17 THEN 156000 + 7000 * SIN(2 * PI() * (p.hour_of_day - 8) / 9.0)
+                    WHEN p.hour_of_day < 20 THEN 156000 - (p.hour_of_day - 17) * 26000
+                    ELSE 78000
+                END
 
-    -- East: Residential Load Berlin
-    (11,1,'2026-06-22 08:00:00+02',112000,'simulation','valid'),
-    (11,1,'2026-06-22 08:15:00+02',118000,'simulation','valid'),
-    (11,1,'2026-06-22 08:30:00+02',121000,'simulation','valid'),
-    (11,1,'2026-06-22 08:45:00+02',116000,'simulation','valid'),
+            WHEN 'E-RES-001' THEN
+                50000
+                + 42000 * EXP(-POWER((p.hour_of_day - 7.5) / 1.8, 2))
+                + 76000 * EXP(-POWER((p.hour_of_day - 20.0) / 2.6, 2))
 
-    -- East: Substation Berlin, regional import
-    (12,1,'2026-06-22 08:00:00+02',52000,'simulation','valid'),
-    (12,1,'2026-06-22 08:15:00+02',53000,'simulation','valid'),
-    (12,1,'2026-06-22 08:30:00+02',51000,'simulation','valid'),
-    (12,1,'2026-06-22 08:45:00+02',41200,'simulation','valid'),
-
-    -- West: Gas Power Plant Rhine-Ruhr
-    (13,1,'2026-06-22 08:00:00+02',105000,'simulation','valid'),
-    (13,1,'2026-06-22 08:15:00+02',112000,'simulation','valid'),
-    (13,1,'2026-06-22 08:30:00+02',120000,'simulation','valid'),
-    (13,1,'2026-06-22 08:45:00+02',128000,'simulation','valid'),
-
-    -- West: Wind Park Sauerland
-    (14,1,'2026-06-22 08:00:00+02',36000,'simulation','valid'),
-    (14,1,'2026-06-22 08:15:00+02',39000,'simulation','valid'),
-    (14,1,'2026-06-22 08:30:00+02',37500,'simulation','valid'),
-    (14,1,'2026-06-22 08:45:00+02',41000,'simulation','valid'),
-
-    -- West: Industrial Load Ruhr
-    (15,1,'2026-06-22 08:00:00+02',132000,'simulation','valid'),
-    (15,1,'2026-06-22 08:15:00+02',139000,'simulation','valid'),
-    (15,1,'2026-06-22 08:30:00+02',145000,'simulation','valid'),
-    (15,1,'2026-06-22 08:45:00+02',148000,'simulation','valid'),
-
-    -- West: Data Center Düsseldorf
-    (16,1,'2026-06-22 08:00:00+02',62000,'simulation','valid'),
-    (16,1,'2026-06-22 08:15:00+02',62500,'simulation','valid'),
-    (16,1,'2026-06-22 08:30:00+02',63000,'simulation','valid'),
-    (16,1,'2026-06-22 08:45:00+02',62800,'simulation','valid');
+            WHEN 'W-DC-001' THEN
+                63000
+                + 1800 * SIN(2 * PI() * (p.hour_of_day - 3.0) / 24.0)
+                + 900 * SIN(2 * PI() * p.hour_of_day / 6.0)
+        END AS active_power_kw
+    FROM demo_assets a
+    CROSS JOIN demo_points p
+)
+INSERT INTO measurements(
+    asset_id,
+    simulation_run_id,
+    measurement_time,
+    active_power_kw,
+    source,
+    quality_status
+)
+SELECT
+    asset_id,
+    1,
+    measurement_time,
+    ROUND(GREATEST(active_power_kw, 0)::numeric, 2),
+    'simulation',
+    'valid'
+FROM demo_values
+ORDER BY asset_id, measurement_time;
 
 
 INSERT INTO storage_specs(asset_id, energy_capacity_kwh, max_charge_power_kw, max_discharge_power_kw, charge_efficiency_percent, discharge_efficiency_percent, min_state_of_charge_percent, max_state_of_charge_percent)
