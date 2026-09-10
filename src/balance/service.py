@@ -13,7 +13,9 @@ from src.balance.models import (
     BalanceSummary,
     EnergyMix,
 )
-from src.measurements.measurement_aggregation import aggregate_measurements_for_intervals
+from src.measurements.measurement_aggregation import (
+    aggregate_measurements_for_intervals,
+)
 from src.measurements.models import PowerMeasurement
 from src.measurements.service import map_measurements_to_power_measurements
 

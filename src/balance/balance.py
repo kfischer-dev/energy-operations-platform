@@ -227,9 +227,7 @@ def calculate_energy_mix(
     for asset_type, type_intervals in grouped_intervals.items():
         energy_kwh = sum(interval.energy_kwh for interval in type_intervals)
         share_percent = (
-            energy_kwh / total_energy_kwh * 100
-            if total_energy_kwh > 0
-            else 0.0
+            energy_kwh / total_energy_kwh * 100 if total_energy_kwh > 0 else 0.0
         )
         asset_count = len({interval.asset_id for interval in type_intervals})
 
