@@ -118,6 +118,14 @@ class BalanceSummaryResponse(BaseModel):
 
     quality_status: Literal["valid", "incomplete", "invalid", "estimated"]
 
+    @field_serializer(
+        "total_production_energy_kwh",
+        "total_consumption_energy_kwh",
+        "total_net_energy_kwh",
+    )
+    def serialize_energy(self, value: float) -> float:
+        return round(value, 2)
+
 
 class BalanceIntervalResponse(BaseModel):
     interval_start: datetime
@@ -132,6 +140,17 @@ class BalanceIntervalResponse(BaseModel):
 
     quality_status: Literal["valid", "incomplete", "invalid", "estimated"]
 
+    @field_serializer(
+        "avg_production_power_kw",
+        "avg_consumption_power_kw",
+        "avg_net_power_kw",
+        "production_energy_kwh",
+        "consumption_energy_kwh",
+        "net_energy_kwh",
+    )
+    def serialize_values(self, value: float) -> float:
+        return round(value, 2)
+
 
 class EnergyMixContributionResponse(BaseModel):
     asset_type: str
@@ -139,7 +158,7 @@ class EnergyMixContributionResponse(BaseModel):
     share_percent: float
     asset_count: int
 
-    @field_serializer("share_percent")
+    @field_serializer("energy_kwh", "share_percent")
     def serialize_share_percent(self, value: float) -> float:
         return round(value, 2)
 
@@ -147,7 +166,14 @@ class EnergyMixContributionResponse(BaseModel):
 class EnergyMixResponse(BaseModel):
     start_time: datetime
     end_time: datetime
+
     asset_role: Literal["producer", "consumer"]
     total_energy_kwh: float
+
     contributions: list[EnergyMixContributionResponse]
+    
     quality_status: Literal["valid", "incomplete", "estimated", "invalid"]
+
+    @field_serializer("total_energy_kwh")
+    def serialize_total_energy(self, value: float) -> float:
+        return round(value, 2)
