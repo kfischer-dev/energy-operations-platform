@@ -1,12 +1,25 @@
-﻿:root {
-  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
-  line-height: 1.6;
-  color: #f1f5f9;
-  background: #0b1120;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+:root {
+  --bg: #08111f;
+  --surface: rgba(15, 23, 42, 0.72);
+  --surface-hover: rgba(30, 41, 59, 0.82);
+
+  --border: rgba(148, 163, 184, 0.16);
+
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+
+  --accent-green: #34d399;
+  --accent-blue: #60a5fa;
+  --accent-purple: #a78bfa;
+
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
 }
 
 * {
@@ -14,16 +27,23 @@
 }
 
 body {
+  font-family: "Geist", sans-serif;
+  font-weight: 400;
   margin: 0;
+  color: var(--text-primary);
   background:
-    radial-gradient(ellipse at top left, rgba(16, 185, 129, 0.2), transparent 60%),
-    radial-gradient(ellipse at bottom right, rgba(59, 130, 246, 0.2), transparent 60%),
-    #0b1120;
+    radial-gradient(ellipse at top left, rgba(52, 211, 153, 0.14), transparent 60%),
+    radial-gradient(ellipse at bottom right, rgba(96, 165, 250, 0.14), transparent 60%),
+    var(--bg);
+}
+
+h1,
+h2,
+h3 {
+  font-weight: 500;
 }
 
 #root {
-  display: grid;
-  place-items: center;
-  min-height: 100svh;
-  padding: 1.5rem;
+  min-height: 100vh;
+  width: 100%;
 }
