@@ -1,5 +1,6 @@
 import { getHealth } from '../api/api'
 import { useState, useEffect } from 'react'
+import './ApiStatus.css'
 
 function ApiStatus() {
 

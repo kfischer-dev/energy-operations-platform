@@ -1,0 +1,49 @@
+.balance-summary {
+    padding: 1.5rem;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 24px;
+    background: rgba(15, 23, 42, 0.8);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.25);
+}
+.balance-summary-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+    width: 100%;
+}
+
+.kpi-card {
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 24px;
+    background: rgba(15, 23, 42, 0.8);
+
+    padding: 1.25rem;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+
+    min-height: 110px;
+    text-align: center;
+}
+
+.balance-summary-inner h1,
+.balance-summary-inner p {
+    margin: 0;
+}
+
+.kpi-card h3 {
+    margin: 0 0 1rem;
+}
+
+.kpi-card p {
+    margin: 0;
+}
