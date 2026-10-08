@@ -161,6 +161,28 @@ def app_status():
     return {"status": "ok"}
 
 
+@app.get(
+    "/health/db",
+    tags=["General"],
+    summary="Database Health Check",
+    description="Checks PostgreSQL connectivity by executing a simple SQL query.",
+)
+def database_health():
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT 1")
+
+        return {"status": "ok"}
+
+    except Exception:
+        logger.exception("Database health check failed")
+        raise HTTPException(
+            status_code=503,
+            detail="Database unavailable",
+        )
+
+
 # ============================================================
 # Asset Endpoints
 # ============================================================
