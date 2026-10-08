@@ -1,5 +1,8 @@
 import type { ReactNode } from 'react';
+import { Header } from './Header';
+import { Sidebar } from './Sidebar'; 
 import './MainLayout.css';
+
 
 type MainLayoutProps = {
   children: ReactNode;
@@ -8,20 +11,8 @@ type MainLayoutProps = {
 export function MainLayout({ children }: MainLayoutProps) {
   return (
     <div className="main-layout">
-      <header className="app-header">
-        <div className="logo">
-          <img src="01_eop_horizontal.png" alt="Logo" />
-        </div>
-        <div className="header-panel">
-          Header
-        </div>
-      </header>
-
-      <aside className="sidebar">
-        <div className="sidebar-panel">
-          Sidebar
-        </div>
-      </aside>
+      <Header />
+      <Sidebar />
 
       <main className="main-content">
         {children}
@@ -29,4 +20,3 @@ export function MainLayout({ children }: MainLayoutProps) {
     </div>
   );
 }
-    

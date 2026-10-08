@@ -1,5 +1,5 @@
 import './App.css'
-import ApiStatus from './components/ApiStatus'
+import { ApiStatus } from './components/ApiStatus'
 import BalanceSummaryComponent from './components/BalanceSummary'
 import { MainLayout } from './layout/MainLayout'
 

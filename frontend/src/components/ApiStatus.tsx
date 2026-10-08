@@ -2,9 +2,15 @@ import { getHealth } from '../api/api'
 import { useState, useEffect } from 'react'
 import './ApiStatus.css'
 
-function ApiStatus() {
+type ApiStatusType = 'loading' | 'success' | 'error';
 
-    type ApiStatusType = 'loading' | 'success' | 'error';
+const statusLabels: Record<ApiStatusType, string> = {
+    loading: 'Connecting API...',
+    success: 'API Connected',
+    error: 'API Disconnected',
+};
+
+export function ApiStatus() {
 
     const [status, setStatus] = useState<ApiStatusType>('loading');
 
@@ -22,13 +28,8 @@ function ApiStatus() {
 
     return (
         <div className="api-status">
-            <p>
-                {status === 'loading' && 'Checking API status...'}
-                {status === 'success' && 'API is healthy'}
-                {status === 'error' && 'Failed to fetch API status'}
-            </p>
+            <span className={`status-dot ${status}`} />
+            <span>{statusLabels[status]}</span>
         </div>
     );
 }
-
-export default ApiStatus;

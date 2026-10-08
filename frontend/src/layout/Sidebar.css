@@ -1,0 +1,46 @@
+/* Sidebar container and navigation items */
+.sidebar {
+  grid-area: sidebar;
+  padding: 0.5rem;
+  min-width: 0;
+  min-height: 0;
+}
+
+.sidebar-panel {
+  width: 100%;
+  height: 100%;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.sidebar-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.sidebar-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+}
+
+.sidebar-item--active {
+  background: rgba(245, 158, 82, 0.12);
+  color: var(--text-primary);
+}
+
+.sidebar-item img {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  object-fit: contain;
+}

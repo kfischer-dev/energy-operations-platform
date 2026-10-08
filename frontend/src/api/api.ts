@@ -1,3 +1,5 @@
+import type { BalanceSummary } from "../types/balance";
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export async function getHealth() {
@@ -12,7 +14,7 @@ export async function getBalanceSummary(
     startTime: string, 
     endTime: string, 
     intervalMinutes?: number
-) {
+): Promise<BalanceSummary> {
     const params = new URLSearchParams({
         start_time: startTime,
         end_time: endTime,
