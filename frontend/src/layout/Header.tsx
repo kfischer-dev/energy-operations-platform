@@ -1,5 +1,5 @@
 import logo from '../assets/logos/EOP_Logo.png';
-import { ApiStatus } from '../components/ApiStatus';
+import { ApiStatus, DbStatus } from '../components/ConnectionStatus';
 import './Header.css';
 
 export function Header() {
@@ -18,6 +18,7 @@ export function Header() {
 
         <div className="header-right">
           <ApiStatus />
+          <DbStatus />
         </div>
       </div>
     </header>

@@ -1,0 +1,59 @@
+.api-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.db-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-dot.loading {
+  background-color: #f59e0b;
+}
+
+.status-dot.success {
+  background-color: #22c55e;
+}
+
+.status-dot.error {
+  background-color: #ef4444;
+}
+
+.db-logo {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+
+  mask-image: url('../assets/icons/sql-server_regular.svg');
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+
+  background-color: currentColor;
+}
+
+.db-logo.loading {
+  background-color: #f59e0b;
+}
+
+.db-logo.success {
+  background-color: #22c55e;
+}
+
+.db-logo.error {
+  background-color: #ef4444;
+}

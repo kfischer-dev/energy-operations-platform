@@ -1,5 +1,4 @@
 import './App.css'
-import { ApiStatus } from './components/ApiStatus'
 import BalanceSummaryComponent from './components/BalanceSummary'
 import { MainLayout } from './layout/MainLayout'
 
@@ -13,9 +12,9 @@ function App() {
           <h1>Hello, Energy Operations Platform!</h1>
           <p>Frontend connected successfully!</p>
         </div>
-
-        <ApiStatus />
-        <BalanceSummaryComponent />
+        <div className="balance-summary-container">
+          <BalanceSummaryComponent />
+        </div>
       </MainLayout>
     </>
   )

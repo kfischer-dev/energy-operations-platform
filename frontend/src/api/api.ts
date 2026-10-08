@@ -9,6 +9,13 @@ export async function getHealth() {
     }
     return response.json();
 }
+export async function getDbHealth() {
+    const response = await fetch(`${API_BASE_URL}/health/db`);
+    if (!response.ok) {
+        throw new Error('Failed to fetch database health status');
+    }
+    return response.json();
+}
 
 export async function getBalanceSummary(
     startTime: string, 
