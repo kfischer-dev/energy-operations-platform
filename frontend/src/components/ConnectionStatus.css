@@ -57,3 +57,10 @@
 .db-logo.error {
   background-color: #ef4444;
 }
+
+/* Prevent icons and short labels from wrapping separately. */
+.api-status,
+.db-status {
+  flex-shrink: 0;
+  white-space: nowrap;
+}

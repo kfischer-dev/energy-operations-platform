@@ -1,8 +1,14 @@
-import { getHealth, getDbHealth } from '../api/api'
-import { useState, useEffect } from 'react'
-import './ConnectionStatus.css'
+import { useEffect, useState } from 'react';
+import { getHealth, getDbHealth } from '../api/api';
+import './ConnectionStatus.css';
 
 type StatusType = 'loading' | 'success' | 'error';
+type ServiceType = 'api' | 'db';
+
+type StatusProps = {
+    refreshTrigger: number;
+    onCheckComplete: (service: ServiceType) => void;
+};
 
 const statusLabels: Record<StatusType, string> = {
     loading: 'Connecting...',
@@ -10,59 +16,66 @@ const statusLabels: Record<StatusType, string> = {
     error: 'Disconnected',
 };
 
-// API Connection
-export function ApiStatus() {
-
+export function ApiStatus({ refreshTrigger, onCheckComplete }: StatusProps) {
     const [status, setStatus] = useState<StatusType>('loading');
 
     useEffect(() => {
-        const checkHealth = async () => {
+        let active = true;
+
+        async function checkHealth() {
+            setStatus('loading');
             try {
                 await getHealth();
-                setStatus('success');
+                if (active) setStatus('success');
             } catch {
-                setStatus('error');
+                if (active) setStatus('error');
+            } finally {
+                if (active) onCheckComplete('api');
             }
+        }
+
+        void checkHealth();
+        return () => {
+            active = false;
         };
-        checkHealth();
-    }, []);
+    }, [refreshTrigger, onCheckComplete]);
 
     return (
-        <div className="api-status">
-            <span className={`status-dot ${status}`} />
-            <span>{'API ' + statusLabels[status]}</span>
+        <div className="api-status" role="status">
+            <span className={`status-dot ${status}`} aria-hidden="true" />
+            <span>API {statusLabels[status]}</span>
         </div>
     );
 }
 
-// DB Connection
-export function DbStatus() {
-
+export function DbStatus({ refreshTrigger, onCheckComplete }: StatusProps) {
     const [status, setStatus] = useState<StatusType>('loading');
 
     useEffect(() => {
-        const checkDbHealth = async () => {
+        let active = true;
+
+        async function checkDbHealth() {
+            setStatus('loading');
             try {
                 await getDbHealth();
-                setStatus('success');
+                if (active) setStatus('success');
             } catch {
-                setStatus('error');
+                if (active) setStatus('error');
+            } finally {
+                if (active) onCheckComplete('db');
             }
+        }
+
+        void checkDbHealth();
+        return () => {
+            active = false;
         };
-        checkDbHealth();
-    }, []);
+    }, [refreshTrigger, onCheckComplete]);
 
     return (
-        <div className="db-status">
-            <span
-                className={`db-logo ${status}`}
-                role="img"
-                aria-label="Database"
-            />
-            <span>{
-                'DB ' 
-                + statusLabels[status]}
-            </span>
+        <div className="db-status" role="status">
+            <span className={`db-logo ${status}`} aria-hidden="true" />
+            <span>DB {statusLabels[status]}</span>
         </div>
     );
 }
