@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import logo from '../assets/logos/EOP_Logo.png';
+import logo from '../assets/logos/EOP_Logo_2.png';
 import { ApiStatus, DbStatus } from '../components/ConnectionStatus';
 import './Header.css';
 
@@ -39,7 +39,7 @@ export function Header() {
 
             <div className="header-panel">
                 <div className="header-left">
-                    <h1>Energy Dashboard</h1>
+                    <h1>Energy Operations Platform</h1>
                 </div>
 
                 <div className="header-right">

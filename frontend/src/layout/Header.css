@@ -17,7 +17,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 1rem 1.25rem;
+    padding: 0.5rem 0.5rem;
     border-radius: 18px;
     background: rgba(8, 15, 28, 0.72);
     box-shadow:
@@ -65,7 +65,7 @@
 .logo-card img {
     display: block;
     max-width: 100%;
-    max-height: 65px;
+    max-height: 80px;
     object-fit: contain;
 }
 

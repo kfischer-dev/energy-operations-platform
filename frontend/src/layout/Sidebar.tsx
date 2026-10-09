@@ -1,7 +1,7 @@
 import { SidebarItem } from './SidebarItem';
 import dashboardIcon from '../assets/icons/dashboard.svg';
 import assetsIcon from '../assets/icons/assets.svg';
-import balanceIcon from '../assets/icons/balance.svg';
+import balanceIcon from '../assets/icons/balance/balance.svg';
 import simulationIcon from '../assets/icons/simulation.svg';
 import './Sidebar.css';
 

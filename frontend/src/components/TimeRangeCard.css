@@ -1,0 +1,53 @@
+.time-range-card {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    justify-content: center;
+    align-items: center;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background-color: var(--surface);
+}
+
+.time-range-card header{
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.time-range-card header img{
+    height: 24px;
+    width: 24px;
+}
+
+.time-range-card header h3 {
+  margin: 0;
+}
+
+.time-range-card form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.time-range-card form input {
+    padding: 0.25rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+}
+
+.time-range-card form button {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background-color: var(--primary);
+    color: var(--on-primary);
+    cursor: pointer;
+}
+
+.time-range-card form button:hover {
+    background-color: var(--primary-hover);
+}
+

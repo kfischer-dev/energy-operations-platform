@@ -1,9 +1,17 @@
-.balance-summary {
-    padding: 1.5rem;
-    border: 1px solid var(--border);
-    border-radius: 24px;
-    background: var(--surface);
-    box-shadow: 0 24px 64px rgba(2, 6, 23, 0.35);
+.balance-message {
+  padding: 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background-color: var(--surface);
+  text-align: center;
+}
+
+.balance-message--loading {
+  color: var(--text-secondary);
+}
+
+.balance-message--error {
+  color: #ef4444;
 }
 
 .balance-summary-inner {
@@ -14,26 +22,23 @@
 }
 
 .kpi-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 1rem;
-    width: 100%;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
 }
 
-.kpi-card {
-    border: 1px solid var(--border);
-    border-radius: 24px;
-    background: var(--surface-hover);
+/* Kleinere Bildschirme */
+@media (max-width: 1200px) {
+  .kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
 
-    padding: 1.25rem;
-
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-
-    min-height: 110px;
-    text-align: center;
+/* Smartphones */
+@media (max-width: 600px) {
+  .kpi-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .balance-summary-inner h1,
@@ -41,12 +46,4 @@
     margin: 0;
 }
 
-.kpi-card h3 {
-    margin: 0 0 1rem;
-    color: var(--text-secondary);
-}
 
-.kpi-card p {
-    margin: 0;
-    color: var(--text-primary);
-}
