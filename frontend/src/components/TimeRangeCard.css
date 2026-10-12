@@ -186,3 +186,20 @@
   outline: 2px solid rgba(216, 154, 99, 0.7);
   outline-offset: 3px;
 }
+
+/* =========================================
+   Time Range Error
+   ========================================= */
+
+.time-range-error {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: #f0b4a4;
+
+  background: rgba(180, 70, 55, 0.10);
+  border: 1px solid rgba(220, 105, 85, 0.25);
+  border-radius: 8px;
+}

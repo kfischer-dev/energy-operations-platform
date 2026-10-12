@@ -8,11 +8,21 @@ export function TimeRangeCard({ onApply }: {
  }) {
     const [startTime, setStartTime] = useState('2026-09-01T00:00');
     const [endTime, setEndTime] = useState('2026-09-02T00:00');
+    const [error, setError] = useState('');
 
     function handleApply() {
-        if (!startTime || !endTime || startTime >= endTime) {
+        if (!startTime || !endTime) {
+            setError('Please select both start and end time.');
             return;
         }
+
+        if (new Date(startTime) >= new Date(endTime)) {
+            setError('End time must be after start time.');
+            return;
+        }
+
+        setError('');
+
         onApply(
             new Date(startTime).toISOString(), 
             new Date(endTime).toISOString()
@@ -43,6 +53,8 @@ export function TimeRangeCard({ onApply }: {
                 <button type="button" onClick={handleApply}>
                     Apply Range
                 </button>
+                
+                {error && <p className="time-range-error" role="alert">{error}</p>}
             </form>
         </div>
     );
