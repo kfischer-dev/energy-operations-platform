@@ -24,14 +24,10 @@ export function Dashboard() {
                     <h1>Energy Overview</h1>
                     <p>System performance and energy balance</p>
                 </div>
-                <div className="dashboard-controls">
-                    <p>Last 24 hours \/</p>
-                </div>
-
             </div>
 
             <div className="dashboard-content">
-                <div className="balance-summary">
+                <div className="dashboard-overview">
                     <TimeRangeCard
                     onApply={handleApply}
                     />

@@ -58,7 +58,7 @@
    Card Header
    ========================================= */
 
-.kpi-card .header {
+.kpi-card .kpi-card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -75,7 +75,7 @@
   color: var(--text-secondary);
 }
 
-.kpi-card .header img {
+.kpi-card .kpi-card-header img {
   width: 24px;
   height: 24px;
   flex-shrink: 0;

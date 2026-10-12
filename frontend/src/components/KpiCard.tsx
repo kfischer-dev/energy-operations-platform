@@ -39,7 +39,7 @@ export function KpiCard({ title, value, unit }: KpiCardProps) {
 
   return (
     <div className="kpi-card">
-      <div className="header">
+      <div className="kpi-card-header">
         <h3>{title}</h3>
         <img src={icon} alt="Icon" />
       </div>

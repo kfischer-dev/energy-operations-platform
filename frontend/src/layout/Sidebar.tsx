@@ -13,22 +13,25 @@ export function Sidebar() {
                     <SidebarItem
                         label="Dashboard"
                         icon={<img src={dashboardIcon} alt="" />}
-                        active
+                        to="/"
                     />
 
                     <SidebarItem
                         label="Assets"
                         icon={<img src={assetsIcon} alt="" />}
+                        to="/assets"
                     />
 
                     <SidebarItem
                         label="Balance"
                         icon={<img src={balanceIcon} alt="" />}
+                        to="/balance"
                     />
 
                     <SidebarItem
                         label="Simulation"
                         icon={<img src={simulationIcon} alt="" />}
+                        to="/simulation"
                     />
                 </div>
             </div>

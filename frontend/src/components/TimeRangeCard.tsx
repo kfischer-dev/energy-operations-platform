@@ -6,8 +6,8 @@ import './TimeRangeCard.css';
 export function TimeRangeCard({ onApply }: {
     onApply: (start: string, end: string) => void
  }) {
-    const [startTime, setStartTime] = useState('');
-    const [endTime, setEndTime] = useState('');
+    const [startTime, setStartTime] = useState('2026-09-01T00:00');
+    const [endTime, setEndTime] = useState('2026-09-02T00:00');
 
     function handleApply() {
         if (!startTime || !endTime || startTime >= endTime) {

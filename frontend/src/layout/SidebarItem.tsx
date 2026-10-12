@@ -1,20 +1,26 @@
+import { NavLink } from 'react-router';
+
 type SidebarItemProps = {
   label: string;
+  to: string;
   icon?: React.ReactNode;
-  active?: boolean;
 };
 
 export function SidebarItem({
   label,
+  to,
   icon,
-  active = false,
 }: SidebarItemProps) {
   return (
-    <button
-      className={`sidebar-item ${active ? 'sidebar-item--active' : ''}`}
+    <NavLink
+      to={to}
+      end={to === '/'}
+      className={({ isActive }) =>
+        `sidebar-item ${isActive ? 'sidebar-item--active' : ''}`
+      }
     >
       {icon}
       <span>{label}</span>
-    </button>
+    </NavLink>
   );
 }
