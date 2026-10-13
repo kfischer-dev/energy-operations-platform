@@ -274,15 +274,16 @@ http://127.0.0.1:8000/docs
 http://127.0.0.1:8000/health
 ```
 
-Start the frontend in a second terminal:
+Start the frontend in a second terminal. From the repository root, create the frontend environment file from the provided template:
 
 ```bash
 cd frontend
+cp .env.example .env
 npm install
 npm run dev
 ```
 
-The local frontend runs at `http://localhost:5173` and uses `VITE_API_BASE_URL` for the FastAPI base URL.
+The frontend runs at `http://localhost:5173`. The local `frontend/.env` file sets `VITE_API_BASE_URL` for the FastAPI connection; use `http://localhost:8000` when running the backend locally. If your backend uses a different address, update `VITE_API_BASE_URL` in `frontend/.env` before starting Vite. The `.env` file is local configuration and should not be committed.
 
 Run the backend without Docker:
 

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document describes the public REST API contract used by the Energy Operations Platform in `v0.15.0`. The REST contract itself is unchanged from `v0.14.0`.
+This document describes the public REST API contract used by the Energy Operations Platform in `v0.15.0`. Existing domain and balance contracts remain unchanged from `v0.14.0`; `v0.15.0` adds a lightweight database health endpoint for frontend status monitoring.
 
 Interactive OpenAPI documentation is available at:
 
@@ -70,6 +70,34 @@ Lightweight application health endpoint.
 ```
 
 The endpoint confirms that FastAPI is running. It does not query PostgreSQL.
+
+## `GET /health/db`
+
+Checks PostgreSQL connectivity by executing a simple database query.
+
+Successful response:
+
+```json
+{
+  "status": "ok"
+}
+```
+
+If PostgreSQL is unavailable, the endpoint returns:
+
+```text
+503 Service Unavailable
+```
+
+with:
+
+```json
+{
+  "detail": "Database unavailable"
+}
+```
+
+The `v0.15.0` frontend uses `/health` and `/health/db` to display API and database connection status separately.
 
 ---
 
@@ -312,7 +340,7 @@ Behavior:
 
 # Balance Endpoints
 
-`v0.13.0` introduced portfolio-level production/consumption analytics on top of the existing point-in-time measurement aggregation layer. `v0.14.0` stabilized those public contracts for frontend integration, and `v0.15.0` consumes them without backend contract changes.
+`v0.13.0` introduced portfolio-level production/consumption analytics on top of the existing point-in-time measurement aggregation layer. `v0.14.0` stabilized those public contracts for frontend integration, and `v0.15.0` consumes them without changing the balance contracts.
 
 Common query parameters:
 
