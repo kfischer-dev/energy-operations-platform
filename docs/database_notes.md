@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document describes the PostgreSQL implementation, Python database access, simulation persistence and balance-source retrieval of the Energy Operations Platform in `v0.14.0`.
+This document describes the PostgreSQL implementation, Python database access, simulation persistence and balance-source retrieval of the Energy Operations Platform in `v0.15.0`.
 
 Related documents:
 
@@ -447,12 +447,12 @@ This deliberately deletes and recreates the development database volume.
 
 # Current Database Limitations / Next Refactor
 
-Known intentional limitations after `v0.14.0`:
+Known intentional limitations after `v0.15.0`:
 
 1. `UNIQUE (asset_id, measurement_time)` prevents storing parallel forecast/scenario values for the same asset/timestamp.
 2. No migration framework is used yet; schema changes currently require controlled clean rebuilds.
 3. `src/database.py` is still a comparatively large legacy data-access module and can be split later if it becomes a concrete development blocker.
 4. KPI support selection is designed for the current PostgreSQL model and data scale; further performance optimization should follow measured need rather than be added pre-emptively.
 
-Consumer/load simulation and Energy Balance remain integrated without a schema change. `city_load` and `industrial_load` store positive point-in-time power in the same `measurements` table as producer output; balance queries derive production and consumption by `asset_role`. Balance summaries, series and energy mix are not persisted. `v0.14.0` changes only development data/readiness for the frontend; no new database domain block is planned before `v1.0.0`. Backend work is now frozen except for concrete frontend blockers or bugs.
+Consumer/load simulation and Energy Balance remain integrated without a schema change. `city_load` and `industrial_load` store positive point-in-time power in the same `measurements` table as producer output; balance queries derive production and consumption by `asset_role`. Balance summaries, series and energy mix are not persisted. `v0.15.0` adds the React frontend without database or backend-domain changes. Backend work remains frozen except for concrete frontend blockers or bugs before `v1.0.0`.
 

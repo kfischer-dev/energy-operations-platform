@@ -12,6 +12,7 @@ The project uses small, explainable versions so the GitHub history shows how the
 | `v0.12.0` | completed | Consumer load simulation with `city_load` and `industrial_load` on the shared simulation engine |
 | `v0.13.0` | completed | Portfolio Energy Balance with summary, chronological series and producer/consumer energy mix exposed through FastAPI |
 | `v0.14.0` | completed | Frontend-ready API with explicit CORS, deterministic 24-hour dashboard seed and backend feature freeze |
+| `v0.15.0` | current | React/TypeScript/Vite frontend foundation with app shell, typed FastAPI integration and live balance KPI cards |
 
 ## Version Timeline
 
@@ -50,6 +51,7 @@ The project uses small, explainable versions so the GitHub history shows how the
 | `v0.12.0` | completed | City and industrial consumer load profiles integrated into the existing simulation engine and persistence flow | Load-profile modeling, interpolation, mixed producer/consumer simulation and registry reuse |
 | `v0.13.0` | completed | Production/consumption/net balance, period summary, chronological series and energy mix with DB/API integration | Role-aware portfolio analytics, service orchestration, API contracts and frontend-oriented time-series outputs |
 | `v0.14.0` | completed | Explicit local CORS contract, focused preflight test and deterministic 24-hour frontend demo seed | Browser/API integration, CORS security basics, demo-data design and contract stabilization |
+| `v0.15.0` | current | React/TypeScript/Vite application shell, typed API access, status feedback, time-range selection and live balance KPI cards | React component structure, props/state/effects, typed API consumption and browser error/loading handling |
 
 ---
 
@@ -588,6 +590,14 @@ Until `v1.0.0`, backend scope is frozen except for real bugs or concrete blocker
 
 ---
 
+# v0.15.0 — React Frontend Foundation
+
+`v0.15.0` adds the first real browser UI under `frontend/` without changing the frozen backend contracts. The React/TypeScript/Vite client provides an application shell with header, sidebar and dashboard content, consumes FastAPI through a typed API layer, shows API/database status, supports the deterministic demo time range and renders production, consumption and net-energy KPI cards with loading/error handling.
+
+The frontend still runs locally through Vite rather than Docker Compose. Charts, energy mix and asset views remain the next dashboard block; no new backend domain or database schema is added in this release.
+
+---
+
 # Documentation Split
 
 | Document | Role |
@@ -606,8 +616,8 @@ Until `v1.0.0`, backend scope is frozen except for real bugs or concrete blocker
 
 | Planned block | Focus |
 |---|---|
-| frontend foundation (`v0.15`) | React/TypeScript/Vite basics, typed API access, loading/error handling and first live backend integration |
-| dashboard / portfolio phase (`v0.16`–`v0.17`) | KPI cards, balance chart, energy mix, asset overview, Full-Stack integration and portfolio polish |
+| dashboard (`v0.16`) | production/consumption/net balance chart, energy mix and asset overview on the existing React foundation |
+| portfolio polish (`v0.17`) | Full-Stack integration, responsive polish, architecture diagram, screenshots and release/demo workflow |
 | `v1.0.0` | first complete Full-Stack portfolio MVP with demo, screenshots, architecture diagram and setup |
 | post-MVP | weather, storage/SoC, recommendations, monitoring and Azure/cloud deployment |
 

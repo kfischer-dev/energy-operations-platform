@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document describes the automated test approach of the Energy Operations Platform in `v0.14.0`.
+This document describes the automated test approach of the Energy Operations Platform in `v0.15.0`.
 
 The strategy keeps strong coverage around domain-heavy logic and critical persistence paths while following an 80/20 learning-project rule: tests should prevent realistic regressions or clarify complex behavior, not duplicate framework-standard validation on every layer.
 
@@ -17,7 +17,8 @@ Current focus areas include:
 - balance interval/series/summary calculations,
 - balance service orchestration and PostgreSQL-backed balance analytics,
 - balance summary/series/energy-mix API contracts,
-- CORS preflight behavior for the local React/Vite origin.
+- CORS preflight behavior for the local React/Vite origin,
+- frontend static checks through Vite/TypeScript build and ESLint.
 
 # Test Structure
 
@@ -592,6 +593,20 @@ py -m compileall src tests scripts
 
 ---
 
+# Frontend Quality Checks
+
+`v0.15.0` does not introduce a separate frontend unit-test framework. The current MVP frontend is checked with:
+
+```bash
+cd frontend
+npm run lint
+npm run build
+```
+
+Loading/error behavior and the live `/health` / `/balance` integration are smoke-checked in the browser. Automated frontend component tests can be added later if UI logic becomes complex enough to justify them.
+
+---
+
 # Release Test Rule
 
 Before tagging a release:
@@ -605,10 +620,10 @@ Before tagging a release:
 6. inspect git status and release diff
 ```
 
-`v0.14.0` requires the existing point-in-time measurement/KPI, mixed producer/consumer simulation and balance paths to remain green, plus the focused CORS preflight contract. Because the development seed changed substantially, the release check also includes a Docker clean rebuild so the 24-hour frontend demo dataset is actually initialized.
+For `v0.15.0`, the existing backend regression suite and CORS contract remain the safety net. The frontend release check adds `npm run lint`, `npm run build` and a short browser smoke check against the deterministic demo period. No backend schema or seed change is introduced by this release.
 
 ---
 
 # Known Test-Architecture Improvement
 
-A later cleanup can move database setup fixtures closer to integration/API tests so truly pure simulation and aggregation tests can run without any database-session initialization. That is a structural improvement, not a blocker for `v0.14.0`.
+A later cleanup can move database setup fixtures closer to integration/API tests so truly pure simulation and aggregation tests can run without any database-session initialization. That is a structural improvement, not a blocker for `v0.15.0`.

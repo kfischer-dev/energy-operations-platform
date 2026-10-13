@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document describes the public REST API contract of the Energy Operations Platform for `v0.14.0`.
+This document describes the public REST API contract used by the Energy Operations Platform in `v0.15.0`. The REST contract itself is unchanged from `v0.14.0`.
 
 Interactive OpenAPI documentation is available at:
 
@@ -22,13 +22,13 @@ All request and response bodies use JSON. Date-time values are serialized as ISO
 
 ## Frontend Development / CORS
 
-`v0.14.0` enables browser access from the local React/Vite development origin:
+`v0.14.0` enabled browser access from the local React/Vite development origin used by the `v0.15.0` frontend:
 
 ```text
 http://localhost:5173
 ```
 
-FastAPI uses `CORSMiddleware` with credentials disabled. The configured local origin is explicit rather than wildcard-based; methods and headers are allowed for the development client. The frontend is not yet part of Docker Compose in this release.
+FastAPI uses `CORSMiddleware` with credentials disabled. The configured local origin is explicit rather than wildcard-based; methods and headers are allowed for the development client. The React frontend runs locally through Vite and is not yet part of Docker Compose.
 
 ## `v0.11.1` Measurement Model
 
@@ -43,7 +43,7 @@ energy_kwh
 
 Energy is derived by period-based KPI/aggregation logic rather than persisted redundantly. `simulation_runs.interval_minutes` remains part of simulation configuration.
 
-There is no public simulation endpoint in `v0.14.0`.
+There is no public simulation endpoint in `v0.15.0`.
 
 ---
 
@@ -312,7 +312,7 @@ Behavior:
 
 # Balance Endpoints
 
-`v0.13.0` introduced portfolio-level production/consumption analytics on top of the existing point-in-time measurement aggregation layer. `v0.14.0` keeps those public contracts stable for frontend integration.
+`v0.13.0` introduced portfolio-level production/consumption analytics on top of the existing point-in-time measurement aggregation layer. `v0.14.0` stabilized those public contracts for frontend integration, and `v0.15.0` consumes them without backend contract changes.
 
 Common query parameters:
 
@@ -431,7 +431,7 @@ asset_count
 
 ---
 
-# Simulation Service in `v0.14.0`
+# Simulation Service in `v0.15.0`
 
 Simulation is **not exposed as a REST endpoint** yet.
 
@@ -489,15 +489,15 @@ Public API models are defined in:
 src/schemas.py
 ```
 
-`v0.13.0` introduced `BalanceSummaryResponse`, `BalanceIntervalResponse`, `EnergyMixContributionResponse` and `EnergyMixResponse`. `v0.14.0` keeps these frontend-facing contracts unchanged. Internal balance dataclasses remain in `src/balance/models.py`.
+`v0.13.0` introduced `BalanceSummaryResponse`, `BalanceIntervalResponse`, `EnergyMixContributionResponse` and `EnergyMixResponse`. These frontend-facing contracts remain unchanged through `v0.15.0`. Internal balance dataclasses remain in `src/balance/models.py`.
 
-`src/simulation/schemas.py` currently contains `SimulationRunResponse`, but no endpoint uses it in `v0.14.0`. It is preparation for a later public simulation API and must not be interpreted as an already exposed REST resource.
+`src/simulation/schemas.py` currently contains `SimulationRunResponse`, but no endpoint uses it in `v0.15.0`. It is preparation for a later public simulation API and must not be interpreted as an already exposed REST resource.
 
 ---
 
 # Frontend Demo Period
 
-The development seed in `v0.14.0` is designed for a deterministic first dashboard view. Recommended queries use:
+The development seed introduced in `v0.14.0` remains the deterministic demo period used by the `v0.15.0` frontend. Recommended queries use:
 
 ```text
 start_time = 2026-09-01T00:00:00+02:00

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document is the authoritative field and domain reference for the Energy Operations Platform in `v0.14.0`.
+This document is the authoritative field and domain reference for the Energy Operations Platform in `v0.15.0`.
 
 It covers:
 
@@ -13,7 +13,7 @@ It covers:
 - the canonical point-in-time measurement model from `v0.11.1`,
 - producer and consumer simulation semantics introduced through `v0.12.0`,
 - balance, balance-series and energy-mix contracts introduced through `v0.13.0`,
-- frontend integration contract stabilization and deterministic demo seeding introduced in `v0.14.0` without changing the underlying database or domain fields.
+- frontend integration contract stabilization and deterministic demo seeding introduced in `v0.14.0`, plus the `v0.15.0` React client, which does not change the underlying database or domain fields.
 
 ---
 
@@ -94,7 +94,7 @@ ev_charging_park
 data_center
 ```
 
-Six asset types are registered for runtime simulation in the current `v0.14.0` codebase:
+Six asset types are registered for runtime simulation in the current `v0.15.0` codebase:
 
 ```text
 solar_park
@@ -230,7 +230,7 @@ Energy and interval-average power are derived from a sequence of raw power measu
 | `max_state_of_charge_percent` | numeric | `0..100` and greater than minimum |
 | `created_at` | timestamp with time zone | Creation timestamp |
 
-Dynamic state of charge is not yet persisted or simulated in `v0.14.0`; storage behavior remains post-MVP work.
+Dynamic state of charge is not yet persisted or simulated in `v0.15.0`; storage behavior remains post-MVP work.
 
 ---
 
@@ -677,7 +677,7 @@ default_asset_factory
 context_factory
 ```
 
-Registered since `v0.12.0` and unchanged through `v0.14.0`:
+Registered since `v0.12.0` and unchanged through `v0.15.0`:
 
 | Asset type | Default behavior |
 |---|---|
