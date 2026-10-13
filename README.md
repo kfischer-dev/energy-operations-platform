@@ -17,7 +17,7 @@ Main additions:
 - connected the browser client to FastAPI through a typed API layer,
 - added API/database status feedback plus loading and error states,
 - added a configurable demo time range and live balance KPI cards for production, consumption and net energy,
-- kept the `v0.14.0` backend/API/database contracts unchanged while moving active development to the dashboard.
+- kept the existing domain, balance and database schema contracts unchanged while adding a lightweight database health endpoint for frontend status monitoring.
 
 ## Project Goal
 
@@ -201,6 +201,7 @@ The database no longer stores `interval_minutes` or `energy_kwh` on raw measurem
 
 - `GET /`
 - `GET /health`
+- `GET /health/db`
 
 ### Assets
 

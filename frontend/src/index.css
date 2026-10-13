@@ -38,7 +38,7 @@ body {
       rgba(7, 11, 16, 0.15),
       rgba(7, 11, 16, 0.35)
     ),
-    url('./src/assets/images/01_Wallpaper_EOP.png');
+    url('./assets/images/01_Wallpaper_EOP.png');
 
   background-size: cover;
   background-position: center;

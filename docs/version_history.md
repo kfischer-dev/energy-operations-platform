@@ -592,7 +592,7 @@ Until `v1.0.0`, backend scope is frozen except for real bugs or concrete blocker
 
 # v0.15.0 — React Frontend Foundation
 
-`v0.15.0` adds the first real browser UI under `frontend/` without changing the frozen backend contracts. The React/TypeScript/Vite client provides an application shell with header, sidebar and dashboard content, consumes FastAPI through a typed API layer, shows API/database status, supports the deterministic demo time range and renders production, consumption and net-energy KPI cards with loading/error handling.
+`v0.15.0` adds the first real browser UI under `frontend/` while keeping the existing domain, balance and database schema contracts unchanged. The React/TypeScript/Vite client provides an application shell with header, sidebar and dashboard content, consumes FastAPI through a typed API layer, shows separate API/database status through `GET /health` and the new lightweight `GET /health/db` endpoint, supports the deterministic demo time range and renders production, consumption and net-energy KPI cards with loading/error handling.
 
 The frontend still runs locally through Vite rather than Docker Compose. Charts, energy mix and asset views remain the next dashboard block; no new backend domain or database schema is added in this release.
 
