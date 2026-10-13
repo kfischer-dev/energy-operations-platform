@@ -1,0 +1,171 @@
+
+/* =========================================
+   KPI Card – Light Graphite Copper Glass
+   ========================================= */
+
+.kpi-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: stretch;
+  gap: 1.5rem;
+
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 145px;
+  height: 100%;
+  padding: 1.25rem;
+
+  /* Subtle graphite glass */
+  background:
+    linear-gradient(
+      145deg,
+      rgba(80, 88, 100, 0.25),
+      rgba(25, 31, 40, 0.38)
+    );
+
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+
+  transition:
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+
+/* =========================================
+   Hover – Subtle Copper Reflection
+   ========================================= */
+
+.kpi-card:hover {
+  border-color: rgba(184, 115, 51, 0.35);
+
+  box-shadow:
+    0 6px 24px rgba(0, 0, 0, 0.22),
+    0 0 14px rgba(184, 115, 51, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+
+/* =========================================
+   Card Header
+   ========================================= */
+
+.kpi-card .kpi-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.kpi-card h3 {
+  margin: 0;
+
+  font-size: 0.9rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+
+.kpi-card .kpi-card-header img {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+
+/* =========================================
+   KPI Value and Unit
+   ========================================= */
+
+.kpi-card-value {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+
+  min-width: 0;
+
+  font-size: clamp(1.5rem, 2vw, 2rem);
+  font-weight: 700;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.kpi-card-value p {
+  margin: 0;
+  color: inherit;
+}
+
+.kpi-card-unit {
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
+
+/* =========================================
+   Responsive Adjustments
+   ========================================= */
+
+@media (max-width: 1200px) {
+  .kpi-card {
+    min-height: 135px;
+    padding: 1rem;
+  }
+
+  .kpi-card-value {
+    font-size: 1.7rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .kpi-card {
+    min-height: 120px;
+  }
+}
+
+/* =========================================
+   Card Footer
+   ========================================= */
+
+.kpi-card .kpi-card-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+}
+
+.kpi-card .kpi-card-footer img {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  opacity: 0.75;
+}
+
+/* =========================================
+   Card Divider
+   ========================================= */
+
+.kpi-card-divider {
+  height: 1px;
+  width: 100%;
+  margin-top: 0.9rem;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.05),
+    rgba(255, 255, 255, 0.18),
+    rgba(255, 255, 255, 0.05)
+  );
+}

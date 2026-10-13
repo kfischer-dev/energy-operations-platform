@@ -2,9 +2,9 @@
 
 ## Purpose
 
-This document describes the local containerized environment and developer execution paths of the Energy Operations Platform in `v0.14.0`.
+This document describes the local backend container environment and developer execution paths of the Energy Operations Platform in `v0.15.0`.
 
-The Docker foundation was established in `v0.9.x`. `v0.14.0` keeps the same API + PostgreSQL container architecture and point-in-time measurement schema. This release adds browser-facing CORS configuration and a dashboard-oriented development seed; it does not add a frontend container yet.
+The Docker foundation was established in `v0.9.x`. The API + PostgreSQL Compose architecture remains unchanged. `v0.15.0` adds a local React/TypeScript/Vite frontend that consumes the existing API through the `v0.14.0` CORS contract; the frontend is not containerized yet.
 
 Related documentation:
 
@@ -181,6 +181,18 @@ http://127.0.0.1:8000/balance
 http://127.0.0.1:8000/balance/series
 http://127.0.0.1:8000/balance/energy-mix
 ```
+
+## Frontend Development
+
+The `v0.15.0` frontend runs locally with Vite and remains outside Docker Compose:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open `http://localhost:5173`. The frontend uses `VITE_API_BASE_URL` for the FastAPI base URL, typically `http://localhost:8000` for local development.
 
 ---
 
@@ -389,9 +401,9 @@ The three balance endpoints run inside the existing FastAPI service and read the
 
 ---
 
-# Browser / Frontend CORS in `v0.14.0`
+# Browser / Frontend CORS in `v0.15.0`
 
-The planned React/Vite development client runs on a different origin from FastAPI:
+The React/Vite development client runs on a different origin from FastAPI:
 
 ```text
 React/Vite dev origin: http://localhost:5173
@@ -400,7 +412,7 @@ FastAPI API:            http://localhost:8000 (or 127.0.0.1:8000)
 
 `src/api.py` therefore registers `CORSMiddleware` with `http://localhost:5173` as the explicit allowed origin. `allow_credentials` is `False`; methods and headers are enabled for the local development client. This is intentionally narrower than wildcard origin access.
 
-The React application itself is not yet part of Compose. Full-stack Compose integration is deferred to the frontend/portfolio-polish phase.
+The React application is implemented in `v0.15.0` but is not yet part of Compose. Full-stack Compose integration is deferred to the frontend/portfolio-polish phase.
 
 ---
 
@@ -415,13 +427,14 @@ The React application itself is not yet part of Compose. Full-stack Compose inte
 - No CI image build/test pipeline yet.
 - No cloud deployment or managed PostgreSQL configuration yet.
 - No public simulation REST endpoint yet.
+- React/Vite frontend still runs as a host development process rather than a Compose service.
 
 ---
 
 # Next Deployment Steps
 
-1. Keep the backend API + PostgreSQL contract frozen unless React exposes a concrete blocker or bug.
-2. Start the React/TypeScript/Vite frontend against the `v0.14.0` API and deterministic 24-hour demo dataset.
+1. Keep the backend API + PostgreSQL contract frozen unless the dashboard exposes a concrete blocker or bug.
+2. Build the remaining dashboard views on the `v0.15.0` React foundation.
 3. Add the frontend to the local Full-Stack start for the `v1.0.0` portfolio MVP.
 4. Add a portfolio architecture diagram, screenshots and a clear release/demo workflow.
 5. Introduce migrations, CI, production hardening and cloud-oriented configuration after the first Full-Stack MVP unless a concrete need appears earlier.

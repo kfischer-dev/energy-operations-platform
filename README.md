@@ -2,23 +2,22 @@
 
 ## Overview
 
-The **Energy Operations Platform** is a backend and data portfolio project for modeling, validating, simulating, analyzing and exposing operational energy data.
+The **Energy Operations Platform** is a full-stack portfolio project for modeling, validating, simulating, analyzing and visualizing operational energy data.
 
-It combines PostgreSQL, FastAPI, Pydantic, pytest and Docker Compose with a domain model for technical energy assets. The current backend supports regional assets, point-in-time power measurements, deterministic producer and consumer simulation, reusable time-series aggregation, period-based KPIs, persisted simulation-run tracking, portfolio energy balance analytics and period energy-mix analysis.
+It combines PostgreSQL, FastAPI, Pydantic, pytest and Docker Compose with a React/TypeScript/Vite frontend and a domain model for technical energy assets. The backend supports regional assets, point-in-time power measurements, deterministic producer and consumer simulation, reusable time-series aggregation, period-based KPIs, persisted simulation-run tracking, portfolio energy balance analytics and period energy-mix analysis.
 
 ## Current Version
 
-**`v0.14.0 – Frontend-ready API`**
+**`v0.15.0 – React Frontend Foundation`**
 
 Main additions:
 
-- added explicit CORS support for the local React/Vite development origin `http://localhost:5173`,
-- kept credentials disabled and limited the allowed origin instead of using a wildcard origin,
-- added a focused CORS preflight regression test,
-- aligned the Energy Mix endpoint with the existing `Balance` OpenAPI tag,
-- expanded `sql/seed_data.sql` into a deterministic 24-hour frontend demo dataset with 15-minute point-in-time measurements,
-- seeded 13 producer/consumer assets with 97 points each (`1261` measurements) while keeping storage/grid assets available as master data,
-- stabilized the existing balance, KPI and asset contracts for the frontend and reached the planned backend feature freeze for the v1.0 MVP.
+- added a React + TypeScript + Vite frontend under `frontend/`,
+- introduced a reusable application shell with header, sidebar and dashboard content area,
+- connected the browser client to FastAPI through a typed API layer,
+- added API/database status feedback plus loading and error states,
+- added a configurable demo time range and live balance KPI cards for production, consumption and net energy,
+- kept the existing domain, balance and database schema contracts unchanged while adding a lightweight database health endpoint for frontend status monitoring.
 
 ## Project Goal
 
@@ -30,7 +29,7 @@ The project demonstrates practical backend and data engineering with visible ene
 - deterministic simulation and analytics logic,
 - automated unit, API, repository, service and integration testing,
 - reproducible local startup with Docker Compose,
-- portfolio energy-balance and energy-mix analytics exposed through REST, now browser-accessible for the local React/Vite client; React/TypeScript dashboard work is next, while storage, weather, recommendations and cloud deployment remain post-MVP work.
+- portfolio energy-balance and energy-mix analytics exposed through REST and consumed by a React/TypeScript dashboard foundation; charts, energy mix and asset views are the next frontend steps, while storage, weather, recommendations and cloud deployment remain post-MVP work.
 
 ## Architecture
 
@@ -202,6 +201,7 @@ The database no longer stores `interval_minutes` or `energy_kwh` on raw measurem
 
 - `GET /`
 - `GET /health`
+- `GET /health/db`
 
 ### Assets
 
@@ -239,11 +239,11 @@ The public balance interval sizes are `15`, `30` and `60` minutes. The requested
 
 ### Frontend development / CORS
 
-`v0.14.0` allows browser requests from the local Vite development origin `http://localhost:5173`. Credentials are disabled; methods and headers are allowed for the local development contract. The API remains available on port `8000`.
+`v0.14.0` introduced browser access from the local Vite origin `http://localhost:5173`; `v0.15.0` now uses that contract from the React frontend. Credentials remain disabled and the API remains available on port `8000`.
 
 ### Simulation API
 
-There is **no public simulation REST endpoint in `v0.14.0`**. Simulation is executed through the internal service layer and developer demo script.
+There is **no public simulation REST endpoint in `v0.15.0`**. Simulation is executed through the internal service layer and developer demo script.
 
 ## Technology Stack
 
@@ -254,6 +254,7 @@ There is **no public simulation REST endpoint in `v0.14.0`**. Simulation is exec
 | Simulation | dataclasses, seeded `Random`, profile registry, time-grid generation |
 | Aggregation | interpolation, time-weighted average power, trapezoidal integration |
 | Balance | role-aware production/consumption aggregation, chronological series, period summary, energy mix |
+| Frontend | React, TypeScript, Vite, typed FastAPI integration |
 | Testing | pytest, FastAPI TestClient, dedicated test database |
 | Quality | Ruff, pytest markers, deterministic seeds and rollback tests |
 | Deployment | Docker, Docker Compose, PostgreSQL health check, named volume |
@@ -261,7 +262,7 @@ There is **no public simulation REST endpoint in `v0.14.0`**. Simulation is exec
 
 ## Quick Start
 
-Create `.env` from `.env.example`, then start the full local stack:
+Create `.env` from `.env.example`, then start the backend stack:
 
 ```bash
 docker compose up --build
@@ -274,7 +275,18 @@ http://127.0.0.1:8000/docs
 http://127.0.0.1:8000/health
 ```
 
-Run without Docker:
+Start the frontend in a second terminal. From the repository root, create the frontend environment file from the provided template:
+
+```bash
+cd frontend
+cp .env.example .env
+npm install
+npm run dev
+```
+
+The frontend runs at `http://localhost:5173`. The local `frontend/.env` file sets `VITE_API_BASE_URL` for the FastAPI connection; use `http://localhost:8000` when running the backend locally. If your backend uses a different address, update `VITE_API_BASE_URL` in `frontend/.env` before starting Vite. The `.env` file is local configuration and should not be committed.
+
+Run the backend without Docker:
 
 ```bash
 py -m pip install -r requirements.txt
@@ -363,6 +375,8 @@ For this learning project, testing follows an 80/20 approach: complex domain log
 ```text
 energy-operations-platform/
 ├── docs/
+├── frontend/
+│   └── src/              # React/TypeScript application shell, API client and dashboard components
 ├── scripts/
 │   └── run_simulation_demo.py
 ├── sql/
@@ -409,10 +423,9 @@ Private notes, logs, environments, `.env` files, bytecode and archives are exclu
 
 ## Roadmap
 
-1. React + TypeScript + Vite frontend foundation with typed API integration and loading/error states.
-2. Dashboard with KPI cards, production/consumption/net balance chart, energy mix and asset overview.
-3. Full-stack portfolio polish, architecture diagram, screenshots and `v1.0.0`.
-4. Post-MVP: weather-driven generation, storage/SoC, recommendations, monitoring and Azure deployment.
+1. Build out the dashboard with production/consumption/net balance chart, energy mix and asset overview.
+2. Add full-stack portfolio polish, architecture diagram, screenshots and `v1.0.0`.
+3. Post-MVP: weather-driven generation, storage/SoC, recommendations, monitoring and Azure deployment.
 
 Large structural refactors remain secondary unless they solve a concrete development problem.
 

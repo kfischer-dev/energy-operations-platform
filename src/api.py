@@ -52,7 +52,7 @@ app = FastAPI(
         "REST API for accessing energy asset and measurement data. "
         "This API is part of the Energy Operations Platform portfolio project."
     ),
-    version="0.14.0",
+    version="0.15.0",
     openapi_tags=[
         {
             "name": "General",
@@ -159,6 +159,28 @@ def app_status():
     logger.info("Health endpoint called")
     logger.info("=" * 60)
     return {"status": "ok"}
+
+
+@app.get(
+    "/health/db",
+    tags=["General"],
+    summary="Database Health Check",
+    description="Checks PostgreSQL connectivity by executing a simple SQL query.",
+)
+def database_health():
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT 1")
+
+        return {"status": "ok"}
+
+    except Exception:
+        logger.exception("Database health check failed")
+        raise HTTPException(
+            status_code=503,
+            detail="Database unavailable",
+        )
 
 
 # ============================================================
