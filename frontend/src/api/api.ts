@@ -1,4 +1,4 @@
-import type { BalanceSummary } from "../types/balance";
+import type { BalanceInterval, BalanceSummary } from "../types/balance";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
@@ -21,7 +21,7 @@ export async function getDbHealth() {
 export async function getBalanceSummary(
     startTime: string, 
     endTime: string, 
-    intervalMinutes?: number
+    intervalMinutes?: 15 | 30 | 60
 ): Promise<BalanceSummary> {
     const params = new URLSearchParams({
         start_time: startTime,
@@ -35,6 +35,27 @@ export async function getBalanceSummary(
     const response = await fetch(`${API_BASE_URL}/balance?${params.toString()}`);
     if (!response.ok) {
         throw new Error('Failed to fetch balance summary');
+    }
+    return response.json();
+}
+
+export async function getBalanceSeries(
+    startTime: string, 
+    endTime: string, 
+    intervalMinutes?: 15 | 30 | 60
+): Promise<BalanceInterval[]> {
+    const params = new URLSearchParams({
+        start_time: startTime,
+        end_time: endTime,
+    });
+
+    if (intervalMinutes !== undefined) {
+        params.set('interval_minutes', intervalMinutes.toString());
+    }
+
+    const response = await fetch(`${API_BASE_URL}/balance/series?${params.toString()}`);
+    if (!response.ok) {
+        throw new Error('Failed to fetch balance series');
     }
     return response.json();
 }
