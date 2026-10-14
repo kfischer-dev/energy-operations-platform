@@ -26,13 +26,17 @@
 
 .dashboard-content {
     display: flex;
-    justify-content: space-between;
-    width: 100%;
+    flex-direction: column;
     gap: 20px;
+    width: 100%;
+    min-width: 0;
 }
 
-.dashboard-overview {
+.dashboard-overview,
+.balance-chart {
     display: flex;
     flex-direction: row;
+    width: 100%;
+    min-width: 0;
     gap: 20px;
 }
