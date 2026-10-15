@@ -203,3 +203,31 @@
   border: 1px solid rgba(220, 105, 85, 0.25);
   border-radius: 8px;
 }
+
+/* =========================================
+  Time Range Inputs
+   ========================================= */
+
+.time-range-inputs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  width: 100%;
+}
+
+.time-range-field {
+  display: flex;
+  flex: 1 1 165px;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.time-range-field label {
+  white-space: nowrap;
+}
+
+.time-range-field input {
+  width: 100%;
+  min-width: 0;
+}
