@@ -12,6 +12,7 @@ import {
 } from 'recharts';
 
 import './BalanceChart.css';
+import { BalanceChartTooltip } from './BalanceChartTooltip';
 
 type EnergyBalanceChartProps = {
     data: BalanceInterval[];
@@ -127,7 +128,22 @@ export function EnergyBalanceChart({
                             fontSize: 14,
                         }}
                     />
-                    <Tooltip />
+                    <Tooltip
+                        content={(props) => (
+                            <BalanceChartTooltip
+                                {...props}
+                                powerDivisor={powerDivisor}
+                                powerUnit={powerUnit}
+                            />
+                        )}
+                        formatter={(value) => {
+                            if (typeof value !== 'number') return String(value ?? '');
+
+                            return `${new Intl.NumberFormat('de-DE', {
+                                maximumFractionDigits: 2,
+                            }).format(value / powerDivisor)} ${powerUnit}`;
+                        }}
+                    />
                     <Legend
                         iconType="plainline"
                         wrapperStyle={{
