@@ -73,6 +73,8 @@ export function Dashboard() {
                 <div className="balance-chart">
                     <EnergyBalanceChart
                         data={series}
+                        startTime={timeRange.startTime}
+                        endTime={timeRange.endTime}
                     />
                 </div>
             </div>

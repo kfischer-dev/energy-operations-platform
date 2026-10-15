@@ -1,4 +1,50 @@
 .energy-balance-chart {
   width: 100%;
   min-width: 0;
+  box-sizing: border-box;
+  padding: 24px 28px 18px;
+
+  background: linear-gradient(
+    135deg,
+    rgba(25, 30, 39, 0.55),
+    rgba(18, 22, 30, 0.55)
+  );
+
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+
+  transition:
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+@media (max-width: 768px) {
+  .energy-balance-chart {
+    padding: 14px;
+    border-radius: 14px;
+  }
+}
+
+.chart-header {
+  margin-bottom: 16px;
+}
+
+.chart-header h2 {
+  margin: 0 0 5px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #F1F5F9;
+}
+
+.chart-header p {
+  margin: 0;
+  font-size: 12px;
+  color: #94A3B8;
 }
