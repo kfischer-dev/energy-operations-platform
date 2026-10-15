@@ -12,6 +12,7 @@
 
   box-sizing: border-box;
   min-width: 0;
+  width: 100%;
   min-height: 145px;
   height: 100%;
   padding: 1.25rem;

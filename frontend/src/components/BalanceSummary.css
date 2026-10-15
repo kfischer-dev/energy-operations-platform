@@ -1,3 +1,14 @@
+.balance-summary {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(min(100%, 210px), 1fr)
+  );
+  gap: 20px;
+  width: 100%;
+  min-width: 0;
+}
+
 .balance-message {
   padding: 1.5rem;
   border: 1px solid var(--border);
@@ -23,22 +34,10 @@
 
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
   gap: 1rem;
-}
-
-/* Kleinere Bildschirme */
-@media (max-width: 1200px) {
-  .kpi-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-/* Smartphones */
-@media (max-width: 600px) {
-  .kpi-grid {
-    grid-template-columns: 1fr;
-  }
+  width: 100%;
+  min-width: 0;
 }
 
 .balance-summary-inner h1,
