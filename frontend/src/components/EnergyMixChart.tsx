@@ -7,6 +7,7 @@ import {
 
 import './EnergyMixChart.css';
 import type { EnergyMix } from '../types/balance';
+import { EnergyMixTooltip } from './EnergyMixTooltip';
 
 type EnergyMixChartProps = {
   data: EnergyMix | null;
@@ -65,6 +66,7 @@ export function EnergyMixChart(
     name: ASSET_LABELS[item.asset_type] ?? item.asset_type,
     value: item.energy_kwh,
     share: item.share_percent,
+    assetCount: item.asset_count,
     fill: ASSET_COLORS[item.asset_type] ?? '#94A3B8',
   })) ?? [];
 
@@ -89,7 +91,9 @@ export function EnergyMixChart(
               stroke="rgba(255, 255, 255, 0.15)"
               strokeWidth={1}
             />
-            <Tooltip />
+            <Tooltip
+              content={(props) => <EnergyMixTooltip {...props} />}
+            />
           </PieChart>
         </ResponsiveContainer>
 

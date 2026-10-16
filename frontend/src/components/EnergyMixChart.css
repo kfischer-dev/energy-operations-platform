@@ -12,8 +12,6 @@
 
     border: 1px solid rgba(184, 115, 51, 0.2);
     border-radius: 18px;
-
-
 }
 
 /* Header */
@@ -35,6 +33,7 @@
 
 .energy-mix-donut {
     position: relative;
+    isolation: isolate;
     width: 100%;
     max-width: 320px;
     margin: 0 auto;
@@ -45,6 +44,7 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
+    z-index: 0;
 
     display: flex;
     flex-direction: column;
@@ -53,6 +53,11 @@
 
     text-align: center;
     pointer-events: none;
+}
+
+/* Keep Recharts tooltip above the centered total-energy label. */
+.energy-mix-donut .recharts-tooltip-wrapper {
+    z-index: 2 !important;
 }
 
 .energy-mix-center span {
@@ -120,6 +125,66 @@
     font-variant-numeric: tabular-nums;
 }
 
+/* Energy Mix Tooltip */
+
+.energy-mix-tooltip {
+  min-width: 210px;
+  padding: 14px 16px;
+
+  background: rgba(24, 29, 38, 0.98);
+  border: 1px solid rgba(184, 115, 51, 0.3);
+  border-radius: 12px;
+
+  color: #f1f5f9;
+  font-size: 12px;
+
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.energy-mix-tooltip-header {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.energy-mix-tooltip-header strong {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.energy-mix-tooltip-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.energy-mix-tooltip-divider {
+  height: 1px;
+  margin: 12px 0;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.energy-mix-tooltip-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-top: 9px;
+}
+
+.energy-mix-tooltip-row span {
+  color: #aeb7c5;
+}
+
+.energy-mix-tooltip-row strong {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
 
 /* When the chart card becomes narrow */
 
