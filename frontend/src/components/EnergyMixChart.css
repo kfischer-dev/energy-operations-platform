@@ -1,4 +1,136 @@
 .energy-mix-chart {
-  width: 100%;
-  min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 24px;
+
+    background: var(--surface);
+
+    border: 1px solid rgba(184, 115, 51, 0.2);
+    border-radius: 18px;
+
+
+}
+
+/* Header */
+
+.energy-mix-header h2 {
+    margin: 0 0 5px;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.energy-mix-header p {
+    margin: 0;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+/* Donut */
+
+.energy-mix-donut {
+    position: relative;
+    width: 100%;
+    max-width: 320px;
+    margin: 0 auto;
+}
+
+.energy-mix-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+
+    text-align: center;
+    pointer-events: none;
+}
+
+.energy-mix-center span {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.energy-mix-center strong {
+    font-size: 21px;
+    font-weight: 700;
+    color: var(--text-primary);
+    white-space: nowrap;
+}
+
+/* Custom Legend */
+
+.energy-mix-legend {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.energy-mix-legend-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+
+    min-width: 0;
+    padding: 11px 12px;
+
+    background: rgba(255, 255, 255, 0.035);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 10px;
+}
+
+.energy-mix-legend-name {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+
+    color: var(--text-primary);
+    font-size: 12px;
+}
+
+.energy-mix-legend-name span:last-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.energy-mix-legend-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.energy-mix-legend-item strong {
+    flex-shrink: 0;
+    color: #d9b48c;
+    font-size: 12px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+
+/* When the chart card becomes narrow */
+
+@container dashboard-content (max-width: 900px) {
+    .energy-mix-legend {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 600px) {
+    .energy-mix-chart {
+        padding: 16px;
+    }
 }
