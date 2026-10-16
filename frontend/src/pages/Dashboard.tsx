@@ -1,11 +1,12 @@
 
 import { useEffect, useState } from 'react';
 import BalanceSummaryComponent from '../components/BalanceSummary'
+import { EnergyMixChart } from '../components/EnergyMixChart';
 import { TimeRangeCard } from '../components/TimeRangeCard';
 import './Dashboard.css'
-import { getBalanceSeries } from '../api/api';
+import { getBalanceSeries, getEnergyMixProducer, getEnergyMixConsumer } from '../api/api';
 import { EnergyBalanceChart } from '../components/BalanceChart';
-import type { BalanceInterval } from '../types/balance';
+import type { BalanceInterval, EnergyMix } from '../types/balance';
 
 type TimeRange = {
     startTime: string;
@@ -18,6 +19,8 @@ export function Dashboard() {
         endTime: '2026-09-02T00:00:00+02:00',
     });
     const [series, setSeries] = useState<BalanceInterval[]>([]);
+    const [productionMix, setProductionMix] = useState<EnergyMix | null>(null);
+    const [consumerMix, setConsumerMix] = useState<EnergyMix | null>(null);
 
     function handleApply(startTime: string, endTime: string) {
         setTimeRange({ startTime, endTime });
@@ -42,6 +45,26 @@ export function Dashboard() {
             }
         }
 
+        async function fetchEnergyMix() {
+            try {
+                const producerData = await getEnergyMixProducer(startTime, endTime);
+                const consumerData = await getEnergyMixConsumer(startTime, endTime);
+
+                if (active) {
+                    setProductionMix(producerData);
+                    setConsumerMix(consumerData);
+                }
+
+            } catch (error) {
+                if (active) {
+                    console.error('Energy mix error:', error);
+                    setProductionMix(null);
+                    setConsumerMix(null);
+                }
+            }
+        }
+
+        fetchEnergyMix();
         fetchBalanceSeries();
 
         return () => {
@@ -49,7 +72,6 @@ export function Dashboard() {
         };
     }, [timeRange]);
 
-    console.log('Fetched balance series:', series);
     return (
         <div className="dashboard">
 
@@ -75,6 +97,16 @@ export function Dashboard() {
                         data={series}
                         startTime={timeRange.startTime}
                         endTime={timeRange.endTime}
+                    />
+                </div>
+                <div className="energy-mix-section">
+                    <EnergyMixChart
+                        data={productionMix}
+                        title="Production Energy Mix"
+                    />
+                    <EnergyMixChart
+                        data={consumerMix}
+                        title="Consumer Energy Mix"
                     />
                 </div>
             </div>

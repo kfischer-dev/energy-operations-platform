@@ -25,3 +25,21 @@ export type BalanceInterval = {
 
     quality_status: QualityStatus;
 };
+
+export type EnergyMixContribution = {
+    asset_type: string;
+    energy_kwh: number;
+    share_percent: number;
+    asset_count: number;
+};
+
+export type EnergyMix = {
+    start_time: string;
+    end_time: string;
+
+    asset_role: string;
+    total_energy_kwh: number;
+    contributions: EnergyMixContribution[];
+
+    quality_status: QualityStatus;
+};

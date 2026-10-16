@@ -60,3 +60,11 @@
         grid-template-columns: minmax(360px, 1.2fr) minmax(0, 3.3fr);
     }
 }
+
+.energy-mix-section {
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+    width: 100%;
+    min-width: 0;
+}
