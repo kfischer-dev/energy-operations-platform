@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import BalanceSummaryComponent from '../components/BalanceSummary'
 import { EnergyMixChart } from '../components/EnergyMixChart';
@@ -7,6 +6,9 @@ import './Dashboard.css'
 import { getBalanceSeries, getEnergyMixProducer, getEnergyMixConsumer } from '../api/api';
 import { EnergyBalanceChart } from '../components/BalanceChart';
 import type { BalanceInterval, EnergyMix } from '../types/balance';
+import { getAssets } from '../api/api';
+import type { AssetResponse } from '../types/assets';
+import { AssetOverview } from '../components/AssetOverview';
 
 type TimeRange = {
     startTime: string;
@@ -21,6 +23,7 @@ export function Dashboard() {
     const [series, setSeries] = useState<BalanceInterval[]>([]);
     const [productionMix, setProductionMix] = useState<EnergyMix | null>(null);
     const [consumerMix, setConsumerMix] = useState<EnergyMix | null>(null);
+    const [assets, setAssets] = useState<AssetResponse[]>([]);
 
     function handleApply(startTime: string, endTime: string) {
         setTimeRange({ startTime, endTime });
@@ -29,6 +32,21 @@ export function Dashboard() {
     useEffect(() => {
         const { startTime, endTime } = timeRange;
         let active = true;
+
+        async function fetchAssets() {
+            try {
+                const data = await getAssets();
+
+                if (active) {
+                    setAssets(data);
+                }
+            } catch (error) {
+                if (active) {
+                    console.error('Assets error:', error);
+                    setAssets([]);
+                }
+            }
+        }
 
         async function fetchBalanceSeries() {
             try {
@@ -64,6 +82,7 @@ export function Dashboard() {
             }
         }
 
+        fetchAssets();
         fetchEnergyMix();
         fetchBalanceSeries();
 
@@ -108,7 +127,11 @@ export function Dashboard() {
                         data={consumerMix}
                         title="Consumer Energy Mix"
                     />
+                    <div className="asset-overview-section">
+                        <AssetOverview assets={assets} />
+                    </div>
                 </div>
+
             </div>
 
         </div>
