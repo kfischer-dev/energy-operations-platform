@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Header } from './Header';
+import { ModernHeader } from './ModernHeader';
 import { Sidebar } from './Sidebar'; 
 import './MainLayout.css';
 
@@ -11,7 +11,7 @@ type MainLayoutProps = {
 export function MainLayout({ children }: MainLayoutProps) {
   return (
     <div className="main-layout">
-      <Header />
+      <ModernHeader />
       <Sidebar />
 
       <main className="main-content">

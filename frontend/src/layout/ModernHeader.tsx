@@ -5,7 +5,6 @@ import './ModernHeader.css';
 
 type ServiceType = 'api' | 'db';
 
-// Kept separate while the new design is being evaluated.
 export function ModernHeader() {
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [isRefreshing, setIsRefreshing] = useState(true);
@@ -41,26 +40,25 @@ export function ModernHeader() {
                         <ApiStatus refreshTrigger={refreshTrigger} onCheckComplete={handleCheckComplete} />
                         <DbStatus refreshTrigger={refreshTrigger} onCheckComplete={handleCheckComplete} />
                     </div>
+                    <button
+                        type="button"
+                        className="modern-header__refresh"
+                        onClick={handleRefresh}
+                        disabled={isRefreshing}
+                        aria-label="Check API and database connections again"
+                    >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <path d="M20 7v5h-5M4 17v-5h5" />
+                            <path d="M6.1 7a7 7 0 0 1 11.5-1L20 9M4 15l2.4 3A7 7 0 0 0 17.9 17" />
+                        </svg>
+                        <span>{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
+                    </button>
                     <span className="modern-header__timestamp" aria-live="polite">
                         {lastChecked
                             ? `Last checked: ${lastChecked.toLocaleTimeString('de-DE')}`
                             : 'Checking...'}
                     </span>
                 </div>
-
-                <button
-                    type="button"
-                    className="modern-header__refresh"
-                    onClick={handleRefresh}
-                    disabled={isRefreshing}
-                    aria-label="Check API and database connections again"
-                >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <path d="M20 7v5h-5M4 17v-5h5" />
-                        <path d="M6.1 7a7 7 0 0 1 11.5-1L20 9M4 15l2.4 3A7 7 0 0 0 17.9 17" />
-                    </svg>
-                    <span>{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
-                </button>
             </div>
         </header>
     );

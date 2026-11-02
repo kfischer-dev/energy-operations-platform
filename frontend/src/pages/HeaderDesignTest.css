@@ -2,6 +2,10 @@
     grid-template-rows: minmax(100px, auto) 1fr;
 }
 
+.header-design-page--modern {
+    grid-template-rows: minmax(78px, auto) 1fr;
+}
+
 .header-design-page__toolbar {
     display: flex;
     flex-wrap: wrap;

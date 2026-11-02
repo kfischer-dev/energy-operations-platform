@@ -10,7 +10,7 @@ export function HeaderDesignTest() {
     const [variant, setVariant] = useState<'modern' | 'current'>('modern');
 
     return (
-        <div className="main-layout header-design-page">
+        <div className={`main-layout header-design-page${variant === 'modern' ? ' header-design-page--modern' : ''}`}>
             {variant === 'modern' ? <ModernHeader /> : <Header />}
             <Sidebar />
             <main className="main-content">
