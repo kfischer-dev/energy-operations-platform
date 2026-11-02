@@ -3,6 +3,7 @@ import BalanceSummaryComponent from '../components/BalanceSummary'
 import { EnergyMixChart } from '../components/EnergyMixChart';
 import { TimeRangeCard } from '../components/TimeRangeCard';
 import './Dashboard.css'
+import './DashboardContent.css';
 import { getBalanceSeries, getEnergyMixProducer, getEnergyMixConsumer } from '../api/api';
 import { EnergyBalanceChart } from '../components/BalanceChart';
 import type { BalanceInterval, EnergyMix } from '../types/balance';

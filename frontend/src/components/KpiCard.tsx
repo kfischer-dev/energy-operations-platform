@@ -8,7 +8,7 @@ import infoIcon from '../assets/icons/info.svg';
 
 type KpiCardProps = {
   title: string;
-  value: number;
+  value: number | null;
   unit: string;
 };
 
@@ -44,8 +44,8 @@ export function KpiCard({ title, value, unit }: KpiCardProps) {
         <img src={icon} alt="Icon" />
       </div>
       <div className="kpi-card-value">
-        <span>{value}</span>
-        <span className="kpi-card-unit">{unit}</span>
+        <span>{value ?? '—'}</span>
+        {unit && <span className="kpi-card-unit">{unit}</span>}
       </div>
 
       <div className="kpi-card-divider"></div>

@@ -73,7 +73,7 @@ export function EnergyBalanceChart({
             <ResponsiveContainer width="100%" height={350}>
                 <LineChart data={chartData}>
                     <CartesianGrid
-                        stroke="rgba(255, 255, 255, 0.4)"
+                        stroke="rgba(255, 255, 255, 0.1)"
                         strokeDasharray="3 5"
                         vertical={false}
                     />
@@ -96,8 +96,8 @@ export function EnergyBalanceChart({
                             })
                         }
                         tick={{ fill: '#9CA3AF', fontSize: 12 }}
-                        axisLine={true}
-                        tickLine={true}
+                        axisLine={{ stroke: 'rgba(255, 255, 255, 0.18)' }}
+                        tickLine={false}
                         tickMargin={12}
                         label={{
                             value: 'Time',
@@ -111,7 +111,7 @@ export function EnergyBalanceChart({
 
                     <YAxis
                         tick={{ fill: '#9CA3AF', fontSize: 12 }}
-                        axisLine={true}
+                        axisLine={{ stroke: 'rgba(255, 255, 255, 0.18)' }}
                         tickLine={false}
                         width={45}
                         tickFormatter={(value: number) =>

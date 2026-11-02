@@ -14,7 +14,7 @@ type BalanceSummaryProps = {
 
 function BalanceSummaryComponent({
     startTime = '2026-09-01T00:00:00+02:00',
-    endTime = '2026-09-02T00:00:00+02:00'
+    endTime = '2026-09-02T00:00:00+02:00',
 }: BalanceSummaryProps) {
 
     const [balanceSummary, setBalanceSummary] = useState<BalanceSummary | null>(null);
@@ -70,8 +70,8 @@ function BalanceSummaryComponent({
                     />
                     <KpiCard
                         title="Peak Power Deficit"
-                        value={0}
-                        unit="coming soon"
+                        value={null}
+                        unit=""
                     />
                 </div>
             ) : (

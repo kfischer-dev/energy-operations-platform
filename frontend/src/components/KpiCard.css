@@ -1,172 +1,101 @@
-
-/* =========================================
-   KPI Card – Light Graphite Copper Glass
-   ========================================= */
-
+/* Shared visual language with the Production Energy Mix card. */
 .kpi-card {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  align-items: stretch;
-  gap: 1.5rem;
-
+  gap: 18px;
   box-sizing: border-box;
-  min-width: 0;
   width: 100%;
-  min-height: 145px;
+  min-width: 0;
+  min-height: 165px;
   height: 100%;
-  padding: 1.25rem;
-
-  /* Subtle graphite glass */
-  background:
-    linear-gradient(
-      145deg,
-      rgba(80, 88, 100, 0.25),
-      rgba(25, 31, 40, 0.38)
-    );
-
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 16px;
-
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-
-  box-shadow:
-    0 4px 20px rgba(0, 0, 0, 0.16),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
-
-  transition:
-    border-color 0.25s ease,
-    box-shadow 0.25s ease;
+  padding: 24px;
+  background: var(--surface);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--panel-radius);
+  transition: border-color 160ms ease;
 }
-
-
-/* =========================================
-   Hover – Subtle Copper Reflection
-   ========================================= */
 
 .kpi-card:hover {
-  border-color: rgba(184, 115, 51, 0.35);
-
-  box-shadow:
-    0 6px 24px rgba(0, 0, 0, 0.22),
-    0 0 14px rgba(184, 115, 51, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  border-color: var(--panel-border-hover);
 }
-
-
-/* =========================================
-   Card Header
-   ========================================= */
 
 .kpi-card .kpi-card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: 12px;
   min-width: 0;
 }
 
 .kpi-card h3 {
   margin: 0;
-
-  font-size: 0.9rem;
-  font-weight: 500;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
   line-height: 1.4;
-  color: var(--text-secondary);
 }
 
 .kpi-card .kpi-card-header img {
-  width: 24px;
-  height: 24px;
   flex-shrink: 0;
+  width: 22px;
+  height: 22px;
   opacity: 0.85;
 }
-
-
-/* =========================================
-   KPI Value and Unit
-   ========================================= */
 
 .kpi-card-value {
   display: flex;
   align-items: baseline;
-  gap: 0.4rem;
   flex-wrap: wrap;
-
+  gap: 7px;
   min-width: 0;
-
+  color: var(--text-primary);
   font-size: clamp(1.5rem, 2vw, 2rem);
   font-weight: 700;
   line-height: 1.2;
   font-variant-numeric: tabular-nums;
-  color: var(--text-primary);
 }
 
 .kpi-card-value p {
   margin: 0;
-  color: inherit;
 }
 
 .kpi-card-unit {
-  font-size: 0.95rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
   font-weight: 400;
-  color: var(--text-secondary);
 }
-
-
-/* =========================================
-   Responsive Adjustments
-   ========================================= */
-
-@media (max-width: 1200px) {
-  .kpi-card {
-    min-height: 135px;
-    padding: 1rem;
-  }
-
-  .kpi-card-value {
-    font-size: 1.7rem;
-  }
-}
-
-@media (max-width: 600px) {
-  .kpi-card {
-    min-height: 120px;
-  }
-}
-
-/* =========================================
-   Card Footer
-   ========================================= */
-
-.kpi-card .kpi-card-footer {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.65rem;
-  color: var(--text-secondary);
-}
-
-.kpi-card .kpi-card-footer img {
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
-  opacity: 0.75;
-}
-
-/* =========================================
-   Card Divider
-   ========================================= */
 
 .kpi-card-divider {
   height: 1px;
   width: 100%;
-  margin-top: 0.9rem;
-  background: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0.05),
-    rgba(255, 255, 255, 0.18),
-    rgba(255, 255, 255, 0.05)
-  );
+  background: var(--subtle-border);
+}
+
+.kpi-card .kpi-card-footer {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  padding: 10px 12px;
+  color: var(--text-secondary);
+  background: var(--subtle-surface);
+  border: 1px solid var(--subtle-border);
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.kpi-card .kpi-card-footer img {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  opacity: 0.8;
+}
+
+@media (max-width: 600px) {
+  .kpi-card {
+    min-height: 150px;
+    padding: 16px;
+  }
 }
