@@ -35,25 +35,33 @@
 }
 
 body {
+  position: relative;
+  isolation: isolate;
   font-family: "Geist", sans-serif;
   font-weight: 400;
   margin: 0;
   color: var(--text-primary);
   background-color: var(--bg);
 
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  z-index: -1;
+  inset: -6px;
+  pointer-events: none;
   background-image:
     linear-gradient(
-      rgba(7, 11, 16, 0.15),
-      rgba(7, 11, 16, 0.35)
+      rgba(7, 11, 16, 0.35),
+      rgba(7, 11, 16, 0.5)
     ),
     url('./assets/images/01_Wallpaper_EOP.png');
 
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  background-attachment: fixed;
-
-  color: var(--text-primary);
+  filter: blur(1px);
 }
 
 h1,

@@ -4,17 +4,20 @@ import { KpiCard } from './KpiCard';
 import './BalanceSummary.css';
 import type { BalanceSummary } from '../types/balance';
 import { formatEnergy } from '../utils/energy';
+import type { DashboardCardVisibility } from '../pages/dashboardCards';
 
 type BalanceStatus = 'loading' | 'success' | 'error';
 
 type BalanceSummaryProps = {
     startTime: string | undefined;
     endTime: string | undefined;
+    visibleCards: DashboardCardVisibility;
 };
 
 function BalanceSummaryComponent({
     startTime = '2026-09-01T00:00:00+02:00',
     endTime = '2026-09-02T00:00:00+02:00',
+    visibleCards,
 }: BalanceSummaryProps) {
 
     const [balanceSummary, setBalanceSummary] = useState<BalanceSummary | null>(null);
@@ -53,26 +56,26 @@ function BalanceSummaryComponent({
         <div className="balance-summary">
             {status === 'success' && balanceSummary ? (
                 <div className="kpi-grid">
-                    <KpiCard
+                    {visibleCards.production && <KpiCard
                         title="Production Energy"
                         value={production?.value ?? 0}
                         unit={production?.unit ?? 'kWh'}
-                    />
-                    <KpiCard
+                    />}
+                    {visibleCards.consumption && <KpiCard
                         title="Consumption Energy"
                         value={consumption?.value ?? 0}
                         unit={consumption?.unit ?? 'kWh'}
-                    />
-                    <KpiCard
+                    />}
+                    {visibleCards.net && <KpiCard
                         title="Total Net Energy"
                         value={netBalance?.value ?? 0}
                         unit={netBalance?.unit ?? 'kWh'}
-                    />
-                    <KpiCard
+                    />}
+                    {visibleCards.peak && <KpiCard
                         title="Peak Power Deficit"
                         value={null}
                         unit=""
-                    />
+                    />}
                 </div>
             ) : (
                 <div className={`balance-message balance-message--${status}`}>

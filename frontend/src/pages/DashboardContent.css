@@ -6,13 +6,24 @@
 }
 
 .dashboard .dashboard-heading {
-  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.dashboard .dashboard-label {
+  color: var(--accent-light);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
 }
 
 .dashboard .dashboard-title h1 {
-  font-size: 23px;
-  font-weight: 600;
-  letter-spacing: -0.03em;
+  margin: 8px 0 6px;
+  font-size: 18px;
+  font-weight: 500;
 }
 
 .dashboard .dashboard-title p {

@@ -4,12 +4,15 @@ import { EnergyMixChart } from '../components/EnergyMixChart';
 import { TimeRangeCard } from '../components/TimeRangeCard';
 import './Dashboard.css'
 import './DashboardContent.css';
+import './DashboardCardSelector.css';
 import { getBalanceSeries, getEnergyMixProducer, getEnergyMixConsumer } from '../api/api';
 import { EnergyBalanceChart } from '../components/BalanceChart';
 import type { BalanceInterval, EnergyMix } from '../types/balance';
 import { getAssets } from '../api/api';
 import type { AssetResponse } from '../types/assets';
 import { AssetOverview } from '../components/AssetOverview';
+import { allDashboardCardsVisible, dashboardCards } from './dashboardCards';
+import type { DashboardCardId } from './dashboardCards';
 
 type TimeRange = {
     startTime: string;
@@ -17,6 +20,7 @@ type TimeRange = {
 };
 
 export function Dashboard() {
+    const [visibleCards, setVisibleCards] = useState({ ...allDashboardCardsVisible });
     const [timeRange, setTimeRange] = useState<TimeRange>({
         startTime: '2026-09-01T00:00:00+02:00',
         endTime: '2026-09-02T00:00:00+02:00',
@@ -28,6 +32,10 @@ export function Dashboard() {
 
     function handleApply(startTime: string, endTime: string) {
         setTimeRange({ startTime, endTime });
+    }
+
+    function toggleCard(id: DashboardCardId) {
+        setVisibleCards(previous => ({ ...previous, [id]: !previous[id] }));
     }
 
     useEffect(() => {
@@ -97,9 +105,23 @@ export function Dashboard() {
 
             <div className="dashboard-heading">
                 <div className="dashboard-title">
+                    <span className="dashboard-label">DASHBOARD / 01</span>
                     <h1>Energy Overview</h1>
                     <p>System performance and energy balance</p>
                 </div>
+                <details className="dashboard-card-selector">
+                    <summary>Choose cards <span>{Object.values(visibleCards).filter(Boolean).length} / {dashboardCards.length}</span></summary>
+                    <fieldset>
+                        <legend>Visible cards</legend>
+                        {dashboardCards.map(card => (
+                            <label key={card.id}>
+                                <input type="checkbox" checked={visibleCards[card.id]} onChange={() => toggleCard(card.id)} />
+                                <span>{card.label}</span>
+                            </label>
+                        ))}
+                        <p>Time Range is always visible.</p>
+                    </fieldset>
+                </details>
             </div>
 
             <div className="dashboard-content">
@@ -107,31 +129,32 @@ export function Dashboard() {
                     <TimeRangeCard
                         onApply={handleApply}
                     />
-                    <BalanceSummaryComponent
+                    {(visibleCards.production || visibleCards.consumption || visibleCards.net || visibleCards.peak) && <BalanceSummaryComponent
                         startTime={timeRange.startTime}
                         endTime={timeRange.endTime}
-                    />
+                        visibleCards={visibleCards}
+                    />}
                 </div>
-                <div className="balance-chart">
+                {visibleCards.balance && <div className="balance-chart">
                     <EnergyBalanceChart
                         data={series}
                         startTime={timeRange.startTime}
                         endTime={timeRange.endTime}
                     />
-                </div>
-                <div className="energy-mix-section">
-                    <EnergyMixChart
+                </div>}
+                {(visibleCards.productionMix || visibleCards.consumerMix || visibleCards.assets) && <div className="energy-mix-section">
+                    {visibleCards.productionMix && <EnergyMixChart
                         data={productionMix}
                         title="Production Energy Mix"
-                    />
-                    <EnergyMixChart
+                    />}
+                    {visibleCards.consumerMix && <EnergyMixChart
                         data={consumerMix}
                         title="Consumer Energy Mix"
-                    />
-                    <div className="asset-overview-section">
+                    />}
+                    {visibleCards.assets && <div className="asset-overview-section">
                         <AssetOverview assets={assets} />
-                    </div>
-                </div>
+                    </div>}
+                </div>}
 
             </div>
 
