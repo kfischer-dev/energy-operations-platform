@@ -53,8 +53,8 @@ body::before {
   pointer-events: none;
   background-image:
     linear-gradient(
-      rgba(7, 11, 16, 0.35),
-      rgba(7, 11, 16, 0.5)
+      rgba(7, 11, 16, 0.25),
+      rgba(7, 11, 16, 0.4)
     ),
     url('./assets/images/01_Wallpaper_EOP.png');
 

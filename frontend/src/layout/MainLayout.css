@@ -9,6 +9,10 @@
     "sidebar content";
 }
 
+.main-layout--sidebar-collapsed {
+  grid-template-columns: 72px minmax(0, 1fr);
+}
+
 .main-content {
   grid-area: content;
   display: flex;

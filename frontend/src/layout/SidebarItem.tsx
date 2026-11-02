@@ -15,12 +15,14 @@ export function SidebarItem({
     <NavLink
       to={to}
       end={to === '/'}
+      aria-label={label}
+      title={label}
       className={({ isActive }) =>
         `sidebar-item ${isActive ? 'sidebar-item--active' : ''}`
       }
     >
       {icon}
-      <span>{label}</span>
+      <span className="sidebar-item-label">{label}</span>
     </NavLink>
   );
 }

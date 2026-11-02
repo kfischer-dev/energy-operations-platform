@@ -6,10 +6,12 @@ import './App.css'
 import { Simulation } from './pages/Simulation'
 import { Balance } from './pages/Balance'
 import { HeaderDesignTest } from './pages/HeaderDesignTest'
+import { SidebarProvider } from './layout/SidebarState'
 
 function App() {
   return (
     <BrowserRouter>
+      <SidebarProvider>
       <Routes>
         <Route path="/design-test" element={<HeaderDesignTest />} />
         <Route path="*" element={
@@ -23,6 +25,7 @@ function App() {
           </MainLayout>
         } />
       </Routes>
+      </SidebarProvider>
     </BrowserRouter>
   )
 }

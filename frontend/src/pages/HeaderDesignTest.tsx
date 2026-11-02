@@ -1,12 +1,14 @@
 import { ModernHeader } from '../layout/ModernHeader';
 import { Sidebar } from '../layout/Sidebar';
+import { useSidebar } from '../layout/SidebarState';
 import { Dashboard } from './Dashboard';
 import '../layout/MainLayout.css';
 import './HeaderDesignTest.css';
 
 export function HeaderDesignTest() {
+    const { collapsed } = useSidebar();
     return (
-        <div className="main-layout header-design-page">
+        <div className={`main-layout header-design-page${collapsed ? ' main-layout--sidebar-collapsed' : ''}`}>
             <ModernHeader />
             <Sidebar />
             <main className="main-content">
