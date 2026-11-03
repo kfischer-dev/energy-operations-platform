@@ -1,4 +1,5 @@
-import type { BalanceSummary } from "../types/balance";
+import type { AssetResponse } from '../types/assets';
+import type { BalanceInterval, BalanceSummary, EnergyMix } from "../types/balance";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
@@ -21,7 +22,7 @@ export async function getDbHealth() {
 export async function getBalanceSummary(
     startTime: string, 
     endTime: string, 
-    intervalMinutes?: number
+    intervalMinutes?: 15 | 30 | 60
 ): Promise<BalanceSummary> {
     const params = new URLSearchParams({
         start_time: startTime,
@@ -37,4 +38,79 @@ export async function getBalanceSummary(
         throw new Error('Failed to fetch balance summary');
     }
     return response.json();
+}
+
+export async function getBalanceSeries(
+    startTime: string, 
+    endTime: string, 
+    intervalMinutes?: 15 | 30 | 60
+): Promise<BalanceInterval[]> {
+    const params = new URLSearchParams({
+        start_time: startTime,
+        end_time: endTime,
+    });
+
+    if (intervalMinutes !== undefined) {
+        params.set('interval_minutes', intervalMinutes.toString());
+    }
+
+    const response = await fetch(`${API_BASE_URL}/balance/series?${params.toString()}`);
+    if (!response.ok) {
+        throw new Error('Failed to fetch balance series');
+    }
+    return response.json();
+}
+
+export async function getEnergyMixProducer(
+    startTime: string,
+    endTime: string,
+    intervalMinutes?: 15 | 30 | 60
+): Promise<EnergyMix> {
+        const params = new URLSearchParams({
+        start_time: startTime,
+        end_time: endTime,
+        asset_role: 'producer',
+    });
+
+    if (intervalMinutes !== undefined) {
+        params.set('interval_minutes', intervalMinutes.toString());
+    }
+
+    const response = await fetch(`${API_BASE_URL}/balance/energy-mix?${params.toString()}`);
+    if (!response.ok) {
+        throw new Error('Failed to fetch energy mix for producer');
+    }
+    return response.json();
+}
+
+export async function getEnergyMixConsumer(
+    startTime: string,
+    endTime: string,
+    intervalMinutes?: 15 | 30 | 60
+): Promise<EnergyMix> {
+    const params = new URLSearchParams({
+        start_time: startTime,
+        end_time: endTime,
+        asset_role: 'consumer',
+    });
+
+    if (intervalMinutes !== undefined) {
+        params.set('interval_minutes', intervalMinutes.toString());
+    }
+
+    const response = await fetch(`${API_BASE_URL}/balance/energy-mix?${params.toString()}`);
+    if (!response.ok) {
+        throw new Error('Failed to fetch energy mix for consumer');
+    }
+    return response.json();
+}
+
+export async function getAssets(): Promise<AssetResponse[]> {
+  const response = await fetch(`${API_BASE_URL}/assets`);
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch assets');
+  }
+
+  return response.json();
 }

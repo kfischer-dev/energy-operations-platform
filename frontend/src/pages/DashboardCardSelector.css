@@ -1,0 +1,92 @@
+.dashboard-card-selector {
+    position: relative;
+}
+
+.dashboard-card-selector summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 10px 14px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--surface);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2), 0 0 16px rgba(200, 212, 226, 0.06);
+    color: var(--text-primary);
+    font-size: 13px;
+    cursor: pointer;
+    list-style: none;
+}
+
+.dashboard-card-selector summary::-webkit-details-marker {
+    display: none;
+}
+
+.dashboard-card-selector summary span {
+    color: var(--accent-light);
+    font-variant-numeric: tabular-nums;
+}
+
+.dashboard-card-selector summary::after {
+    content: '';
+    width: 7px;
+    height: 7px;
+    flex-shrink: 0;
+    border-right: 1.5px solid var(--text-secondary);
+    border-bottom: 1.5px solid var(--text-secondary);
+    transform: translateY(-2px) rotate(45deg);
+}
+
+.dashboard-card-selector[open] summary::after {
+    transform: translateY(2px) rotate(225deg);
+}
+
+.dashboard-card-selector summary:focus-visible,
+.dashboard-card-selector input:focus-visible {
+    outline: 2px solid var(--accent-light);
+    outline-offset: 2px;
+}
+
+.dashboard-card-selector fieldset {
+    position: absolute;
+    z-index: 5;
+    top: calc(100% + 8px);
+    right: 0;
+    width: min(300px, calc(100vw - 48px));
+    margin: 0;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #151c25;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.dashboard-card-selector legend {
+    padding: 0 4px;
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.dashboard-card-selector label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 4px;
+    color: var(--text-primary);
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.dashboard-card-selector input {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    accent-color: var(--accent);
+}
+
+.dashboard-card-selector fieldset p {
+    margin: 8px 4px 0;
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document describes the public REST API contract used by the Energy Operations Platform in `v0.15.0`. Existing domain and balance contracts remain unchanged from `v0.14.0`; `v0.15.0` adds a lightweight database health endpoint for frontend status monitoring.
+This document describes the public REST API contract used by the Energy Operations Platform in `v0.16.0`. The domain and balance contracts remain unchanged from `v0.14.0`; `v0.15.0` added a lightweight database health endpoint, and `v0.16.0` consumes the existing endpoints for dashboard visualizations without adding new API routes.
 
 Interactive OpenAPI documentation is available at:
 
@@ -22,7 +22,7 @@ All request and response bodies use JSON. Date-time values are serialized as ISO
 
 ## Frontend Development / CORS
 
-`v0.14.0` enabled browser access from the local React/Vite development origin used by the `v0.15.0` frontend:
+`v0.14.0` enabled browser access from the local React/Vite development origin used by the `v0.15.0` and `v0.16.0` frontends:
 
 ```text
 http://localhost:5173
@@ -43,7 +43,7 @@ energy_kwh
 
 Energy is derived by period-based KPI/aggregation logic rather than persisted redundantly. `simulation_runs.interval_minutes` remains part of simulation configuration.
 
-There is no public simulation endpoint in `v0.15.0`.
+There is no public simulation endpoint in `v0.16.0`.
 
 ---
 
@@ -459,7 +459,7 @@ asset_count
 
 ---
 
-# Simulation Service in `v0.15.0`
+# Simulation Service in `v0.16.0`
 
 Simulation is **not exposed as a REST endpoint** yet.
 
@@ -517,15 +517,15 @@ Public API models are defined in:
 src/schemas.py
 ```
 
-`v0.13.0` introduced `BalanceSummaryResponse`, `BalanceIntervalResponse`, `EnergyMixContributionResponse` and `EnergyMixResponse`. These frontend-facing contracts remain unchanged through `v0.15.0`. Internal balance dataclasses remain in `src/balance/models.py`.
+`v0.13.0` introduced `BalanceSummaryResponse`, `BalanceIntervalResponse`, `EnergyMixContributionResponse` and `EnergyMixResponse`. These frontend-facing contracts remain unchanged through `v0.16.0`. Internal balance dataclasses remain in `src/balance/models.py`.
 
-`src/simulation/schemas.py` currently contains `SimulationRunResponse`, but no endpoint uses it in `v0.15.0`. It is preparation for a later public simulation API and must not be interpreted as an already exposed REST resource.
+`src/simulation/schemas.py` currently contains `SimulationRunResponse`, but no endpoint uses it in `v0.16.0`. It is preparation for a later public simulation API and must not be interpreted as an already exposed REST resource.
 
 ---
 
 # Frontend Demo Period
 
-The development seed introduced in `v0.14.0` remains the deterministic demo period used by the `v0.15.0` frontend. Recommended queries use:
+The development seed introduced in `v0.14.0` remains the deterministic demo period used by the `v0.16.0` frontend. Recommended queries use:
 
 ```text
 start_time = 2026-09-01T00:00:00+02:00

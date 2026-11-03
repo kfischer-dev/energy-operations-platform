@@ -1,0 +1,91 @@
+/* Tooltip visual language follows the Energy Mix tooltip. */
+.balance-chart-tooltip {
+  box-sizing: border-box;
+  min-width: 250px;
+  padding: 14px 16px;
+  color: #f1f5f9;
+  background: rgba(24, 30, 39, 0.97);
+  border: 1px solid rgba(201, 154, 107, 0.20);
+  border-radius: 12px;
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.27),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  font-size: 12px;
+}
+
+.tooltip-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tooltip-header strong {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.tooltip-header span {
+  color: #B8C2CE;
+  font-size: 12px;
+}
+
+.tooltip-subtitle {
+  margin: 6px 0 0;
+  color: #A5AEBB;
+  font-size: 11px;
+}
+
+.tooltip-divider {
+  height: 1px;
+  margin: 12px 0;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.tooltip-values {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tooltip-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.tooltip-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #B8C2CE;
+}
+
+.tooltip-row strong {
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.tooltip-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.tooltip-dot.production { background: #C99A6B; }
+.tooltip-dot.consumption { background: #86B8D1; }
+.tooltip-dot.net { background: #91B5A3; }
+
+.tooltip-quality {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  color: #A5AEBB;
+  font-size: 11px;
+}

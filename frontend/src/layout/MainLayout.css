@@ -3,10 +3,14 @@
   min-height: 100vh;
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);
-  grid-template-rows: 100px 1fr;
+  grid-template-rows: minmax(78px, auto) 1fr;
   grid-template-areas:
     "header header"
     "sidebar content";
+}
+
+.main-layout--sidebar-collapsed {
+  grid-template-columns: 72px minmax(0, 1fr);
 }
 
 .main-content {

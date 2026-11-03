@@ -10,3 +10,36 @@ export type BalanceSummary = {
 
     quality_status: QualityStatus;
 };
+
+export type BalanceInterval = {
+    interval_start: string;
+    interval_end: string;
+
+    avg_production_power_kw: number;
+    avg_consumption_power_kw: number;
+    avg_net_power_kw: number;
+    
+    production_energy_kwh: number;
+    consumption_energy_kwh: number;
+    net_energy_kwh: number;
+
+    quality_status: QualityStatus;
+};
+
+export type EnergyMixContribution = {
+    asset_type: string;
+    energy_kwh: number;
+    share_percent: number;
+    asset_count: number;
+};
+
+export type EnergyMix = {
+    start_time: string;
+    end_time: string;
+
+    asset_role: string;
+    total_energy_kwh: number;
+    contributions: EnergyMixContribution[];
+
+    quality_status: QualityStatus;
+};

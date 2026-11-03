@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
-import { Header } from './Header';
-import { Sidebar } from './Sidebar'; 
+import { ModernHeader } from './ModernHeader';
+import { Sidebar } from './Sidebar';
+import { useSidebar } from './sidebarContext';
 import './MainLayout.css';
 
 
@@ -9,9 +10,10 @@ type MainLayoutProps = {
 };
 
 export function MainLayout({ children }: MainLayoutProps) {
+  const { collapsed } = useSidebar();
   return (
-    <div className="main-layout">
-      <Header />
+    <div className={`main-layout${collapsed ? ' main-layout--sidebar-collapsed' : ''}`}>
+      <ModernHeader />
       <Sidebar />
 
       <main className="main-content">

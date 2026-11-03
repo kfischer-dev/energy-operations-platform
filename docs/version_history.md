@@ -12,7 +12,8 @@ The project uses small, explainable versions so the GitHub history shows how the
 | `v0.12.0` | completed | Consumer load simulation with `city_load` and `industrial_load` on the shared simulation engine |
 | `v0.13.0` | completed | Portfolio Energy Balance with summary, chronological series and producer/consumer energy mix exposed through FastAPI |
 | `v0.14.0` | completed | Frontend-ready API with explicit CORS, deterministic 24-hour dashboard seed and backend feature freeze |
-| `v0.15.0` | current | React/TypeScript/Vite frontend foundation with app shell, typed FastAPI integration and live balance KPI cards |
+| `v0.15.0` | completed | React/TypeScript/Vite frontend foundation with app shell, typed FastAPI integration and live balance KPI cards |
+| `v0.16.0` | current | Energy dashboard with balance time series, producer/consumer energy mix, asset overview, peak deficit KPI and card selection |
 
 ## Version Timeline
 
@@ -51,7 +52,8 @@ The project uses small, explainable versions so the GitHub history shows how the
 | `v0.12.0` | completed | City and industrial consumer load profiles integrated into the existing simulation engine and persistence flow | Load-profile modeling, interpolation, mixed producer/consumer simulation and registry reuse |
 | `v0.13.0` | completed | Production/consumption/net balance, period summary, chronological series and energy mix with DB/API integration | Role-aware portfolio analytics, service orchestration, API contracts and frontend-oriented time-series outputs |
 | `v0.14.0` | completed | Explicit local CORS contract, focused preflight test and deterministic 24-hour frontend demo seed | Browser/API integration, CORS security basics, demo-data design and contract stabilization |
-| `v0.15.0` | current | React/TypeScript/Vite application shell, typed API access, status feedback, time-range selection and live balance KPI cards | React component structure, props/state/effects, typed API consumption and browser error/loading handling |
+| `v0.15.0` | completed | React/TypeScript/Vite application shell, typed API access, status feedback, time-range selection and live balance KPI cards | React component structure, props/state/effects, typed API consumption and browser error/loading handling |
+| `v0.16.0` | current | Recharts balance power series, peak deficit KPI, production/consumer energy-mix donuts, asset overview and selectable dashboard cards | Time-series visualization, derived frontend KPIs, REST integration and reusable dashboard presentation |
 
 ---
 
@@ -598,6 +600,16 @@ The frontend still runs locally through Vite rather than Docker Compose. Charts,
 
 ---
 
+# v0.16.0 — Energy Dashboard
+
+The existing React dashboard now visualizes production, consumption and net interval-average power over the selected time range using Recharts. Producer and consumer energy mix are displayed as separate donut charts, and the asset overview lists registered assets with their types and roles.
+
+The fourth KPI card now derives **Peak Power Deficit** from the largest negative interval-average net power (displayed as a positive magnitude). Dashboard cards can be shown or hidden, and the visual styling is unified across the dashboard.
+
+This release consumes the existing `/balance`, `/balance/series`, `/balance/energy-mix` and `/assets` endpoints. It introduces no new backend endpoints, domain logic or database schema changes. The frontend remains a local Vite application; full-stack packaging and portfolio polish follow in `v0.17`.
+
+---
+
 # Documentation Split
 
 | Document | Role |
@@ -616,7 +628,6 @@ The frontend still runs locally through Vite rather than Docker Compose. Charts,
 
 | Planned block | Focus |
 |---|---|
-| dashboard (`v0.16`) | production/consumption/net balance chart, energy mix and asset overview on the existing React foundation |
 | portfolio polish (`v0.17`) | Full-Stack integration, responsive polish, architecture diagram, screenshots and release/demo workflow |
 | `v1.0.0` | first complete Full-Stack portfolio MVP with demo, screenshots, architecture diagram and setup |
 | post-MVP | weather, storage/SoC, recommendations, monitoring and Azure/cloud deployment |

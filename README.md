@@ -8,16 +8,16 @@ It combines PostgreSQL, FastAPI, Pydantic, pytest and Docker Compose with a Reac
 
 ## Current Version
 
-**`v0.15.0 – React Frontend Foundation`**
+**`v0.16.0 – Energy Dashboard`**
 
 Main additions:
 
-- added a React + TypeScript + Vite frontend under `frontend/`,
-- introduced a reusable application shell with header, sidebar and dashboard content area,
-- connected the browser client to FastAPI through a typed API layer,
-- added API/database status feedback plus loading and error states,
-- added a configurable demo time range and live balance KPI cards for production, consumption and net energy,
-- kept the existing domain, balance and database schema contracts unchanged while adding a lightweight database health endpoint for frontend status monitoring.
+- added a Recharts time-series chart for production, consumption and net average power,
+- added producer and consumer energy-mix donut charts,
+- added a live asset overview with asset types and roles,
+- implemented the peak power deficit KPI from the balance interval series,
+- added dashboard card visibility controls and unified the dashboard presentation,
+- reused the existing FastAPI endpoints and database schema without backend domain changes.
 
 ## Project Goal
 
@@ -29,12 +29,12 @@ The project demonstrates practical backend and data engineering with visible ene
 - deterministic simulation and analytics logic,
 - automated unit, API, repository, service and integration testing,
 - reproducible local startup with Docker Compose,
-- portfolio energy-balance and energy-mix analytics exposed through REST and consumed by a React/TypeScript dashboard foundation; charts, energy mix and asset views are the next frontend steps, while storage, weather, recommendations and cloud deployment remain post-MVP work.
+- portfolio energy-balance and energy-mix analytics exposed through REST and visualized in a React/TypeScript dashboard with KPIs, power time series, energy-mix charts and an asset overview; storage, weather, recommendations and cloud deployment remain post-MVP work.
 
 ## Architecture
 
 ```text
-Client / Swagger UI
+React dashboard / Swagger UI
         |
         v
 FastAPI + Pydantic
@@ -254,7 +254,7 @@ There is **no public simulation REST endpoint in `v0.15.0`**. Simulation is exec
 | Simulation | dataclasses, seeded `Random`, profile registry, time-grid generation |
 | Aggregation | interpolation, time-weighted average power, trapezoidal integration |
 | Balance | role-aware production/consumption aggregation, chronological series, period summary, energy mix |
-| Frontend | React, TypeScript, Vite, typed FastAPI integration |
+| Frontend | React, TypeScript, Vite, Recharts, typed FastAPI integration |
 | Testing | pytest, FastAPI TestClient, dedicated test database |
 | Quality | Ruff, pytest markers, deterministic seeds and rollback tests |
 | Deployment | Docker, Docker Compose, PostgreSQL health check, named volume |
@@ -376,7 +376,7 @@ For this learning project, testing follows an 80/20 approach: complex domain log
 energy-operations-platform/
 ├── docs/
 ├── frontend/
-│   └── src/              # React/TypeScript application shell, API client and dashboard components
+│   └── src/              # React/TypeScript application shell, API client, charts and dashboard components
 ├── scripts/
 │   └── run_simulation_demo.py
 ├── sql/
@@ -423,8 +423,8 @@ Private notes, logs, environments, `.env` files, bytecode and archives are exclu
 
 ## Roadmap
 
-1. Build out the dashboard with production/consumption/net balance chart, energy mix and asset overview.
-2. Add full-stack portfolio polish, architecture diagram, screenshots and `v1.0.0`.
+1. Add full-stack integration, responsive polish, architecture diagram and screenshots in `v0.17`.
+2. Prepare the documented, reproducible `v1.0.0` portfolio release.
 3. Post-MVP: weather-driven generation, storage/SoC, recommendations, monitoring and Azure deployment.
 
 Large structural refactors remain secondary unless they solve a concrete development problem.

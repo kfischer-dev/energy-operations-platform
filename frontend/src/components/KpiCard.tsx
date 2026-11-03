@@ -1,14 +1,14 @@
-import './BalanceSummary.css';
-import './KpiCard.css';
-import productionIcon from '../assets/icons/balance/bolt.svg';
 import balanceIcon from '../assets/icons/balance/balance.svg';
+import productionIcon from '../assets/icons/balance/bolt.svg';
 import consumptionIcon from '../assets/icons/balance/city.svg';
 import powerDeficitIcon from '../assets/icons/balance/wave-square.svg';
 import infoIcon from '../assets/icons/info.svg';
+import './BalanceSummary.css';
+import './KpiCard.css';
 
 type KpiCardProps = {
   title: string;
-  value: number;
+  value: number | null;
   unit: string;
 };
 
@@ -31,7 +31,7 @@ export function KpiCard({ title, value, unit }: KpiCardProps) {
       break;
     case 'peak power deficit':
       icon = powerDeficitIcon;
-      footer = 'Available in v0.16';
+      footer = 'Maximum deficit based on interval-average power';
       break;
     default:
       icon = '';
@@ -44,8 +44,8 @@ export function KpiCard({ title, value, unit }: KpiCardProps) {
         <img src={icon} alt="Icon" />
       </div>
       <div className="kpi-card-value">
-        <span>{value}</span>
-        <span className="kpi-card-unit">{unit}</span>
+        <span>{value ?? '—'}</span>
+        {unit && <span className="kpi-card-unit">{unit}</span>}
       </div>
 
       <div className="kpi-card-divider"></div>

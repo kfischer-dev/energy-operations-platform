@@ -1,0 +1,119 @@
+.asset-overview {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 24px;
+  background: var(--surface);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.asset-overview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.asset-overview-header h2 {
+  margin: 0 0 5px;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.asset-overview-header p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.asset-overview-count {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.asset-overview-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.asset-overview-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+}
+
+.asset-overview-table th,
+.asset-overview-table td {
+  padding: 13px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.asset-overview-table th {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.asset-overview-table td {
+  color: var(--text-primary);
+}
+
+.asset-overview-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.asset-overview-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.asset-overview-role {
+  display: inline-block;
+  padding: 4px 9px;
+  border-radius: 8px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* Asset Roles */
+
+.asset-overview-role--producer {
+  color: #C99A6B;
+  background: rgba(201, 154, 107, 0.10);
+}
+
+.asset-overview-role--consumer {
+  color: #86B8D1;
+  background: rgba(134, 184, 209, 0.10);
+}
+
+.asset-overview-role--storage {
+  color: #B4A1CF;
+  background: rgba(180, 161, 207, 0.10);
+}
+
+.asset-overview-role--grid {
+  color: #91B5A3;
+  background: rgba(145, 181, 163, 0.10);
+}
+
+.asset-overview-empty {
+  margin: 0;
+  padding: 24px 0;
+  color: var(--text-secondary);
+  text-align: center;
+  font-size: 13px;
+}
+
+@media (max-width: 600px) {
+  .asset-overview {
+    padding: 16px;
+  }
+}

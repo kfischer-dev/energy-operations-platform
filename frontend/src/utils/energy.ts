@@ -17,3 +17,26 @@ export function formatEnergy(kwh: number) {
     unit,
   };
 }
+
+export function formatPower(valueKw: number) {
+  const abs = Math.abs(valueKw);
+
+  if (abs >= 1_000_000) {
+    return {
+      value: Number((valueKw / 1_000_000).toFixed(2)),
+      unit: 'GW',
+    };
+  }
+
+  if (abs >= 1_000) {
+    return {
+      value: Number((valueKw / 1_000).toFixed(2)),
+      unit: 'MW',
+    };
+  }
+
+  return {
+    value: Number(valueKw.toFixed(2)),
+    unit: 'kW',
+  };
+}

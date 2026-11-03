@@ -1,8 +1,10 @@
 .dashboard {
     display: flex;
     flex-direction: column;
-    padding: 20px;
+    padding: 8px 0 20px;
     width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
 }
 
 .dashboard-heading {
@@ -11,28 +13,64 @@
     align-items: flex-end;
     margin-bottom: 20px;
 }
+
 .dashboard-title h1 {
     margin: 0;
     margin-bottom: 5px;
     font-size: 22px;
 }
+
 .dashboard-title p {
     margin: 0;
     font-size: 14px;
 }
+
 .dashboard-controls p {
     font-size: 12px;
 }
 
 .dashboard-content {
     display: flex;
-    justify-content: space-between;
-    width: 100%;
+    flex-direction: column;
     gap: 20px;
+    width: 100%;
+    min-width: 0;
+    container: dashboard-content / inline-size;
 }
 
 .dashboard-overview {
-    display: flex;
-    flex-direction: row;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 20px;
+    width: 100%;
+    align-items: stretch;
+}
+
+.balance-chart {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    gap: 20px;
+}
+/* Two columns only when the content area (excluding sidebar) is wide enough
+   for the date controls and four readable KPI cards. */
+@container dashboard-content (min-width: 1320px) {
+    .dashboard-overview {
+        grid-template-columns: minmax(360px, 1.2fr) minmax(0, 3.3fr);
+    }
+}
+
+.energy-mix-section {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  width: 100%;
+  min-width: 0;
+}
+
+@container dashboard-content (max-width: 1000px) {
+  .energy-mix-section {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

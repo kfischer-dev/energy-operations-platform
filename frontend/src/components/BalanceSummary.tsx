@@ -1,20 +1,25 @@
 import { useEffect, useState } from 'react';
 import { getBalanceSummary } from '../api/api';
+import type { DashboardCardVisibility } from '../pages/dashboardCards';
+import type { BalanceInterval, BalanceSummary } from '../types/balance';
+import { formatEnergy, formatPower } from '../utils/energy';
 import { KpiCard } from './KpiCard';
 import './BalanceSummary.css';
-import type { BalanceSummary } from '../types/balance';
-import { formatEnergy } from '../utils/energy';
 
 type BalanceStatus = 'loading' | 'success' | 'error';
 
 type BalanceSummaryProps = {
     startTime: string | undefined;
     endTime: string | undefined;
+    visibleCards: DashboardCardVisibility;
+    intervals: BalanceInterval[];
 };
 
 function BalanceSummaryComponent({
     startTime = '2026-09-01T00:00:00+02:00',
-    endTime = '2026-09-02T00:00:00+02:00'
+    endTime = '2026-09-02T00:00:00+02:00',
+    visibleCards,
+    intervals,
 }: BalanceSummaryProps) {
 
     const [balanceSummary, setBalanceSummary] = useState<BalanceSummary | null>(null);
@@ -48,31 +53,41 @@ function BalanceSummaryComponent({
     const netBalance = balanceSummary
         ? formatEnergy(balanceSummary.total_net_energy_kwh)
         : null;
+    
+    const peakDeficitKw = intervals.reduce(
+        (maxDeficit, interval) =>
+            Math.max(maxDeficit, -interval.avg_net_power_kw),
+        0
+        );
+
+    const peakDeficit = intervals.length > 0
+        ? formatPower(peakDeficitKw)
+        : null;
 
     return (
         <div className="balance-summary">
             {status === 'success' && balanceSummary ? (
                 <div className="kpi-grid">
-                    <KpiCard
+                    {visibleCards.production && <KpiCard
                         title="Production Energy"
                         value={production?.value ?? 0}
                         unit={production?.unit ?? 'kWh'}
-                    />
-                    <KpiCard
+                    />}
+                    {visibleCards.consumption && <KpiCard
                         title="Consumption Energy"
                         value={consumption?.value ?? 0}
                         unit={consumption?.unit ?? 'kWh'}
-                    />
-                    <KpiCard
+                    />}
+                    {visibleCards.net && <KpiCard
                         title="Total Net Energy"
                         value={netBalance?.value ?? 0}
                         unit={netBalance?.unit ?? 'kWh'}
-                    />
-                    <KpiCard
+                    />}
+                    {visibleCards.peak && <KpiCard
                         title="Peak Power Deficit"
-                        value={0}
-                        unit="coming soon"
-                    />
+                        value={peakDeficit?.value ?? 0}
+                        unit={peakDeficit?.unit ?? 'kW'}
+                    />}
                 </div>
             ) : (
                 <div className={`balance-message balance-message--${status}`}>
