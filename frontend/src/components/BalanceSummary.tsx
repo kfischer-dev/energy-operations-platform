@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { getBalanceSummary } from '../api/api';
-import { KpiCard } from './KpiCard';
-import './BalanceSummary.css';
+import type { DashboardCardVisibility } from '../pages/dashboardCards';
 import type { BalanceSummary } from '../types/balance';
 import { formatEnergy } from '../utils/energy';
-import type { DashboardCardVisibility } from '../pages/dashboardCards';
+import { KpiCard } from './KpiCard';
+import './BalanceSummary.css';
 
 type BalanceStatus = 'loading' | 'success' | 'error';
 

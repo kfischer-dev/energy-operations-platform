@@ -4,10 +4,9 @@ import {
   Pie,
   Tooltip,
 } from 'recharts';
-
-import './EnergyMixChart.css';
 import type { EnergyMix } from '../types/balance';
 import { EnergyMixTooltip } from './EnergyMixTooltip';
+import './EnergyMixChart.css';
 
 type EnergyMixChartProps = {
   data: EnergyMix | null;

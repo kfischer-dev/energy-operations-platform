@@ -1,12 +1,6 @@
-import { createContext, useContext, useState } from 'react';
+import { useState } from 'react';
 import type { ReactNode } from 'react';
-
-type SidebarState = {
-  collapsed: boolean;
-  toggle: () => void;
-};
-
-const SidebarContext = createContext<SidebarState | null>(null);
+import { SidebarContext } from './sidebarContext';
 
 export function SidebarProvider({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -18,8 +12,3 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useSidebar() {
-  const state = useContext(SidebarContext);
-  if (!state) throw new Error('useSidebar must be used within SidebarProvider');
-  return state;
-}

@@ -1,12 +1,12 @@
 import { BrowserRouter, Routes, Route } from 'react-router';
 import { MainLayout } from './layout/MainLayout'
-import { Dashboard } from './pages/Dashboard'
-import { Assets } from './pages/Assets'
-import './App.css'
-import { Simulation } from './pages/Simulation'
-import { Balance } from './pages/Balance'
-import { HeaderDesignTest } from './pages/HeaderDesignTest'
 import { SidebarProvider } from './layout/SidebarState'
+import { Assets } from './pages/Assets'
+import { Balance } from './pages/Balance'
+import { Dashboard } from './pages/Dashboard'
+import { HeaderDesignTest } from './pages/HeaderDesignTest'
+import { Simulation } from './pages/Simulation'
+import './App.css'
 
 function App() {
   return (

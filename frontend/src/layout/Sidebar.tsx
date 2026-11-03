@@ -1,9 +1,9 @@
-import { SidebarItem } from './SidebarItem';
-import { useSidebar } from './SidebarState';
-import dashboardIcon from '../assets/icons/dashboard.svg';
 import assetsIcon from '../assets/icons/assets.svg';
 import balanceIcon from '../assets/icons/balance/balance.svg';
+import dashboardIcon from '../assets/icons/dashboard.svg';
 import simulationIcon from '../assets/icons/simulation.svg';
+import { SidebarItem } from './SidebarItem';
+import { useSidebar } from './sidebarContext';
 import './Sidebar.css';
 
 export function Sidebar() {

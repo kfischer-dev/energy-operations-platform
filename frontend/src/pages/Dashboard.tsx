@@ -1,18 +1,18 @@
 import { useEffect, useState } from 'react';
+import { getBalanceSeries, getEnergyMixProducer, getEnergyMixConsumer } from '../api/api';
+import { getAssets } from '../api/api';
+import { AssetOverview } from '../components/AssetOverview';
+import { EnergyBalanceChart } from '../components/BalanceChart';
 import BalanceSummaryComponent from '../components/BalanceSummary'
 import { EnergyMixChart } from '../components/EnergyMixChart';
 import { TimeRangeCard } from '../components/TimeRangeCard';
+import type { AssetResponse } from '../types/assets';
+import type { BalanceInterval, EnergyMix } from '../types/balance';
+import { allDashboardCardsVisible, dashboardCards } from './dashboardCards';
+import type { DashboardCardId } from './dashboardCards';
 import './Dashboard.css'
 import './DashboardContent.css';
 import './DashboardCardSelector.css';
-import { getBalanceSeries, getEnergyMixProducer, getEnergyMixConsumer } from '../api/api';
-import { EnergyBalanceChart } from '../components/BalanceChart';
-import type { BalanceInterval, EnergyMix } from '../types/balance';
-import { getAssets } from '../api/api';
-import type { AssetResponse } from '../types/assets';
-import { AssetOverview } from '../components/AssetOverview';
-import { allDashboardCardsVisible, dashboardCards } from './dashboardCards';
-import type { DashboardCardId } from './dashboardCards';
 
 type TimeRange = {
     startTime: string;

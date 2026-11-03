@@ -1,6 +1,6 @@
 import { ModernHeader } from '../layout/ModernHeader';
 import { Sidebar } from '../layout/Sidebar';
-import { useSidebar } from '../layout/SidebarState';
+import { useSidebar } from '../layout/sidebarContext';
 import { Dashboard } from './Dashboard';
 import '../layout/MainLayout.css';
 import './HeaderDesignTest.css';

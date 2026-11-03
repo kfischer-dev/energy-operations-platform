@@ -1,5 +1,3 @@
-import type { BalanceInterval } from '../types/balance';
-
 import {
     ResponsiveContainer,
     LineChart,
@@ -10,9 +8,9 @@ import {
     Legend,
     Line,
 } from 'recharts';
-
-import './BalanceChart.css';
+import type { BalanceInterval } from '../types/balance';
 import { BalanceChartTooltip } from './BalanceChartTooltip';
+import './BalanceChart.css';
 
 type EnergyBalanceChartProps = {
     data: BalanceInterval[];

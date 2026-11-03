@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { ModernHeader } from './ModernHeader';
-import { Sidebar } from './Sidebar'; 
-import { useSidebar } from './SidebarState';
+import { Sidebar } from './Sidebar';
+import { useSidebar } from './sidebarContext';
 import './MainLayout.css';
 
 

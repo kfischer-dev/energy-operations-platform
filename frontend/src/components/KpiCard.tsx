@@ -1,10 +1,10 @@
-import './BalanceSummary.css';
-import './KpiCard.css';
-import productionIcon from '../assets/icons/balance/bolt.svg';
 import balanceIcon from '../assets/icons/balance/balance.svg';
+import productionIcon from '../assets/icons/balance/bolt.svg';
 import consumptionIcon from '../assets/icons/balance/city.svg';
 import powerDeficitIcon from '../assets/icons/balance/wave-square.svg';
 import infoIcon from '../assets/icons/info.svg';
+import './BalanceSummary.css';
+import './KpiCard.css';
 
 type KpiCardProps = {
   title: string;

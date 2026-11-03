@@ -1,5 +1,5 @@
-import type { BalanceInterval, BalanceSummary, EnergyMix } from "../types/balance";
 import type { AssetResponse } from '../types/assets';
+import type { BalanceInterval, BalanceSummary, EnergyMix } from "../types/balance";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
