@@ -4,7 +4,7 @@ import { SidebarProvider } from './layout/SidebarState'
 import { Assets } from './pages/Assets'
 import { Balance } from './pages/Balance'
 import { Dashboard } from './pages/Dashboard'
-import { HeaderDesignTest } from './pages/HeaderDesignTest'
+// import { HeaderDesignTest } from './pages/HeaderDesignTest'
 import { Simulation } from './pages/Simulation'
 import './App.css'
 
@@ -13,7 +13,7 @@ function App() {
     <BrowserRouter>
       <SidebarProvider>
       <Routes>
-        <Route path="/design-test" element={<HeaderDesignTest />} />
+        {/* <Route path="/design-test" element={<HeaderDesignTest />} /> */}
         <Route path="*" element={
           <MainLayout>
             <Routes>

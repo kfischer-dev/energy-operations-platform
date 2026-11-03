@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document describes the automated test approach of the Energy Operations Platform in `v0.15.0`.
+This document describes the automated test approach of the Energy Operations Platform in `v0.16.0`.
 
 The strategy keeps strong coverage around domain-heavy logic and critical persistence paths while following an 80/20 learning-project rule: tests should prevent realistic regressions or clarify complex behavior, not duplicate framework-standard validation on every layer.
 
@@ -595,7 +595,7 @@ py -m compileall src tests scripts
 
 # Frontend Quality Checks
 
-`v0.15.0` does not introduce a separate frontend unit-test framework. The current MVP frontend is checked with:
+`v0.16.0` does not introduce a separate frontend unit-test framework. The current MVP frontend is checked with:
 
 ```bash
 cd frontend
@@ -603,7 +603,7 @@ npm run lint
 npm run build
 ```
 
-Loading/error behavior and the live `/health` / `/balance` integration are smoke-checked in the browser. Automated frontend component tests can be added later if UI logic becomes complex enough to justify them.
+The browser smoke check should cover `/health`, `/balance`, `/balance/series`, both `/balance/energy-mix` roles and `/assets`, including time-range updates, charts, the derived peak-deficit KPI and the asset overview. Automated frontend component tests can be added later if UI logic becomes complex enough to justify them.
 
 ---
 
@@ -620,10 +620,10 @@ Before tagging a release:
 6. inspect git status and release diff
 ```
 
-For `v0.15.0`, the existing backend regression suite and CORS contract remain the safety net. The frontend release check adds `npm run lint`, `npm run build` and a short browser smoke check against the deterministic demo period. No backend schema or seed change is introduced by this release.
+For `v0.16.0`, the existing backend regression suite and CORS contract remain the safety net. The frontend release check includes `npm run lint`, `npm run build` and a short browser smoke check against the deterministic demo period. No backend schema or seed change is introduced by this release.
 
 ---
 
 # Known Test-Architecture Improvement
 
-A later cleanup can move database setup fixtures closer to integration/API tests so truly pure simulation and aggregation tests can run without any database-session initialization. That is a structural improvement, not a blocker for `v0.15.0`.
+A later cleanup can move database setup fixtures closer to integration/API tests so truly pure simulation and aggregation tests can run without any database-session initialization. That is a structural improvement, not a blocker for `v0.16.0`.

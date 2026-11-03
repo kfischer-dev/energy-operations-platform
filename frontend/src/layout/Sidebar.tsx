@@ -45,7 +45,7 @@ export function Sidebar() {
                         icon={<img src={simulationIcon} alt="" />}
                         to="/simulation"
                     />
-                    <SidebarItem
+                    {/* <SidebarItem
                         label="Design Test"
                         icon={
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
@@ -54,7 +54,7 @@ export function Sidebar() {
                             </svg>
                         }
                         to="/design-test"
-                    />
+                    /> */}
                 </nav>
             </div>
         </aside>

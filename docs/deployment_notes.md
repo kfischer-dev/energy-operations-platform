@@ -2,9 +2,9 @@
 
 ## Purpose
 
-This document describes the local backend container environment and developer execution paths of the Energy Operations Platform in `v0.15.0`.
+This document describes the local backend container environment and developer execution paths of the Energy Operations Platform in `v0.16.0`.
 
-The Docker foundation was established in `v0.9.x`. The API + PostgreSQL Compose architecture remains unchanged. `v0.15.0` adds a local React/TypeScript/Vite frontend that consumes the existing API through the `v0.14.0` CORS contract; the frontend is not containerized yet.
+The Docker foundation was established in `v0.9.x`. The API + PostgreSQL Compose architecture remains unchanged. `v0.15.0` adds a local React/TypeScript/Vite frontend; `v0.16.0` adds the energy dashboard on the same API and `v0.14.0` CORS contract. The frontend is not containerized yet.
 
 Related documentation:
 
@@ -184,7 +184,7 @@ http://127.0.0.1:8000/balance/energy-mix
 
 ## Frontend Development
 
-The `v0.15.0` frontend runs locally with Vite and remains outside Docker Compose:
+The `v0.16.0` frontend runs locally with Vite and remains outside Docker Compose:
 
 ```bash
 cd frontend
@@ -401,7 +401,7 @@ The three balance endpoints run inside the existing FastAPI service and read the
 
 ---
 
-# Browser / Frontend CORS in `v0.15.0`
+# Browser / Frontend CORS in `v0.16.0`
 
 The React/Vite development client runs on a different origin from FastAPI:
 
@@ -412,7 +412,7 @@ FastAPI API:            http://localhost:8000 (or 127.0.0.1:8000)
 
 `src/api.py` therefore registers `CORSMiddleware` with `http://localhost:5173` as the explicit allowed origin. `allow_credentials` is `False`; methods and headers are enabled for the local development client. This is intentionally narrower than wildcard origin access.
 
-The React application is implemented in `v0.15.0` but is not yet part of Compose. Full-stack Compose integration is deferred to the frontend/portfolio-polish phase.
+The React application was introduced in `v0.15.0` and expanded with dashboard charts and asset overview in `v0.16.0`, but is not yet part of Compose. Full-stack Compose integration is deferred to the frontend/portfolio-polish phase.
 
 ---
 
@@ -434,7 +434,7 @@ The React application is implemented in `v0.15.0` but is not yet part of Compose
 # Next Deployment Steps
 
 1. Keep the backend API + PostgreSQL contract frozen unless the dashboard exposes a concrete blocker or bug.
-2. Build the remaining dashboard views on the `v0.15.0` React foundation.
+2. Prepare deployment-friendly frontend configuration and the production build workflow.
 3. Add the frontend to the local Full-Stack start for the `v1.0.0` portfolio MVP.
 4. Add a portfolio architecture diagram, screenshots and a clear release/demo workflow.
 5. Introduce migrations, CI, production hardening and cloud-oriented configuration after the first Full-Stack MVP unless a concrete need appears earlier.
