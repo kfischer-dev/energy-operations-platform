@@ -121,7 +121,7 @@ export function EnergyBalanceChart({
                             value: `Power [${powerUnit}]`,
                             angle: -90,
                             position: 'insideLeft',
-                            offset: 0,
+                            offset: 4,
                             fill: '#B8C2CE',
                             fontSize: 14,
                         }}
