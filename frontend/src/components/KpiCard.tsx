@@ -31,7 +31,7 @@ export function KpiCard({ title, value, unit }: KpiCardProps) {
       break;
     case 'peak power deficit':
       icon = powerDeficitIcon;
-      footer = 'Available in v0.16';
+      footer = 'Maximum deficit based on interval-average power';
       break;
     default:
       icon = '';

@@ -133,6 +133,7 @@ export function Dashboard() {
                         startTime={timeRange.startTime}
                         endTime={timeRange.endTime}
                         visibleCards={visibleCards}
+                        intervals={series}
                     />}
                 </div>
                 {visibleCards.balance && <div className="balance-chart">

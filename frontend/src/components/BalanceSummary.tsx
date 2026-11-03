@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { getBalanceSummary } from '../api/api';
 import type { DashboardCardVisibility } from '../pages/dashboardCards';
-import type { BalanceSummary } from '../types/balance';
-import { formatEnergy } from '../utils/energy';
+import type { BalanceInterval, BalanceSummary } from '../types/balance';
+import { formatEnergy, formatPower } from '../utils/energy';
 import { KpiCard } from './KpiCard';
 import './BalanceSummary.css';
 
@@ -12,12 +12,14 @@ type BalanceSummaryProps = {
     startTime: string | undefined;
     endTime: string | undefined;
     visibleCards: DashboardCardVisibility;
+    intervals: BalanceInterval[];
 };
 
 function BalanceSummaryComponent({
     startTime = '2026-09-01T00:00:00+02:00',
     endTime = '2026-09-02T00:00:00+02:00',
     visibleCards,
+    intervals,
 }: BalanceSummaryProps) {
 
     const [balanceSummary, setBalanceSummary] = useState<BalanceSummary | null>(null);
@@ -51,6 +53,16 @@ function BalanceSummaryComponent({
     const netBalance = balanceSummary
         ? formatEnergy(balanceSummary.total_net_energy_kwh)
         : null;
+    
+    const peakDeficitKw = intervals.reduce(
+        (maxDeficit, interval) =>
+            Math.max(maxDeficit, -interval.avg_net_power_kw),
+        0
+        );
+
+    const peakDeficit = intervals.length > 0
+        ? formatPower(peakDeficitKw)
+        : null;
 
     return (
         <div className="balance-summary">
@@ -73,8 +85,8 @@ function BalanceSummaryComponent({
                     />}
                     {visibleCards.peak && <KpiCard
                         title="Peak Power Deficit"
-                        value={null}
-                        unit=""
+                        value={peakDeficit?.value ?? 0}
+                        unit={peakDeficit?.unit ?? 'kW'}
                     />}
                 </div>
             ) : (
