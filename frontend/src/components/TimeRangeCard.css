@@ -81,7 +81,7 @@
 
 .time-range-card form input:hover {
   background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(184, 115, 51, 0.3);
+  border-color: rgba(201, 154, 107, 0.24);
 }
 
 .time-range-card form input:focus-visible {
@@ -95,7 +95,7 @@
   margin-top: 4px;
   padding: 11px 12px;
   color: var(--text-primary);
-  background: rgba(184, 115, 51, 0.13);
+  background: rgba(201, 154, 107, 0.09);
   border: 1px solid var(--panel-border-hover);
   border-radius: 10px;
   font: inherit;
@@ -106,8 +106,8 @@
 }
 
 .time-range-card form button:hover {
-  background: rgba(184, 115, 51, 0.21);
-  border-color: rgba(216, 154, 99, 0.55);
+  background: rgba(201, 154, 107, 0.15);
+  border-color: rgba(201, 154, 107, 0.40);
 }
 
 .time-range-card form button:focus-visible {

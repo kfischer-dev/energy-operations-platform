@@ -71,7 +71,7 @@ export function EnergyBalanceChart({
             <ResponsiveContainer width="100%" height={350}>
                 <LineChart data={chartData}>
                     <CartesianGrid
-                        stroke="rgba(255, 255, 255, 0.1)"
+                        stroke="rgba(215, 224, 233, 0.075)"
                         strokeDasharray="3 5"
                         vertical={false}
                     />
@@ -93,23 +93,23 @@ export function EnergyBalanceChart({
                                 minute: '2-digit',
                             })
                         }
-                        tick={{ fill: '#9CA3AF', fontSize: 12 }}
-                        axisLine={{ stroke: 'rgba(255, 255, 255, 0.18)' }}
+                        tick={{ fill: '#A5AEBB', fontSize: 12 }}
+                        axisLine={{ stroke: 'rgba(215, 224, 233, 0.13)' }}
                         tickLine={false}
                         tickMargin={12}
                         label={{
                             value: 'Time',
                             position: 'insideBottom',
                             offset: -8,
-                            fill: '#CBD5E1',
+                            fill: '#B8C2CE',
                             fontSize: 14,
                         }}
                         height={40}
                     />
 
                     <YAxis
-                        tick={{ fill: '#9CA3AF', fontSize: 12 }}
-                        axisLine={{ stroke: 'rgba(255, 255, 255, 0.18)' }}
+                        tick={{ fill: '#A5AEBB', fontSize: 12 }}
+                        axisLine={{ stroke: 'rgba(215, 224, 233, 0.13)' }}
                         tickLine={false}
                         width={45}
                         tickFormatter={(value: number) =>
@@ -122,7 +122,7 @@ export function EnergyBalanceChart({
                             angle: -90,
                             position: 'insideLeft',
                             offset: 0,
-                            fill: '#CBD5E1',
+                            fill: '#B8C2CE',
                             fontSize: 14,
                         }}
                     />
@@ -147,7 +147,7 @@ export function EnergyBalanceChart({
                         wrapperStyle={{
                             paddingTop: 16,
                             fontSize: 12,
-                            color: '#CBD5E1',
+                            color: '#B8C2CE',
                         }}
                     />
 
@@ -155,8 +155,8 @@ export function EnergyBalanceChart({
                         type="linear"
                         dataKey="avg_production_power_kw"
                         name="Production"
-                        stroke="#C88953"
-                        strokeWidth={2.5}
+                        stroke="#C99A6B"
+                        strokeWidth={2.2}
                         dot={false}
                         activeDot={{ r: 5 }}
                     />
@@ -165,8 +165,8 @@ export function EnergyBalanceChart({
                         type="linear"
                         dataKey="avg_consumption_power_kw"
                         name="Consumption"
-                        stroke="#38BDF8"
-                        strokeWidth={2.5}
+                        stroke="#86B8D1"
+                        strokeWidth={2.2}
                         dot={false}
                         activeDot={{ r: 5 }}
                     />
@@ -175,9 +175,9 @@ export function EnergyBalanceChart({
                         type="linear"
                         dataKey="avg_net_power_kw"
                         name="Net Power"
-                        stroke="#34D399"
-                        strokeWidth={2}
-                        strokeDasharray="2 4"
+                        stroke="#91B5A3"
+                        strokeWidth={1.9}
+                        strokeDasharray="4 5"
                         dot={false}
                         activeDot={{ r: 5 }}
                     />

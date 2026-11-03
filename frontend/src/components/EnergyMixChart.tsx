@@ -14,16 +14,16 @@ type EnergyMixChartProps = {
 };
 
 const ASSET_COLORS: Record<string, string> = {
-  solar_park: '#F4C95D',
-  wind_park: '#38BDF8',
-  hydro_power_plant: '#2DD4BF',
-  biomass_power_plant: '#84CC16',
-  gas_power_plant: '#C88953',
+  solar_park: '#D8BD7B',
+  wind_park: '#86B8D1',
+  hydro_power_plant: '#77B9AF',
+  biomass_power_plant: '#9CAC78',
+  gas_power_plant: '#C99A6B',
 
-  city_load: '#A78BFA',
-  industrial_load: '#F97316',
-  residential_load: '#F472B6',
-  data_center: '#818CF8',
+  city_load: '#B4A1CF',
+  industrial_load: '#D29A77',
+  residential_load: '#CE9FB7',
+  data_center: '#839BC5',
 };
 
 const ASSET_LABELS: Record<string, string> = {
@@ -87,7 +87,7 @@ export function EnergyMixChart(
               cy="50%"
               innerRadius={72}
               outerRadius={105}
-              stroke="rgba(255, 255, 255, 0.15)"
+              stroke="rgba(17, 24, 33, 0.55)"
               strokeWidth={1}
             />
             <Tooltip

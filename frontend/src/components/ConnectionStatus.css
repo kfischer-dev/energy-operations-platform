@@ -22,9 +22,9 @@
   border-radius: 50%;
 }
 
-.status-dot.loading { background-color: #f59e0b; }
-.status-dot.success { background-color: #22c55e; }
-.status-dot.error { background-color: #ef4444; }
+.status-dot.loading { background-color: #CBAA72; }
+.status-dot.success { background-color: #91B5A3; }
+.status-dot.error { background-color: #D28F8A; }
 
 .db-logo {
   display: inline-block;
@@ -38,6 +38,6 @@
   background-color: currentColor;
 }
 
-.db-logo.loading { background-color: #f59e0b; }
-.db-logo.success { background-color: #22c55e; }
-.db-logo.error { background-color: #ef4444; }
+.db-logo.loading { background-color: #CBAA72; }
+.db-logo.success { background-color: #91B5A3; }
+.db-logo.error { background-color: #D28F8A; }

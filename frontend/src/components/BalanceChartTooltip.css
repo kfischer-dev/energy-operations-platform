@@ -4,11 +4,11 @@
   min-width: 250px;
   padding: 14px 16px;
   color: #f1f5f9;
-  background: rgba(24, 29, 38, 0.98);
-  border: 1px solid rgba(184, 115, 51, 0.3);
+  background: rgba(24, 30, 39, 0.97);
+  border: 1px solid rgba(201, 154, 107, 0.20);
   border-radius: 12px;
   box-shadow:
-    0 10px 28px rgba(0, 0, 0, 0.35),
+    0 8px 24px rgba(0, 0, 0, 0.27),
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
   font-size: 12px;
 }
@@ -28,13 +28,13 @@
 }
 
 .tooltip-header span {
-  color: #cbd5e1;
+  color: #B8C2CE;
   font-size: 12px;
 }
 
 .tooltip-subtitle {
   margin: 6px 0 0;
-  color: #aeb7c5;
+  color: #A5AEBB;
   font-size: 11px;
 }
 
@@ -61,7 +61,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #cbd5e1;
+  color: #B8C2CE;
 }
 
 .tooltip-row strong {
@@ -78,14 +78,14 @@
   border-radius: 50%;
 }
 
-.tooltip-dot.production { background: #c88953; }
-.tooltip-dot.consumption { background: #38bdf8; }
-.tooltip-dot.net { background: #34d399; }
+.tooltip-dot.production { background: #C99A6B; }
+.tooltip-dot.consumption { background: #86B8D1; }
+.tooltip-dot.net { background: #91B5A3; }
 
 .tooltip-quality {
   display: flex;
   justify-content: space-between;
   gap: 16px;
-  color: #aeb7c5;
+  color: #A5AEBB;
   font-size: 11px;
 }
