@@ -12,6 +12,13 @@ function formatAssetType(value: string): string {
     .join(' ');
 }
 
+const ASSET_ROLE_LABELS: Record<string, string> = {
+  producer: 'Producer',
+  consumer: 'Consumer',
+  storage: 'Storage',
+  grid: 'Grid',
+};
+
 export function AssetOverview({ assets }: AssetOverviewProps) {
   return (
     <section className="asset-overview">
@@ -41,8 +48,10 @@ export function AssetOverview({ assets }: AssetOverviewProps) {
                   <td>{asset.asset_name}</td>
                   <td>{formatAssetType(asset.asset_type)}</td>
                   <td>
-                    <span className={`asset-overview-role asset-overview-role--${asset.asset_role}`}>
-                      {asset.asset_role === 'producer' ? 'Producer' : 'Consumer'}
+                    <span
+                      className={`asset-overview-role asset-overview-role--${asset.asset_role}`}
+                    >
+                      {ASSET_ROLE_LABELS[asset.asset_role] ?? asset.asset_role}
                     </span>
                   </td>
                 </tr>

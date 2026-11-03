@@ -82,14 +82,26 @@
   white-space: nowrap;
 }
 
+/* Asset Roles */
+
 .asset-overview-role--producer {
-  color: #d9b48c;
-  background: rgba(184, 115, 51, 0.12);
+  color: #C99A6B;
+  background: rgba(201, 154, 107, 0.10);
 }
 
 .asset-overview-role--consumer {
-  color: #7dd3fc;
-  background: rgba(56, 189, 248, 0.12);
+  color: #86B8D1;
+  background: rgba(134, 184, 209, 0.10);
+}
+
+.asset-overview-role--storage {
+  color: #B4A1CF;
+  background: rgba(180, 161, 207, 0.10);
+}
+
+.asset-overview-role--grid {
+  color: #91B5A3;
+  background: rgba(145, 181, 163, 0.10);
 }
 
 .asset-overview-empty {
