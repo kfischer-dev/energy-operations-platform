@@ -65,17 +65,19 @@ def create_simulation_run(conn, config: "SimulationConfig") -> int:
             """
             INSERT INTO simulation_runs (
                 simulation_mode,
+                scenario,
                 start_time, 
                 end_time, 
                 interval_minutes, 
                 random_seed, 
                 status
             )
-            VALUES (%s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
             RETURNING simulation_run_id;
         """,
             (
                 config.simulation_mode,
+                config.scenario,
                 config.start_time,
                 config.end_time,
                 config.interval_minutes,
@@ -154,6 +156,7 @@ def fetch_simulation_run_by_id(conn, simulation_run_id) -> dict | None:
             SELECT
                 simulation_run_id,
                 simulation_mode,
+                scenario,
                 start_time,
                 end_time,
                 interval_minutes,

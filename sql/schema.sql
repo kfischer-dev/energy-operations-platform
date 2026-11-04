@@ -102,6 +102,7 @@ CREATE TABLE assets (
 CREATE TABLE simulation_runs (
     simulation_run_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     simulation_mode VARCHAR(50) NOT NULL,
+    scenario VARCHAR(50) NOT NULL DEFAULT 'baseline',
     start_time TIMESTAMPTZ NOT NULL,
     end_time TIMESTAMPTZ NOT NULL,
     interval_minutes INTEGER NOT NULL,
@@ -128,7 +129,10 @@ CREATE TABLE simulation_runs (
         CHECK (generated_measurement_count >= 0),
 
     CONSTRAINT chk_simulation_runs_mode
-        CHECK (simulation_mode IN ('historical', 'live', 'forecast', 'scenario'))
+        CHECK (simulation_mode IN ('historical', 'live', 'forecast', 'scenario')),
+
+    CONSTRAINT chk_simulation_runs_scenario
+        CHECK (scenario IN ('baseline', 'cloudy_day', 'windy_day', 'high_demand', 'energy_stress'))
 );
 
 

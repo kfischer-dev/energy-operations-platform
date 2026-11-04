@@ -77,6 +77,7 @@ VALUES
 
 INSERT INTO simulation_runs(
     simulation_mode,
+    scenario,
     start_time,
     end_time,
     interval_minutes,
@@ -89,6 +90,7 @@ INSERT INTO simulation_runs(
 )
 VALUES (
     'historical',
+    'baseline',
     '2026-09-01 00:00:00+02',
     '2026-09-02 00:00:00+02',
     15,

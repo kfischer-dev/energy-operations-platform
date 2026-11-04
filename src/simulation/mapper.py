@@ -65,6 +65,7 @@ def map_simulation_run_row(row) -> dict:
     (
         simulation_run_id,
         simulation_mode,
+        scenario,
         start_time,
         end_time,
         interval_minutes,
@@ -79,6 +80,7 @@ def map_simulation_run_row(row) -> dict:
     return {
         "simulation_run_id": simulation_run_id,
         "simulation_mode": simulation_mode,
+        "scenario": scenario,
         "start_time": start_time,
         "end_time": end_time,
         "interval_minutes": interval_minutes,
