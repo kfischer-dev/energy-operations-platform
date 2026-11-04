@@ -9,6 +9,7 @@ from src.simulation import service as simulation_service
 from src.simulation.models import SimulationConfig
 
 SIMULATION_RUN_ID = 42
+# Creation, running status and the final completed/failed status are separate commits.
 EXPECTED_COMMIT_COUNT = 3
 
 
@@ -138,7 +139,10 @@ def test_execute_simulation_run_persists_measurements_and_completes_run(
 
     assert connection.commit.call_count == EXPECTED_COMMIT_COUNT
     connection.rollback.assert_not_called()
-    assert result == power_intervals
+    # The result must carry the ID created by this call together with its output.
+    assert result.simulation_run_id == SIMULATION_RUN_ID
+    assert result.generated_measurement_count == 2
+    assert result.power_intervals == power_intervals
 
 
 @pytest.mark.service
@@ -182,6 +186,7 @@ def test_execute_simulation_run_marks_run_failed_when_batch_insert_fails(
         SIMULATION_RUN_ID,
     )
 
+    # Roll back the measurement batch, then persist failure against the same run ID.
     connection.rollback.assert_called_once_with()
     service_mocks.mark_failed.assert_called_once_with(
         connection,

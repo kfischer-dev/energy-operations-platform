@@ -37,20 +37,9 @@ def run_simulation_service_smoke_test() -> bool:
     conn = get_connection()
 
     try:
-        power_intervals = execute_simulation_run(conn, config)
-
-        # The smoke script runs synchronously, so the newest run is the one
-        # created by execute_simulation_run() above.
-        with conn.cursor() as cursor:
-            cursor.execute(
-                """
-                SELECT simulation_run_id
-                FROM simulation_runs
-                ORDER BY simulation_run_id DESC
-                LIMIT 1;
-                """
-            )
-            simulation_run_id = cursor.fetchone()[0]
+        result = execute_simulation_run(conn, config)
+        power_intervals = result.power_intervals
+        simulation_run_id = result.simulation_run_id
 
         simulation_run = fetch_simulation_run_by_id(conn, simulation_run_id)
 

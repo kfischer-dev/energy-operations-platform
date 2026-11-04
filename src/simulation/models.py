@@ -3,6 +3,8 @@ from datetime import datetime, timedelta
 from random import Random
 from typing import Literal
 
+from src.measurements.models import PowerIntervalDraft
+
 # ============================================================
 # Simulation Configuration
 # ============================================================
@@ -85,6 +87,15 @@ class SimulationConfig:
 # ============================================================
 # Simulation Domain Models
 # ============================================================
+
+
+@dataclass(frozen=True)
+class SimulationRunResult:
+    """Identify the persisted run alongside its generated output."""
+
+    simulation_run_id: int
+    generated_measurement_count: int
+    power_intervals: list[PowerIntervalDraft]
 
 
 @dataclass(frozen=True)

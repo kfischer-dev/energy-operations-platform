@@ -80,18 +80,9 @@ def test_execute_simulation_run_and_save_measurements(
 
     assert consumer_asset_ids
 
-    execute_simulation_run(conn, config)
-
-    with conn.cursor() as cursor:
-        cursor.execute(
-            """
-            SELECT simulation_run_id
-            FROM simulation_runs
-            ORDER BY simulation_run_id DESC
-            LIMIT 1;
-            """
-        )
-        simulation_run_id = cursor.fetchone()[0]
+    # Use this execution's returned ID so another run cannot change the lookup target.
+    result = execute_simulation_run(conn, config)
+    simulation_run_id = result.simulation_run_id
 
     simulation_run = fetch_simulation_run_by_id(
         conn,
@@ -183,18 +174,8 @@ def test_failure_rollback_simulation_run(
     conn = database_connection
     config = create_default_simulation_config()
 
-    execute_simulation_run(conn, config)
-
-    with conn.cursor() as cursor:
-        cursor.execute(
-            """
-            SELECT simulation_run_id
-            FROM simulation_runs
-            ORDER BY simulation_run_id DESC
-            LIMIT 1;
-            """
-        )
-        simulation_run_a_id = cursor.fetchone()[0]
+    result = execute_simulation_run(conn, config)
+    simulation_run_a_id = result.simulation_run_id
 
     simulation_run_a = fetch_simulation_run_by_id(conn, simulation_run_a_id)
 
@@ -218,6 +199,7 @@ def test_failure_rollback_simulation_run(
         )
         total_measurements_before = cursor.fetchone()[0]
 
+    # Repeating the same asset timestamps exercises the real database constraint.
     with pytest.raises(psycopg.errors.UniqueViolation):
         execute_simulation_run(conn, config)
 
@@ -226,8 +208,7 @@ def test_failure_rollback_simulation_run(
             """
             SELECT simulation_run_id
             FROM simulation_runs
-            ORDER BY simulation_run_id DESC
-            LIMIT 1;
+            WHERE status = 'failed';
             """
         )
         simulation_run_b_id = cursor.fetchone()[0]

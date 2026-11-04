@@ -5,6 +5,7 @@ from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Path, Query, status
 from fastapi.middleware.cors import CORSMiddleware
+from psycopg.errors import UniqueViolation
 
 from src.balance.repository import fetch_balance_measurements
 from src.balance.service import (
@@ -42,6 +43,9 @@ from src.schemas import (
     MeasurementResponse,
     MeasurementSummaryResponse,
 )
+from src.simulation.repository import fetch_simulation_run_by_id
+from src.simulation.schemas import SimulationRunCreate, SimulationRunResponse
+from src.simulation.service import execute_simulation_run
 
 configure_logging()
 logger = logging.getLogger(__name__)
@@ -52,8 +56,12 @@ app = FastAPI(
         "REST API for accessing energy asset and measurement data. "
         "This API is part of the Energy Operations Platform portfolio project."
     ),
-    version="0.16.0",
+    version="0.17.0",
     openapi_tags=[
+        {
+            "name": "Simulation",
+            "description": "Execute simulations and retrieve persisted runs.",
+        },
         {
             "name": "General",
             "description": "General API information and health checks.",
@@ -119,6 +127,63 @@ def get_measurement_or_404(conn, measurement_id):
         )
 
     return measurement
+
+
+# ============================================================
+# Simulation Endpoints
+# ============================================================
+
+
+@app.post(
+    "/simulation/runs",
+    response_model=SimulationRunResponse,
+    status_code=status.HTTP_201_CREATED,
+    tags=["Simulation"],
+    summary="Execute a historical simulation",
+)
+def create_simulation_run(payload: SimulationRunCreate):
+    conn = get_connection()
+    try:
+        result = execute_simulation_run(conn, payload.to_simulation_config())
+        return fetch_simulation_run_by_id(conn, result.simulation_run_id)
+    except UniqueViolation as error:
+        # The unique constraint also protects concurrent requests. The service
+        # rolls back the whole measurement batch before marking the run failed.
+        if error.diag.constraint_name != "uq_measurements_asset_time":
+            raise
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Measurements already exist for an asset and simulation timestamp.",
+        ) from error
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(error),
+        ) from error
+    finally:
+        conn.close()
+
+
+@app.get(
+    "/simulation/runs/{simulation_run_id}",
+    response_model=SimulationRunResponse,
+    tags=["Simulation"],
+    summary="Get a persisted simulation run",
+)
+def get_simulation_run(
+    simulation_run_id: int = Path(..., ge=1),
+):
+    conn = get_connection()
+    try:
+        run = fetch_simulation_run_by_id(conn, simulation_run_id)
+        if run is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Simulation run with id {simulation_run_id} not found",
+            )
+        return run
+    finally:
+        conn.close()
 
 
 # ============================================================

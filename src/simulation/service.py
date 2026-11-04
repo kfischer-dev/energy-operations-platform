@@ -6,7 +6,7 @@ from src.measurements.measurement_aggregation import (
 from src.measurements.models import PowerIntervalDraft, PowerMeasurement
 from src.simulation.engine import simulate_assets_power_grid
 from src.simulation.mapper import map_asset_to_simulation_asset
-from src.simulation.models import SimulationAsset, SimulationConfig
+from src.simulation.models import SimulationAsset, SimulationConfig, SimulationRunResult
 from src.simulation.registry import SIMULATION_PROFILE_REGISTRY
 from src.simulation.repository import (
     create_simulation_run,
@@ -75,8 +75,8 @@ def aggregate_simulation_measurements(
     return intervals
 
 
-def execute_simulation_run(conn, config: SimulationConfig) -> list[PowerIntervalDraft]:
-    """Run the simulation and return the generated power intervals."""
+def execute_simulation_run(conn, config: SimulationConfig) -> SimulationRunResult:
+    """Run the simulation and return its own persisted ID, count and intervals."""
 
     simulation_run_id = create_simulation_run(conn, config)
     conn.commit()  # Commit the creation of the simulation run before starting the simulation
@@ -111,7 +111,11 @@ def execute_simulation_run(conn, config: SimulationConfig) -> list[PowerInterval
 
         conn.commit()  # Commit the status update and any other changes made during the simulation
 
-        return power_intervals
+        return SimulationRunResult(
+            simulation_run_id=simulation_run_id,
+            generated_measurement_count=generated_measurement_count,
+            power_intervals=power_intervals,
+        )
 
     except Exception:
         conn.rollback()  # Rollback any changes made during the simulation in case of an error
