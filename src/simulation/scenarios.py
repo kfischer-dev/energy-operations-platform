@@ -2,7 +2,6 @@
 
 Factors apply to the profile's calculated power, not directly to context factors.
 This keeps wind variation intact and allows the result to be capped at rated power.
-The simulation does not apply these definitions until explicitly integrated.
 """
 
 from dataclasses import dataclass, fields

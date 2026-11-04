@@ -11,6 +11,7 @@ from src.simulation.models import (
 )
 from src.simulation.profiles import time_to_minutes
 from src.simulation.registry import SIMULATION_PROFILE_REGISTRY
+from src.simulation.scenarios import ProfileKind, get_scenario
 from src.simulation.time_grid import generate_time_grid
 
 # ============================================================
@@ -113,6 +114,15 @@ def validate_complete_interval(power_interval: PowerIntervalDraft) -> None:
 # Measurement Generation
 # ============================================================
 
+PROFILE_KINDS: dict[str, ProfileKind] = {
+    "solar_park": "solar",
+    "wind_park": "wind",
+    "hydro_power_plant": "hydro",
+    "biomass_power_plant": "biomass",
+    "city_load": "load",
+    "industrial_load": "load",
+}
+
 
 def simulate_power_of_asset(
     asset: SimulationAsset,
@@ -143,7 +153,9 @@ def simulate_power_of_asset(
     if final_active_power_kw < 0:
         raise ValueError(f"Active power of {asset.asset_code} is negative!")
 
-    return final_active_power_kw
+    return get_scenario(context.config.scenario).scale_power(
+        PROFILE_KINDS[asset.asset_type], final_active_power_kw, asset.rated_power_kw
+    )
 
 
 def simulate_asset_power_grid(

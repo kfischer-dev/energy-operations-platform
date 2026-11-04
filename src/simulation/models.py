@@ -4,6 +4,7 @@ from random import Random
 from typing import Literal
 
 from src.measurements.models import PowerIntervalDraft
+from src.simulation.scenarios import ScenarioName, get_scenario
 
 # ============================================================
 # Simulation Configuration
@@ -19,6 +20,7 @@ class SimulationConfig:
     interval_minutes: int
     random_seed: int
     simulation_mode: Literal["historical", "live", "forecast", "scenario"]
+    scenario: ScenarioName = "baseline"
 
     def __post_init__(self) -> None:
         """Validates the simulation configuration after initialization."""
@@ -44,6 +46,8 @@ class SimulationConfig:
 
         if self.random_seed < 0:
             raise ValueError("random_seed must be a non-negative integer")
+
+        get_scenario(self.scenario)
 
     @property
     def duration(self) -> timedelta:

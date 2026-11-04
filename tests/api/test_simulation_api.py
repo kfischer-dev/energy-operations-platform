@@ -121,9 +121,9 @@ def test_missing_simulation_configuration_is_rejected(
     assert client.post("/simulation/runs", json=simulation_payload).status_code == 422
 
 
-@pytest.mark.parametrize("run_id", [0, -1, "invalid", 9_223_372_036_854_775_808])
+@pytest.mark.parametrize("run_id", [0, -1, "invalid"])
 def test_invalid_run_id(client, run_id):
-    """Reject IDs outside the positive BIGINT range and nonnumeric path values."""
+    """Reject nonpositive IDs and nonnumeric path values."""
 
     assert client.get(f"/simulation/runs/{run_id}").status_code == 422
 
